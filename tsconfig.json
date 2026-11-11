@@ -30,7 +30,7 @@
   },
   "include": [
     "src",
-    "server",
+    "worker",
     "shared",
     "scripts",
     "courses",

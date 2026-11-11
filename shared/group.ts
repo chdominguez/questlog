@@ -1,5 +1,7 @@
-import type { SavedAnswer } from "../../shared/api-types";
-import { scoreOf } from "./text";
+import type { SavedAnswer } from "./api-types";
+
+/** Claude's grade when there is one, else the self-rating. */
+export const scoreOf = (a: SavedAnswer) => a.grade?.score ?? a.selfScore;
 
 export interface ChallengeGroup { challengeId: string; prompt: string; attempts: SavedAnswer[]; best?: number }
 export interface LevelGroup { levelId: string; title: string; challenges: ChallengeGroup[] }

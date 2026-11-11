@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import type { SavedAnswer } from "../../shared/api-types";
+import type { SavedAnswer } from "./api-types";
 import { toMarkdown } from "./export";
 
 const a = (id: string, challengeId: string, levelId: string, prompt: string, createdAt: string, extra: Partial<SavedAnswer> = {}): SavedAnswer =>

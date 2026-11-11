@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "questlog",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "questlog",
+      // Replace with the id printed by `npx wrangler d1 create questlog`.
+      "database_id": "REPLACE_WITH_D1_ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // Cloudflare Access: team domain (e.g. myteam.cloudflareaccess.com) and the application's AUD tag. Empty = every /api call gets 401.
+  // Secret: `npx wrangler secret put ANTHROPIC_API_KEY`.
+  "vars": { "ACCESS_TEAM_DOMAIN": "", "ACCESS_AUD": "" }
+}

@@ -12,9 +12,6 @@ export function insertAt(text: string, pos: number, chunk: string): { text: stri
   return { text: before + ins + after, pos: p + pre.length + c.length };
 }
 
-/** Claude's grade when there is one, else the self-rating. */
-export const scoreOf = (a: SavedAnswer) => a.grade?.score ?? a.selfScore;
-
 export const sourceOf = (typed: boolean, dictated: boolean): SavedAnswer["source"] =>
   typed && dictated ? "mixed" : dictated ? "dictated" : "typed";
 

@@ -7,7 +7,8 @@ import { play } from "../audio/sfx";
 import { ApiError, gradeAnswer, listAnswers, saveAnswer } from "./api";
 import { useDictation } from "./useDictation";
 import { GradeView, ScorePill } from "./GradeView";
-import { fmtDate, insertAt, mmss, scoreOf, SELF_RATINGS, SOURCE_LABEL, sourceOf } from "./text";
+import { fmtDate, insertAt, mmss, SELF_RATINGS, SOURCE_LABEL, sourceOf } from "./text";
+import { scoreOf } from "../../shared/group";
 import { courseById, courseOf } from "../course/registry";
 import "./answers.css";
 
@@ -105,10 +106,7 @@ export function WrittenAnswer({ challenge, levelId, onDone, saveOnExit = false }
     setNotice("");
     abort.current = new AbortController();
     try {
-      const g = await gradeAnswer(
-        { challengeId: challenge.id, prompt: challenge.prompt, model: challenge.model, keyPoints: challenge.keyPoints, answer: text.trim() },
-        abort.current.signal,
-      );
+      const g = await gradeAnswer({ challengeId: challenge.id, answer: text.trim() }, abort.current.signal);
       setGrade(g);
       setPhase("graded");
       await save({ grade: g });

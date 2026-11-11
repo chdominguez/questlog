@@ -1,4 +1,4 @@
-import type { SavedAnswer } from "../../shared/api-types";
+import type { SavedAnswer } from "./api-types";
 import { groupAnswers } from "./group";
 
 const SOURCE: Record<SavedAnswer["source"], string> = { typed: "typed", dictated: "dictated", mixed: "mixed" };
