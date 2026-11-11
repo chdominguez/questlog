@@ -3,6 +3,7 @@ import type { ChallengeType } from "../course/schema";
 import { setMuted, setVolume } from "../audio/sfx";
 import { gradeOf, isCard, schedule, type SrsCard } from "./srs";
 import { Rating } from "ts-fsrs";
+import { LEGACY_KEY, migrateKataKeys, migrateLegacy } from "./legacy";
 
 export const STORAGE_KEY = "questlog-v1";
 export const MAX_LIVES = 3;
@@ -137,7 +138,13 @@ export function hydrate(raw: unknown): Progress {
 function load(): Progress {
   try {
     const txt = localStorage.getItem(STORAGE_KEY);
-    return txt ? hydrate(JSON.parse(txt)) : initial;
+    if (txt) return hydrate(JSON.parse(txt));
+    const legacy = localStorage.getItem(LEGACY_KEY);
+    if (!legacy) return initial;
+    migrateKataKeys(localStorage);
+    const migrated = hydrate(migrateLegacy(JSON.parse(legacy), Date.now()));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...migrated, run: undefined }));
+    return migrated;
   } catch {
     return initial;
   }
