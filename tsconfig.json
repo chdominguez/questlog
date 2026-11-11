@@ -33,6 +33,7 @@
     "server",
     "shared",
     "scripts",
+    "mcp",
     "courses",
     "courses-private",
     "vite.config.ts"

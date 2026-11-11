@@ -9,5 +9,5 @@ export default defineConfig({
   plugins: [react()],
   resolve: { alias: { "@private": privateCourses, "questlog/authoring": resolve("src/course/authoring.ts") } },
   server: { host: "127.0.0.1", port: 5173, fs: { allow: [".", privateCourses] }, proxy: { "/api": "http://127.0.0.1:5180" } },
-  test: { environment: "node", include: ["src/**/*.test.ts", "server/**/*.test.ts", "shared/**/*.test.ts", "scripts/**/*.test.ts"] },
+  test: { environment: "node", include: ["src/**/*.test.ts", "server/**/*.test.ts", "shared/**/*.test.ts", "scripts/**/*.test.ts", "mcp/**/*.test.ts"] },
 } as any);
