@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import type { SavedAnswer } from "../../shared/api-types";
+import type { SavedAnswer } from "./api-types";
 import { groupAnswers } from "./group";
 
 const a = (id: string, challengeId: string, levelId: string, answer: string, score?: number): SavedAnswer => ({

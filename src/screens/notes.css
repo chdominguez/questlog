@@ -1,0 +1,18 @@
+/* Notes list and editor. Only tokens from src/ui/global.css. */
+.note-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.note-chip { background: none; }
+.note-chip[aria-pressed="true"] { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+.note-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.note-item { display: grid; gap: 8px; padding: 14px 16px; text-decoration: none; color: var(--fg); }
+.note-item:hover { border-color: var(--accent); }
+.note-item b { font-family: var(--f-display); overflow-wrap: anywhere; }
+.note-meta { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; color: var(--muted); font-size: .85rem; }
+.note-meta time { margin-left: auto; }
+.note-form { display: grid; gap: 12px; min-width: 0; }
+.note-title { font: 700 1.15rem var(--f-display); }
+.note-row { display: grid; gap: 12px; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+.note-body { min-height: 50vh; resize: vertical; font: .92rem/1.55 var(--f-mono); }
+.note-preview { min-height: 50vh; min-width: 0; overflow-wrap: anywhere; }
+.note-preview img { max-width: 100%; }
+.note-preview table { display: block; overflow-x: auto; }
+@media (max-width: 520px) { .note-row { grid-template-columns: minmax(0, 1fr); } }
