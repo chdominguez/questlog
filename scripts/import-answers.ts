@@ -1,4 +1,4 @@
-// Usage: npx tsx scripts/import-answers.ts <answers.jsonl> --course <id> [--remote]
+// Usage: npx tsx scripts/import-answers.ts <answers.jsonl> --course <id> [--remote | --persist-to <dir>]
 // Imports SavedAnswer records from the old Node server's JSONL into D1 (local by default). Re-running is safe: ids are kept.
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -33,7 +33,7 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const file = args.find((a) => !a.startsWith("--") && args[args.indexOf(a) - 1] !== "--course");
   const course = args[args.indexOf("--course") + 1];
   if (!file || !args.includes("--course") || !/^[a-z0-9][a-z0-9-]*$/.test(course ?? "")) {
-    console.error("Usage: npx tsx scripts/import-answers.ts <answers.jsonl> --course <id> [--remote]");
+    console.error("Usage: npx tsx scripts/import-answers.ts <answers.jsonl> --course <id> [--remote | --persist-to <dir>]");
     process.exit(1);
   }
   const { sql, count, skipped } = toSql(readFileSync(file, "utf8"), course);
@@ -41,6 +41,8 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const out = join(mkdtempSync(join(tmpdir(), "questlog-import-")), "answers.sql");
   writeFileSync(out, sql);
   console.log(`${count} answers${skipped ? `, ${skipped} invalid lines skipped` : ""} → ${out}`);
-  const r = spawnSync("npx", ["wrangler", "d1", "execute", "DB", "--file", out, args.includes("--remote") ? "--remote" : "--local"], { stdio: "inherit" });
+  const persist = args.indexOf("--persist-to"); // the Docker image keeps D1 in /data
+  const extra = persist >= 0 ? ["--persist-to", args[persist + 1]] : [];
+  const r = spawnSync("npx", ["wrangler", "d1", "execute", "DB", "--file", out, args.includes("--remote") ? "--remote" : "--local", ...extra], { stdio: "inherit" });
   process.exit(r.status ?? 1);
 }

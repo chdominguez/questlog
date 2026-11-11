@@ -8,3 +8,4 @@ courses-private
 test-results
 playwright-report
 *.tsbuildinfo
+docker-compose.override.yml

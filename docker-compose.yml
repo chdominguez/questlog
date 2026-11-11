@@ -1,0 +1,11 @@
+# Self-hosted: `docker compose up -d --build`, then open http://127.0.0.1:8790.
+# Put ANTHROPIC_API_KEY in .env for grading. Login is the reverse proxy's job (see scripts/serve.sh).
+name: questlog
+services:
+  app:
+    build: .
+    container_name: questlog
+    restart: unless-stopped
+    ports: ["127.0.0.1:8790:8787"]
+    environment: { ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}" } # read from .env
+    volumes: ["./data:/data"]
