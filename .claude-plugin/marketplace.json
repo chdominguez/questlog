@@ -1,0 +1,16 @@
+{
+  "name": "questlog",
+  "owner": {
+    "name": "chdominguez"
+  },
+  "metadata": {
+    "description": "Questlog: a personal gamified learning platform. Skills for designing quests and authoring courses."
+  },
+  "plugins": [
+    {
+      "name": "questlog",
+      "source": "./plugins/questlog",
+      "description": "Skills to design gamified learning quests and author Questlog courses."
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "name": "questlog",
+  "description": "Design gamified learning quests on any topic and author, extend or port Questlog courses: levels, theory cards with traces and flows, quizzes, written answers and coding katas.",
+  "version": "0.1.0",
+  "author": { "name": "chdominguez" },
+  "license": "MIT",
+  "keywords": ["learning", "course", "gamification", "spaced-repetition", "questlog"]
+}
