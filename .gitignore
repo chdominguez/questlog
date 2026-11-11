@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+.dev.vars
+.wrangler
+data/
+courses-private/
+test-results
+playwright-report
+*.tsbuildinfo

@@ -1,0 +1,40 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2023",
+      "DOM",
+      "DOM.Iterable",
+      "WebWorker"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "types": [
+      "vite/client",
+      "node"
+    ],
+    "paths": {
+      "questlog/authoring": [
+        "./src/course/authoring.ts"
+      ],
+      "@private/*": [
+        "./courses-private/*"
+      ]
+    }
+  },
+  "include": [
+    "src",
+    "server",
+    "shared",
+    "scripts",
+    "courses",
+    "courses-private",
+    "vite.config.ts"
+  ]
+}

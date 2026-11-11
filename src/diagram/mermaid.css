@@ -1,0 +1,11 @@
+.mmd { margin: 0 0 1em; }
+.mmd-svg {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 12px; overflow-x: auto; max-width: 100%;
+}
+.mmd-svg svg { display: block; max-width: 100%; min-width: var(--mmd-min, 0); height: auto; margin: 0 auto; }
+.mmd-loading { min-height: 120px; }
+.mmd figcaption { color: var(--muted); font-size: .88em; margin-top: 6px; text-align: center; }
+.mmd-error { border: 1px solid var(--bad); border-radius: var(--radius); padding: 12px; overflow-x: auto; }
+.mmd-error p { color: var(--bad); margin: 0 0 8px; font-size: .88em; }
+.mmd-error pre { margin: 0; font: .85em/1.5 var(--f-mono); white-space: pre; }
