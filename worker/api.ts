@@ -1,7 +1,7 @@
 import { Hono, type Context, type MiddlewareHandler } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { createRemoteJWKSet, jwtVerify } from "jose";
-import type { Grade, Note, NoteInput, SavedAnswer } from "../shared/api-types";
+import type { Grade, Note, Profile, NoteInput, SavedAnswer } from "../shared/api-types";
 import { toMarkdown } from "../shared/export";
 import { COURSES, courseOf, type Course } from "../src/course/registry";
 import { claudeGrader, parseGrade, type Grader } from "./grader";
@@ -21,6 +21,7 @@ export interface Env {
   ACCESS_TEAM_DOMAIN?: string; // e.g. myteam.cloudflareaccess.com
   ACCESS_AUD?: string; // Access application audience tag
   AUTH_DISABLED?: string; // "1" only in .dev.vars
+  NAME_HEADER?: string; // with AUTH_DISABLED=1: header the proxy sets to the Keycloak display name
   USER_HEADER?: string; // with AUTH_DISABLED=1: the header a trusted reverse proxy sets to the signed-in user (e.g. x-forwarded-email)
 }
 
@@ -74,6 +75,18 @@ function parseNote(v: unknown): NoteInput | string {
     title: b.title.trim(), body: b.body, tags: [...new Set((b.tags as string[]).map((t) => t.trim()))],
     ...(b.courseId != null && { courseId: b.courseId as string }),
   };
+}
+
+const PROFILE_MAX = { name: 100, title: 100, location: 100, link: 300, bio: 2000 } as const;
+function parseProfile(v: unknown): Profile | string {
+  const b = (v ?? {}) as Record<string, unknown>;
+  const out = {} as Profile;
+  for (const [k, max] of Object.entries(PROFILE_MAX) as [keyof Profile, number][]) {
+    if (!str(b[k], max)) return `${k} must be under ${max} characters`;
+    out[k] = (b[k] as string).trim();
+  }
+  if (out.link && !/^https?:\/\//i.test(out.link)) return "link must start with http:// or https://";
+  return out;
 }
 
 type AnswerRow = {
@@ -174,7 +187,23 @@ export function createApi({
     .use(guard)
     .use(bodyLimit({ maxSize: 256 * 1024, onError: (c) => c.json({ error: "Request too large" }, 413) }))
     .get("/health", (c) => c.json({ ok: true, grader: grader(c.env) !== null }))
-    .get("/me", (c) => c.json({ user: user(c) }))
+    .get("/me", (c) => {
+      const name = c.env.AUTH_DISABLED === "1" && c.env.NAME_HEADER ? c.req.header(c.env.NAME_HEADER)?.trim().slice(0, 100) : undefined;
+      return c.json({ user: user(c), ...(name && { name }) });
+    })
+    .get("/profile", async (c) => {
+      const row = await db(c).prepare("SELECT value FROM kv WHERE user_id = ? AND key = 'profile'").bind(user(c)).first<{ value: string }>();
+      return c.json({ name: "", title: "", location: "", link: "", bio: "", ...(row && JSON.parse(row.value)) } satisfies Profile);
+    })
+    .put("/profile", async (c) => {
+      const p = parseProfile(await json(c));
+      if (typeof p === "string") return c.json({ error: p }, 400);
+      await db(c).prepare(
+        `INSERT INTO kv (user_id, key, value, updated_at) VALUES (?, 'profile', ?, ?)
+         ON CONFLICT (user_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+      ).bind(user(c), JSON.stringify(p), Date.now()).run();
+      return c.json(p);
+    })
     .post("/grade", async (c) => {
       const grade = grader(c.env);
       if (!grade) return c.json({ error: "Grader not configured (missing ANTHROPIC_API_KEY)" }, 503);

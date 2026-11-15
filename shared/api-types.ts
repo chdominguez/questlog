@@ -38,6 +38,8 @@ export interface Note {
 
 export type NoteInput = Pick<Note, "title" | "body" | "tags" | "courseId">;
 
+export interface Profile { name: string; title: string; location: string; link: string; bio: string }
+
 export interface SyncedProgress { value: unknown; updatedAt: number }
 
 // Every /api route needs a Cloudflare Access JWT (Cf-Access-Jwt-Assertion) -> 401 otherwise.
@@ -52,4 +54,7 @@ export interface SyncedProgress { value: unknown; updatedAt: number }
 // POST   /api/notes        body NoteInput             -> 201 Note
 // PUT    /api/notes/:id    body NoteInput             -> Note | 404
 // DELETE /api/notes/:id                               -> 204 | 404
+// GET    /api/me                                      -> { user, name? } (name: Keycloak display name from NAME_HEADER)
+// GET    /api/profile                                 -> Profile (empty strings when unset)
+// PUT    /api/profile      body Profile               -> Profile
 // GET    /api/health                                 -> { ok: true, grader: boolean }

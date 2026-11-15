@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-/** Hash routes: #/ · #/c/:course · #/c/:course/level/:id · #/c/:course/kata/:id · #/c/:course/mock · #/review · #/answers · #/notes · #/notes/:id */
+/** Hash routes: #/ · #/c/:course · #/c/:course/level/:id · #/c/:course/kata/:id · #/c/:course/mock · #/review · #/answers · #/profile · #/notes · #/notes/:id */
 export type Route =
   | { name: "home" }
   | { name: "map"; course: string }
@@ -9,6 +9,7 @@ export type Route =
   | { name: "mock"; course: string }
   | { name: "review" }
   | { name: "answers" }
+  | { name: "profile" }
   | { name: "notes"; id?: string };
 
 export function parse(hash: string): Route {
@@ -19,7 +20,7 @@ export function parse(hash: string): Route {
     return { name: "map", course: b };
   }
   if (a === "notes") return b ? { name: "notes", id: b } : { name: "notes" };
-  if (a === "review" || a === "answers") return { name: a };
+  if (a === "review" || a === "answers" || a === "profile") return { name: a };
   return { name: "home" };
 }
 
@@ -33,6 +34,7 @@ export const href = {
   mock: (course: string) => `#/c/${e(course)}/mock`,
   review: () => "#/review",
   answers: () => "#/answers",
+  profile: () => "#/profile",
   notes: (id?: string) => (id ? `#/notes/${e(id)}` : "#/notes"),
 };
 

@@ -7,6 +7,7 @@ import { MapScreen } from "./screens/Map";
 import { LevelScreen } from "./screens/Level";
 import { ReviewScreen } from "./screens/Review";
 import { AnswersScreen } from "./screens/Answers";
+import { ProfileScreen } from "./screens/Profile";
 import { NoteScreen, NotesScreen } from "./screens/Notes";
 import { MockScreen } from "./screens/Mock";
 import { NotFound } from "./screens/NotFound";
@@ -33,6 +34,7 @@ export function App() {
       {r.name === "mock" && course && <MockScreen course={course} />}
       {r.name === "review" && <ReviewScreen />}
       {r.name === "answers" && <AnswersScreen />}
+      {r.name === "profile" && <ProfileScreen />}
       {r.name === "notes" && (r.id ? <NoteScreen id={r.id} /> : <NotesScreen />)}
     </main>
   );

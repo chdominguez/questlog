@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { beforeEach, expect, test } from "vitest";
-import type { Grade, Note, SavedAnswer } from "../shared/api-types";
+import type { Grade, Note, Profile, SavedAnswer } from "../shared/api-types";
 import { CourseSchema } from "../src/course/schema";
 import { resolve } from "../src/course/registry";
 import { accessVerifier, createApi, MAX_ANSWER, type Env } from "./api";
@@ -222,4 +222,19 @@ test("users are isolated; the first user claims pre-existing rows; a proxy heade
   await app.req("/answers", as("a@x.com", post(ans)));
   expect(await (await app.req("/answers", as("b@x.com"))).json()).toEqual([]);
   expect(((await (await app.req("/answers", as("a@x.com"))).json()) as SavedAnswer[]).length).toBe(1);
+});
+
+test("profile: per-user, validated; /me exposes the proxy name", async () => {
+  env = { DB: env.DB, AUTH_DISABLED: "1", USER_HEADER: "x-forwarded-email", NAME_HEADER: "x-name" };
+  const app = api();
+  const as = (u: string, init: RequestInit = {}) => ({ ...init, headers: { ...(init.headers as object), "X-Forwarded-Email": u, "X-Name": "Ann" } });
+  expect(await (await app.req("/me", as("a@x.com"))).json()).toEqual({ user: "a@x.com", name: "Ann" });
+  const empty = { name: "", title: "", location: "", link: "", bio: "" };
+  expect(await (await app.req("/profile", as("a@x.com"))).json()).toEqual(empty);
+  const p = { ...empty, name: " Ann ", bio: "Hi", link: "https://a.dev" };
+  expect(await (await app.req("/profile", as("a@x.com", json("PUT", p)))).json()).toEqual({ ...p, name: "Ann" });
+  expect(((await (await app.req("/profile", as("a@x.com"))).json()) as Profile).bio).toBe("Hi");
+  expect(await (await app.req("/profile", as("b@x.com"))).json()).toEqual(empty);
+  expect((await app.req("/profile", as("a@x.com", json("PUT", { ...p, link: "javascript:alert(1)" })))).status).toBe(400);
+  expect((await app.req("/profile", as("a@x.com", json("PUT", { ...p, bio: "x".repeat(2001) })))).status).toBe(400);
 });
