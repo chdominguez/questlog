@@ -35,6 +35,15 @@ test("validation explains what is wrong and where", () => {
   expect(CourseSchema.safeParse(course({ extra: 1 })).success).toBe(false);
 });
 
+test("sort buckets are checked", () => {
+  const items = (bs: number[]) => bs.map((bucket) => ({ text: "x", bucket }));
+  const sort = { id: "s", type: "sort", prompt: "P", buckets: ["a", "b"], items: items([0, 0, 1, 1]) };
+  const withSort = (s: unknown) => course({ levels: [{ ...course().levels[0], challenges: [s] }] });
+  expect(validateCourse(withSort(sort))).toEqual([]);
+  expect(validateCourse(withSort({ ...sort, items: items([0, 0, 0, 5]) })).join("\n")).toMatch(/bucket 5 but only 2/);
+  expect(validateCourse(withSort({ ...sort, items: items([0, 0, 0, 0]) })).join("\n")).toMatch(/bucket 1 has no items/);
+});
+
 test("kata checks run the solution and the starter", () => {
   const kata = { id: "sum", title: "Sum", difficulty: "easy", statement: "S", examples: [{ input: "1", output: "1" }], complexity: "O(n)",
     starter: "export function sum(xs: number[]): number { return 0; }",

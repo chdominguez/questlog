@@ -69,6 +69,11 @@ export const ChallengeSchema = z.discriminatedUnion("type", [
     keyPoints: z.array(z.string().min(1)).min(2).describe("What a strong answer must mention; sent to the grader"),
     seconds: z.number().int().positive().optional().describe("Soft time limit"),
   }).strict(),
+  z.object({
+    ...base, type: z.literal("sort"),
+    buckets: z.array(md("Bucket label")).min(2).max(4),
+    items: z.array(z.object({ text: md("Item"), bucket: z.number().int().min(0).describe("0-based index into buckets") }).strict()).min(4).max(12),
+  }).strict().describe("Drop each item into the bucket it belongs to"),
   z.object({ ...base, type: z.literal("kata"), kataId: id.describe("Id of a kata in this course") }).strict(),
 ]);
 
@@ -161,6 +166,10 @@ export const CourseSchema = z.object({
       const at = ["levels", li, "challenges", ci];
       if (ch.type === "quiz" && ch.answer >= ch.options.length) issue([...at, "answer"], `answer ${ch.answer} but only ${ch.options.length} options`);
       if (ch.type === "bug" && ch.answer >= ch.lines.length) issue([...at, "answer"], `answer ${ch.answer} but only ${ch.lines.length} lines`);
+      if (ch.type === "sort") {
+        ch.items.forEach((it, ii) => { if (it.bucket >= ch.buckets.length) issue([...at, "items", ii, "bucket"], `bucket ${it.bucket} but only ${ch.buckets.length} buckets`); });
+        ch.buckets.forEach((_, bi) => { if (!ch.items.some((it) => it.bucket === bi)) issue([...at, "buckets", bi], `bucket ${bi} has no items`); });
+      }
       if (ch.type === "kata" && !katas.has(ch.kataId)) issue([...at, "kataId"], `no kata "${ch.kataId}" in course.katas`);
     });
   });
