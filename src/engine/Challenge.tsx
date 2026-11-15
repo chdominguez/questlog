@@ -14,13 +14,14 @@ import { clozeParts, gradeCloze } from "./cloze";
 import { gradeSort } from "./sort";
 import { permutation, shuffled } from "./shuffle";
 import { gradeMatch } from "./match";
+import { gradeMulti } from "./grade";
 import "./engine.css";
 
 type Of<T extends Challenge["type"]> = Extract<Challenge, { type: T }>;
 type Answer = (correct: boolean) => void;
 
 const KICKER: Record<Challenge["type"], string> = {
-  quiz: "Quiz", order: "Put in order", bug: "Find the bug", cloze: "Fill the blanks", written: "Written answer", kata: "Kata", match: "Match", sort: "Sort", flashcard: "Flashcard",
+  quiz: "Quiz", multi: "Select all", order: "Put in order", bug: "Find the bug", cloze: "Fill the blanks", written: "Written answer", kata: "Kata", match: "Match", sort: "Sort", flashcard: "Flashcard",
 };
 
 /** Records a result in the store, plays feedback sound and returns XP gained. */
@@ -67,6 +68,44 @@ function Quiz({ c, done, onAnswer }: { c: Of<"quiz">; done: boolean; onAnswer: A
         );
       })}
     </div>
+  );
+}
+
+function Multi({ c, done, onAnswer }: { c: Of<"multi">; done: boolean; onAnswer: (r: Result) => void }) {
+  const [order] = useState(() => (c.style === "truefalse" ? c.options.map((_, i) => i) : permutation(c.options.length)));
+  const [sel, setSel] = useState<number[]>([]); // original option indexes
+  const toggle = (oi: number) => setSel((s) => (done ? s : s.includes(oi) ? s.filter((x) => x !== oi) : [...s, oi]));
+  const check = () => onAnswer(gradeMulti(c.answers, sel));
+  useEffect(() => {
+    if (done) return;
+    const on = (e: KeyboardEvent) => {
+      if (typingTarget(e) || e.altKey || e.ctrlKey || e.metaKey) return;
+      if (e.key === "Enter" && sel.length) { e.preventDefault(); check(); return; }
+      if (/^[1-9]$/.test(e.key) && Number(e.key) <= order.length) { e.preventDefault(); toggle(order[Number(e.key) - 1]); }
+    };
+    addEventListener("keydown", on);
+    return () => removeEventListener("keydown", on);
+  });
+  return (
+    <>
+      <div className="opts">
+        {order.map((oi) => {
+          const on = sel.includes(oi), right = c.answers.includes(oi);
+          const state = done ? (right ? (on ? "right" : "missed") : on ? "wrong" : "") : on ? "on" : "";
+          return (
+            <button key={oi} type="button" role="checkbox" aria-checked={on} className={`opt multi ${state}`} onClick={() => toggle(oi)}>
+              <span className="k" aria-hidden="true">{on ? "■" : "□"}</span>
+              <Md text={c.options[oi]} inline />
+            </button>
+          );
+        })}
+      </div>
+      {!done && (
+        <div className="row end">
+          <button type="button" className="btn" disabled={!sel.length} onClick={check}>Check</button>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -315,6 +354,7 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
   let body: ReactNode;
   switch (c.type) {
     case "quiz": body = <Quiz c={c} done={done} onAnswer={onAnswer} />; break;
+    case "multi": body = <Multi c={c} done={done} onAnswer={finish} />; break;
     case "order": body = <Order c={c} done={done} onAnswer={onAnswer} />; break;
     case "match": body = <Match c={c} done={done} onResult={finish} />; break;
     case "sort": body = <Sort c={c} done={done} onResult={finish} />; break;
@@ -334,7 +374,7 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
     [c],
   );
   const matchHint = useMemo(() => (c.type === "match" ? c.pairs.map((p) => `${p.left} → ${p.right}`).join("\n\n") : ""), [c]);
-  const showFeedback = done && c.type !== "flashcard" && (c.type === "quiz" || c.type === "order" || c.type === "bug" || c.type === "match" || c.type === "cloze" || c.type === "sort" || !!c.explain);
+  const showFeedback = done && c.type !== "flashcard" && (c.type === "quiz" || c.type === "multi" || c.type === "order" || c.type === "bug" || c.type === "match" || c.type === "cloze" || c.type === "sort" || !!c.explain);
   const good = result === "ok";
 
   return (
