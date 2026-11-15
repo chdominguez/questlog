@@ -59,3 +59,11 @@ test("kata checks run the solution and the starter", () => {
   expect(validateCourse(course({ katas: [{ ...kata, solution: kata.starter }] })).join()).toMatch(/solution fails "n1"/);
   expect(validateCourse(course({ katas: [{ ...kata, starter: kata.solution }] })).join()).toMatch(/starter already passes/);
 });
+
+test("cloze markers and bank are cross-checked", () => {
+  const cz = (over: Record<string, unknown>) => course({ levels: [{ ...course().levels[0], challenges: [{ id: "c", type: "cloze", prompt: "P", text: "a {{1}} b {{2}}", blanks: [{ answers: ["x"] }, { answers: ["y"] }], ...over }] }] });
+  expect(validateCourse(cz({}))).toEqual([]);
+  expect(validateCourse(cz({ text: "a {{1}} b {{3}}" })).join()).toMatch(/markers must be/);
+  expect(validateCourse(cz({ text: "a {{1}}" })).join()).toMatch(/markers must be/);
+  expect(validateCourse(cz({ bank: ["x", "z"] })).join()).toMatch(/"y" is not in bank/);
+});

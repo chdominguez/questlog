@@ -241,6 +241,16 @@ Why it matters: after a timeout the client can't tell whether the server acted. 
       explain: "The raw `&` splits the query: the server sees `q=\"rye \"` and a stray parameter `\" spelt\"`. Use `\"/api/menu?\" + new URLSearchParams({ q })`.",
     },
     {
+      id: "req-cloze-status",
+      type: "cloze",
+      prompt: "Complete the response head.",
+      lang: "http",
+      text: "HTTP/1.1 {{1}} Created\n{{2}}: /api/orders/881\nContent-Type: application/json",
+      blanks: [{ answers: ["201"], exact: true }, { answers: ["Location"] }],
+      bank: ["201", "200", "Location", "Referer"],
+      explain: "`201 Created` reports a new resource, and `Location` tells the client where it lives.",
+    },
+    {
       id: "req-written-retry",
       type: "written",
       prompt: "Your checkout client resends requests that time out. Explain which requests it may resend automatically, and why.",

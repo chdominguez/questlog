@@ -166,3 +166,20 @@
 .mi.right { border-color: var(--ok); background: color-mix(in oklab, var(--ok) 14%, var(--bg)); }
 .mi.wrong { border-color: var(--bad); background: color-mix(in oklab, var(--bad) 14%, var(--bg)); }
 @media (prefers-reduced-motion: reduce) { .mi { transition: none; } }
+
+.cloze { line-height: 2.2; overflow-wrap: anywhere; }
+.cloze > .md, .cloze .md { display: inline; }
+.cloze.code { font-family: var(--f-mono); font-size: .9rem; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; white-space: pre-wrap; margin: 0; }
+.blank {
+  font: inherit; color: var(--fg); background: var(--bg); border: 0; border-bottom: 2px solid var(--muted); border-radius: 6px 6px 0 0;
+  padding: 2px 8px; min-width: 4ch; min-height: 32px; text-align: center; vertical-align: baseline;
+}
+input.blank { max-width: 100%; }
+.blank.on, .blank:focus { outline: none; border-bottom-color: var(--accent); }
+.blank.right { border-bottom-color: var(--ok); background: color-mix(in oklab, var(--ok) 14%, var(--bg)); }
+.blank.wrong { border-bottom-color: var(--bad); background: color-mix(in oklab, var(--bad) 14%, var(--bg)); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font-family: var(--f-mono); background: var(--raise); border: 1px solid var(--line); border-radius: 10px; color: var(--fg); padding: 8px 12px; min-height: 40px; }
+.chip:disabled { opacity: .4; }
+.cloze-fix { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.cloze-fix .k { font-family: var(--f-mono); color: var(--muted); margin-right: 8px; }
