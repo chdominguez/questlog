@@ -1,6 +1,6 @@
 ---
 name: quest-design
-description: Designs gamified learning quests on any topic (courses split into levels of short theory cards followed by challenges), grounded in learning science. Covers learning objectives, level structure, theory cards with step-through code traces and request flows, the challenge mix (quiz, ordering, bug-spotting, written self-explanation, coding katas), item-writing rules, gamification that helps rather than hurts, hallucination guards and a final self-review. Use when asked to "design a course", "make a quest", "teach me X as a game", "turn my notes into a course", "write quiz questions", "write challenges or flashcards", "gamify learning", or before writing content for any learning platform, including Questlog.
+description: Designs gamified learning quests on any topic (courses split into levels of short theory cards followed by challenges), grounded in learning science. Covers learning objectives, level structure, theory cards with step-through code traces and request flows, the challenge mix (quiz, multi-select and true/false, ordering, matching, cloze, sorting, flashcards, bug-spotting, written self-explanation, coding katas), media (images, GIFs, video, audio), item-writing rules, gamification that helps rather than hurts, hallucination guards and a final self-review. Use when asked to "design a course", "make a quest", "teach me X as a game", "turn my notes into a course", "write quiz questions", "write challenges or flashcards", "gamify learning", or before writing content for any learning platform, including Questlog.
 ---
 
 # Quest design
@@ -50,6 +50,11 @@ Retrieval practice (testing yourself) and spaced practice are the two techniques
 | Type | Trains | Use for | Per level |
 |---|---|---|---|
 | Quiz (MCQ) | Recognition and discrimination | Telling similar concepts apart, predicting an outcome, choosing a tool | 2–5 |
+| Multi (multi-select, true/false) | Complete, correct facts; misconception busting | Several facts are right; a statement that sounds true and is not | 0–2 |
+| Match | Term to definition links | 3–8 pairs: term/definition, command/effect, cause/effect | 0–1 |
+| Cloze | Recall of exact syntax or terms | Code or a sentence with blanks; typed or from a word bank | 0–2 |
+| Sort | Classification | Items into 2–4 categories (which queue, which layer, safe/unsafe) | 0–1 |
+| Flashcard | High-volume recall, self-rated (FSRS) | Vocabulary, flags, facts to memorize; many per level | 0–10 |
 | Order | Sequence knowledge | Processes, lifecycles, algorithms, protocol handshakes | 0–1 |
 | Bug | Code reading | Spotting the one line that breaks a rule the level taught | 1–2 |
 | Written | Recall + self-explanation | "Explain why", "walk me through", trade-offs; graded against key points | 1–3 |
@@ -60,10 +65,21 @@ Rules of thumb:
 - **Mix types inside a level** and put an easy win first.
 - **Prefer recall over recognition** when the objective is to produce something: a written answer or kata beats a quiz.
 - **Every miss feeds review.** The point of a wrong answer is to schedule it again soon, not to punish.
+- **Recommended mix.** Early level: quizzes, a match or sort for vocabulary, a true/false or two. Mid level: add cloze, multi, order and bug. Boss: written, katas and mixed-concept multi, sort and cloze. Flashcards fit any level that adds many facts.
 - **Interleave in the boss**: questions that require choosing *which* idea applies are harder and stick better than blocks of the same kind.
 - **Explanations after answering** say why the right answer is right *and* why the tempting wrong one is wrong, in 1–3 sentences.
 
 Per-type guidance, templates and examples: [references/challenge-types.md](references/challenge-types.md).
+
+## Media
+
+Add media only when it carries something text cannot: a UI flow, a diagram from a tool, a sound.
+
+- Clips under 30 s, one idea each, with a caption that says what to watch for.
+- Alt text teaches: describe what the media shows or says, not "screenshot".
+- Prefer an image or GIF for UI flows; video for motion that needs sound or length; audio for pronunciation and language courses.
+- Never rely on media alone for the answer: the same fact must be in the text, so review items stand alone and learners who cannot play it still pass.
+- Keep binaries out of git; the course only references uploaded `media/<file>` names.
 
 ## Item-writing rules
 
@@ -126,6 +142,7 @@ Before handing over, check:
 - [ ] Every trace and flow uses real values that you computed or copied.
 - [ ] Every item passes [references/item-checklist.md](references/item-checklist.md): one right answer, real-misconception distractors, no length or grammar cues, explanation present.
 - [ ] Written challenges have a model answer and 2–5 checkable key points.
+- [ ] Media has teaching alt text, a caption, and the answer is also in text; clips are under 30 s.
 - [ ] Katas have a statement with edge cases spelled out, visible and hidden tests, a starter that fails and a solution that passes.
 - [ ] Every factual claim is sourced or marked; nothing was invented.
 - [ ] Gamification only reports learning; nothing punishes beyond scheduling review.
