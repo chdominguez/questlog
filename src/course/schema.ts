@@ -69,6 +69,16 @@ export const ChallengeSchema = z.discriminatedUnion("type", [
     keyPoints: z.array(z.string().min(1)).min(2).describe("What a strong answer must mention; sent to the grader"),
     seconds: z.number().int().positive().optional().describe("Soft time limit"),
   }).strict(),
+  z.object({
+    ...base, type: z.literal("cloze"),
+    text: z.string().min(1).describe("Text with numbered markers {{1}}, {{2}}, ... each used once, contiguous from 1"),
+    blanks: z.array(z.object({
+      answers: z.array(z.string().min(1)).min(1).describe("Accepted variants; the first is shown as the answer"),
+      exact: z.boolean().optional().describe("Case- and whitespace-sensitive; default false"),
+    }).strict()).min(1),
+    bank: z.array(z.string().min(1)).optional().describe("Word bank chips; each blank's first answer must be in it. Omit for typed blanks"),
+    lang: CodeLangSchema.optional().describe("Render text as code in this language; default Markdown"),
+  }).strict(),
   z.object({ ...base, type: z.literal("kata"), kataId: id.describe("Id of a kata in this course") }).strict(),
 ]);
 
@@ -161,6 +171,13 @@ export const CourseSchema = z.object({
       const at = ["levels", li, "challenges", ci];
       if (ch.type === "quiz" && ch.answer >= ch.options.length) issue([...at, "answer"], `answer ${ch.answer} but only ${ch.options.length} options`);
       if (ch.type === "bug" && ch.answer >= ch.lines.length) issue([...at, "answer"], `answer ${ch.answer} but only ${ch.lines.length} lines`);
+      if (ch.type === "cloze") {
+        const marks = [...ch.text.matchAll(/\{\{(\d+)\}\}/g)].map((m) => Number(m[1]));
+        if (marks.length !== ch.blanks.length || marks.some((m, i) => m !== i + 1)) issue([...at, "text"], `markers must be {{1}}..{{${ch.blanks.length}}} in order, once each, matching blanks`);
+        ch.blanks.forEach((b, bi) => {
+          if (ch.bank && !ch.bank.includes(b.answers[0])) issue([...at, "blanks", bi, "answers", 0], `"${b.answers[0]}" is not in bank`);
+        });
+      }
       if (ch.type === "kata" && !katas.has(ch.kataId)) issue([...at, "kataId"], `no kata "${ch.kataId}" in course.katas`);
     });
   });

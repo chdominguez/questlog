@@ -9,6 +9,7 @@ import { dispatch, getProgress, useProgress, type Result } from "./store";
 import { courseById, courseOf } from "../course/registry";
 import { isMilestone } from "./Hud";
 import { typingTarget } from "./Theory";
+import { clozeParts, gradeCloze } from "./cloze";
 import { permutation, shuffled } from "./shuffle";
 import "./engine.css";
 
@@ -16,7 +17,7 @@ type Of<T extends Challenge["type"]> = Extract<Challenge, { type: T }>;
 type Answer = (correct: boolean) => void;
 
 const KICKER: Record<Challenge["type"], string> = {
-  quiz: "Quiz", order: "Put in order", bug: "Find the bug", written: "Written answer", kata: "Kata",
+  quiz: "Quiz", order: "Put in order", bug: "Find the bug", cloze: "Fill the blanks", written: "Written answer", kata: "Kata",
 };
 
 /** Records a result in the store, plays feedback sound and returns XP gained. */
@@ -123,6 +124,65 @@ function Bug({ c, done, onAnswer }: { c: Of<"bug">; done: boolean; onAnswer: Ans
   );
 }
 
+function Cloze({ c, done, onResult }: { c: Of<"cloze">; done: boolean; onResult: (r: Result) => void }) {
+  const parts = useMemo(() => clozeParts(c.text), [c.text]);
+  const [vals, setVals] = useState<string[]>(() => c.blanks.map(() => ""));
+  const [active, setActive] = useState(0);
+  const [graded, setGraded] = useState<boolean[] | null>(null);
+  const set = (i: number, v: string) => setVals((p) => p.map((x, j) => (j === i ? v : x)));
+  const used = (w: string) => vals.includes(w);
+  const tap = (w: string) => {
+    if (done || used(w)) return;
+    const i = vals[active] === "" ? active : vals.indexOf("");
+    if (i < 0) return;
+    set(i, w);
+    const next = vals.findIndex((v, j) => j !== i && v === "");
+    if (next >= 0) setActive(next);
+    play("click");
+  };
+  const check = () => {
+    const g = gradeCloze(c.blanks, vals);
+    setGraded(g.right);
+    onResult(g.result);
+  };
+  const blank = (i: number) => {
+    const state = graded ? (graded[i] ? "right" : "wrong") : "";
+    if (c.bank) {
+      return (
+        <button key={i} type="button" className={`blank ${state}${active === i ? " on" : ""}`} disabled={done}
+          onClick={() => (vals[i] ? set(i, "") : setActive(i))}>{vals[i] || "\u00a0"}</button>
+      );
+    }
+    return (
+      <input key={i} className={`blank ${state}`} value={vals[i]} disabled={done} size={Math.max(4, vals[i].length + 1)}
+        aria-label={`Blank ${i + 1}`} autoCapitalize="off" autoCorrect="off" spellCheck={false} inputMode="text" enterKeyHint="next"
+        onChange={(e) => set(i, e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter" && !done && vals.every(Boolean)) check(); }} />
+    );
+  };
+  const pieces = parts.map((p, k) => (typeof p === "number" ? blank(p) : c.lang ? <span key={k}>{p}</span> : <Md key={k} text={p} inline />));
+  return (
+    <>
+      {c.lang ? <pre className="cloze code">{pieces}</pre> : <div className="cloze">{pieces}</div>}
+      {c.bank && (
+        <div className="chips" role="group" aria-label="Word bank">
+          {c.bank.map((w, i) => <button key={i} type="button" className="chip" disabled={done || used(w)} onClick={() => tap(w)}>{w}</button>)}
+        </div>
+      )}
+      {graded && (
+        <ul className="cloze-fix">
+          {c.blanks.map((b, i) => !graded[i] && <li key={i}><span className="k">{i + 1}</span><code>{b.answers[0]}</code></li>)}
+        </ul>
+      )}
+      {!done && (
+        <div className="row end">
+          <button type="button" className="btn" disabled={!vals.every(Boolean)} onClick={check}>Check</button>
+        </div>
+      )}
+    </>
+  );
+}
+
 interface Fx { kind: "ok" | "bad"; xp: number; n: number }
 
 /** One challenge: renders the right input, records the result, shows feedback and "next". */
@@ -151,6 +211,7 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
     case "quiz": body = <Quiz c={c} done={done} onAnswer={onAnswer} />; break;
     case "order": body = <Order c={c} done={done} onAnswer={onAnswer} />; break;
     case "bug": body = <Bug c={c} done={done} onAnswer={onAnswer} />; break;
+    case "cloze": body = <Cloze c={c} done={done} onResult={finish} />; break;
     case "written":
       body = <WrittenAnswer challenge={c} levelId={levelId} onDone={(s) => finish(s >= 7 ? "ok" : s >= 4 ? "partial" : "miss")} />;
       break;
@@ -163,7 +224,7 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
     () => (c.type === "order" ? c.steps.map((s, i) => `${i + 1}. ${s}`).join("\n") : ""),
     [c],
   );
-  const showFeedback = done && (c.type === "quiz" || c.type === "order" || c.type === "bug" || !!c.explain);
+  const showFeedback = done && (c.type === "quiz" || c.type === "order" || c.type === "bug" || c.type === "cloze" || !!c.explain);
   const good = result === "ok";
 
   return (
