@@ -75,6 +75,8 @@
 .opt .k { font-family: var(--f-mono); color: var(--muted); font-size: .85rem; padding-top: 1px; }
 .opt.right { border-color: var(--ok); background: color-mix(in oklab, var(--ok) 14%, var(--bg)); }
 .opt.wrong { border-color: var(--bad); background: color-mix(in oklab, var(--bad) 14%, var(--bg)); }
+.opt.multi.on { border-color: var(--muted); }
+.opt.multi.missed { border-color: var(--ok); border-style: dashed; }
 .opt:disabled { cursor: default; }
 .opt:disabled:not(.right):not(.wrong) { opacity: .6; }
 .feedback { border-radius: 12px; padding: 12px 14px; border: 1px solid; display: grid; gap: 6px; animation: rise .25s ease-out; }

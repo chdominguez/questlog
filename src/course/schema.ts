@@ -57,6 +57,12 @@ export const ChallengeSchema = z.discriminatedUnion("type", [
     options: z.array(md("Option")).min(2).max(6).describe("Author the right one first; the UI shuffles"),
     answer: z.number().int().min(0).describe("0-based index of the right option"),
   }).strict(),
+  z.object({
+    ...base, type: z.literal("multi"),
+    options: z.array(md("Option")).min(2).max(6).describe("Shuffled by the UI, except style truefalse"),
+    answers: z.array(z.number().int().min(0)).min(1).describe("0-based indexes of every right option; unique, fewer than options"),
+    style: z.literal("truefalse").optional().describe("Fixed order; options must be exactly [True, False] and one answer"),
+  }).strict(),
   z.object({ ...base, type: z.literal("order"), steps: z.array(md("Step")).min(3).describe("In CORRECT order; the UI shuffles") }).strict(),
   z.object({
     ...base, type: z.literal("bug"), lang: CodeLangSchema,
@@ -160,6 +166,12 @@ export const CourseSchema = z.object({
     l.challenges.forEach((ch, ci) => {
       const at = ["levels", li, "challenges", ci];
       if (ch.type === "quiz" && ch.answer >= ch.options.length) issue([...at, "answer"], `answer ${ch.answer} but only ${ch.options.length} options`);
+      if (ch.type === "multi") {
+        if (ch.answers.some((a) => a >= ch.options.length)) issue([...at, "answers"], `answers ${JSON.stringify(ch.answers)} but only ${ch.options.length} options`);
+        if (new Set(ch.answers).size !== ch.answers.length) issue([...at, "answers"], "answers must be unique");
+        if (ch.answers.length >= ch.options.length) issue([...at, "answers"], "answers must be fewer than options (otherwise nothing is a wrong pick)");
+        if (ch.style === "truefalse" && (ch.options.length !== 2 || ch.answers.length !== 1)) issue([...at, "style"], "truefalse needs exactly 2 options and 1 answer");
+      }
       if (ch.type === "bug" && ch.answer >= ch.lines.length) issue([...at, "answer"], `answer ${ch.answer} but only ${ch.lines.length} lines`);
       if (ch.type === "kata" && !katas.has(ch.kataId)) issue([...at, "kataId"], `no kata "${ch.kataId}" in course.katas`);
     });

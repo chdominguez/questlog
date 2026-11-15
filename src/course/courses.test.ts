@@ -21,6 +21,16 @@ const course = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+test("multi challenges validate answers and truefalse shape", () => {
+  const mk = (ch: object) => { const c = course(); (c.levels as any)[0].challenges = [{ id: "m", type: "multi", prompt: "P", ...ch }]; return validateCourse(c).join("\n"); };
+  expect(mk({ options: ["a", "b", "c"], answers: [0, 2] })).toBe("");
+  expect(mk({ options: ["True", "False"], answers: [0], style: "truefalse" })).toBe("");
+  expect(mk({ options: ["a", "b", "c"], answers: [0, 0] })).toMatch(/unique/);
+  expect(mk({ options: ["a", "b", "c"], answers: [3] })).toMatch(/only 3 options/);
+  expect(mk({ options: ["a", "b"], answers: [0, 1] })).toMatch(/fewer than options/);
+  expect(mk({ options: ["a", "b", "c"], answers: [0], style: "truefalse" })).toMatch(/truefalse needs/);
+});
+
 test("validation explains what is wrong and where", () => {
   expect(validateCourse(course())).toEqual([]);
   const bad = course();
