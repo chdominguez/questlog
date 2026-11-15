@@ -1,8 +1,9 @@
 import { Hono, type Context, type MiddlewareHandler } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import type { Grade, Note, Profile, NoteInput, SavedAnswer } from "../shared/api-types";
+import type { Grade, Note, Profile, NoteInput, PushSubscriptionInput, Reminder, SavedAnswer } from "../shared/api-types";
 import { toMarkdown } from "../shared/export";
 import { COURSES, courseOf, type Course } from "../src/course/registry";
+import { validZone } from "./reminders";
 import { claudeGrader, parseGrade, type Grader } from "./grader";
 
 // The slice of the database the API uses; server/db.ts implements it over node:sqlite.
@@ -17,6 +18,7 @@ export interface Db { prepare(sql: string): Stmt }
 export interface Env {
   DB: Db;
   ANTHROPIC_API_KEY?: string;
+  VAPID_PUBLIC?: string; // web push public key; unset = reminders off
   NAME_HEADER?: string; // header the proxy sets to the signed-in user's display name
   USER_HEADER?: string; // header a trusted reverse proxy sets to the signed-in user (e.g. x-auth-request-email); unset = single local user
 }
@@ -71,6 +73,22 @@ function parseProfile(v: unknown): Profile | string {
   }
   if (out.link && !/^https?:\/\//i.test(out.link)) return "link must start with http:// or https://";
   return out;
+}
+
+function parseSubscription(v: unknown): PushSubscriptionInput | string {
+  const b = (v ?? {}) as Record<string, unknown>;
+  if (!str(b.endpoint, 2000, 1) || !/^https:\/\//.test(b.endpoint)) return "Invalid endpoint";
+  if (!str(b.p256dh, 200, 1) || !str(b.auth, 200, 1)) return "Invalid keys";
+  return { endpoint: b.endpoint, p256dh: b.p256dh, auth: b.auth };
+}
+
+function parseReminder(v: unknown): Reminder | string {
+  const b = (v ?? {}) as Record<string, unknown>;
+  if (!str(b.courseId, 100, 1)) return "Invalid courseId";
+  if (!str(b.title, 200, 1)) return "Invalid title";
+  if (typeof b.time !== "string" || !/^([01]\d|2[0-3]):[0-5]\d$/.test(b.time)) return "Invalid time";
+  if (!str(b.tz, 100, 1) || !validZone(b.tz)) return "Invalid tz";
+  return { courseId: b.courseId as string, title: b.title.trim(), time: b.time, tz: b.tz };
 }
 
 type AnswerRow = {
@@ -177,6 +195,40 @@ export function createApi({
          ON CONFLICT (user_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
       ).bind(user(c), JSON.stringify(p), Date.now()).run();
       return c.json(p);
+    })
+    .get("/push/key", (c) => c.env.VAPID_PUBLIC ? c.json({ key: c.env.VAPID_PUBLIC }) : c.json({ error: "Reminders not configured" }, 503))
+    .post("/push/subscription", async (c) => {
+      const sub = parseSubscription(await json(c));
+      if (typeof sub === "string") return c.json({ error: sub }, 400);
+      await db(c).prepare(
+        `INSERT INTO push_subscriptions (endpoint, user_id, p256dh, auth) VALUES (?, ?, ?, ?)
+         ON CONFLICT (endpoint) DO UPDATE SET user_id = excluded.user_id, p256dh = excluded.p256dh, auth = excluded.auth`,
+      ).bind(sub.endpoint, user(c), sub.p256dh, sub.auth).run();
+      return c.body(null, 204);
+    })
+    .delete("/push/subscription", async (c) => {
+      const b = ((await json(c)) ?? {}) as Record<string, unknown>;
+      if (!str(b.endpoint, 2000, 1)) return c.json({ error: "Invalid endpoint" }, 400);
+      await db(c).prepare("DELETE FROM push_subscriptions WHERE endpoint = ? AND user_id = ?").bind(b.endpoint, user(c)).run();
+      return c.body(null, 204);
+    })
+    .get("/reminders", async (c) => {
+      const { results } = await db(c).prepare("SELECT course_id, title, time, tz FROM reminders WHERE user_id = ? ORDER BY course_id").bind(user(c))
+        .all<{ course_id: string; title: string; time: string; tz: string }>();
+      return c.json(results.map((r) => ({ courseId: r.course_id, title: r.title, time: r.time, tz: r.tz }) satisfies Reminder));
+    })
+    .put("/reminders", async (c) => {
+      const r = parseReminder(await json(c));
+      if (typeof r === "string") return c.json({ error: r }, 400);
+      await db(c).prepare(
+        `INSERT INTO reminders (user_id, course_id, title, time, tz) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT (user_id, course_id) DO UPDATE SET title = excluded.title, time = excluded.time, tz = excluded.tz, last_sent = ''`,
+      ).bind(user(c), r.courseId, r.title, r.time, r.tz).run();
+      return c.json(r);
+    })
+    .delete("/reminders/:course", async (c) => {
+      await db(c).prepare("DELETE FROM reminders WHERE user_id = ? AND course_id = ?").bind(user(c), c.req.param("course")).run();
+      return c.body(null, 204);
     })
     .post("/grade", async (c) => {
       const grade = grader(c.env);

@@ -1,4 +1,4 @@
-import type { Grade, GradeRequest, Note, NoteInput, Profile, SavedAnswer } from "../../shared/api-types";
+import type { Grade, GradeRequest, Note, NoteInput, Profile, PushSubscriptionInput, Reminder, SavedAnswer } from "../../shared/api-types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -38,3 +38,10 @@ export const deleteNote = async (id: string) => {
 export const getMe = () => call<{ user: string; name?: string }>("/me");
 export const getProfile = () => call<Profile>("/profile");
 export const saveProfile = (p: Profile) => call<Profile>("/profile", send("PUT", p));
+
+export const getPushKey = () => call<{ key: string }>("/push/key");
+export const savePushSubscription = async (s: PushSubscriptionInput) => { await fetch("/api/push/subscription", send("POST", s)); };
+export const deletePushSubscription = async (endpoint: string) => { await fetch("/api/push/subscription", send("DELETE", { endpoint })); };
+export const listReminders = () => call<Reminder[]>("/reminders");
+export const saveReminder = (r: Reminder) => call<Reminder>("/reminders", send("PUT", r));
+export const deleteReminder = async (course: string) => { await fetch(`/api/reminders/${encodeURIComponent(course)}`, { method: "DELETE" }); };

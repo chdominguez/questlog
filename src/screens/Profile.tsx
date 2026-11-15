@@ -1,6 +1,8 @@
 import { useEffect, useState, type ChangeEvent } from "react";
-import type { Profile } from "../../shared/api-types";
-import { ApiError, getMe, getProfile, saveProfile } from "../answers/api";
+import type { Profile, Reminder } from "../../shared/api-types";
+import { ApiError, deleteReminder, getMe, getProfile, listReminders, saveProfile, saveReminder } from "../answers/api";
+import { COURSES } from "../course/registry";
+import { enablePush, pushState, timeZone, type PushState } from "../engine/push";
 import { Hud } from "../engine/Hud";
 import { href } from "../ui/route";
 import "../answers/answers.css";
@@ -10,6 +12,48 @@ import "./profile.css";
 const FIELDS = [
   ["name", "Name", 100], ["title", "Title", 100], ["location", "Location", 100], ["link", "Link", 300],
 ] as const;
+
+function Reminders() {
+  const [state, setState] = useState<PushState | null>(null);
+  const [mine, setMine] = useState<Record<string, Reminder>>({});
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    pushState().then(setState);
+    listReminders().then((rs) => setMine(Object.fromEntries(rs.map((r) => [r.courseId, r]))), () => {});
+  }, []);
+
+  async function enable() {
+    try { setState(await enablePush()); setFailed(false); } catch { setFailed(true); }
+  }
+  async function set(id: string, title: string, time: string) {
+    if (!time) {
+      setMine(({ [id]: _, ...rest }) => rest);
+      await deleteReminder(id).catch(() => setFailed(true));
+      return;
+    }
+    const r = { courseId: id, title, time, tz: timeZone() };
+    setMine((m) => ({ ...m, [id]: r }));
+    await saveReminder(r).catch(() => setFailed(true));
+  }
+
+  if (!state || state === "unsupported") return null;
+  return (
+    <section className="profile-reminders">
+      <h2>Reminders</h2>
+      {state === "install" && <p className="wa-notice">Share → Add to Home Screen</p>}
+      {state === "denied" && <p className="wa-notice">Notifications are blocked</p>}
+      {state === "off" && <button type="button" className="btn" onClick={enable}>Enable notifications</button>}
+      {failed && <p className="wa-notice" role="alert">Couldn't save</p>}
+      {state === "on" && COURSES.map((c) => (
+        <label key={c.id} className="profile-field profile-reminder">{c.title}
+          <input type="time" className="scr-input" value={mine[c.id]?.time ?? ""} onChange={(e) => set(c.id, c.title, e.target.value)} />
+          {mine[c.id] && <button type="button" className="btn ghost" onClick={() => set(c.id, c.title, "")}>Remove</button>}
+        </label>
+      ))}
+    </section>
+  );
+}
 
 export function ProfileScreen() {
   const [email, setEmail] = useState("");
@@ -62,6 +106,7 @@ export function ProfileScreen() {
           <div className="wa-actions"><button type="submit" className="btn" disabled={busy}>Save</button></div>
         </form>
       )}
+      <Reminders />
     </div>
     </>
   );

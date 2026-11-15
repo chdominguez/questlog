@@ -40,6 +40,11 @@ export type NoteInput = Pick<Note, "title" | "body" | "tags" | "courseId">;
 
 export interface Profile { name: string; title: string; location: string; link: string; bio: string }
 
+export interface PushSubscriptionInput { endpoint: string; p256dh: string; auth: string }
+
+/** Daily study reminder for a course: time is "HH:MM" on the device clock in tz (IANA zone). */
+export interface Reminder { courseId: string; title: string; time: string; tz: string }
+
 export interface SyncedProgress { value: unknown; updatedAt: number }
 
 // Every /api route needs the signed-in user from the proxy header -> 401 otherwise.
@@ -57,4 +62,10 @@ export interface SyncedProgress { value: unknown; updatedAt: number }
 // GET    /api/me                                      -> { user, name? } (name: Keycloak display name from NAME_HEADER)
 // GET    /api/profile                                 -> Profile (empty strings when unset)
 // PUT    /api/profile      body Profile               -> Profile
+// GET    /api/push/key                               -> { key } (VAPID public) | 503 when reminders are off
+// POST   /api/push/subscription body PushSubscriptionInput -> 204
+// DELETE /api/push/subscription body { endpoint }     -> 204
+// GET    /api/reminders                               -> Reminder[]
+// PUT    /api/reminders    body Reminder              -> Reminder (upsert by courseId)
+// DELETE /api/reminders/:course                       -> 204
 // GET    /api/health                                 -> { ok: true, grader: boolean }
