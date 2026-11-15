@@ -4,6 +4,7 @@ import { Md } from "../ui/Md";
 import { Snippet } from "../code/Snippet";
 import { WrittenAnswer } from "../answers/WrittenAnswer";
 import { KataScreen } from "../code/KataScreen";
+import { Flashcard } from "./Flashcard";
 import { play } from "../audio/sfx";
 import { dispatch, getProgress, useProgress, type Result } from "./store";
 import { courseById, courseOf } from "../course/registry";
@@ -16,13 +17,13 @@ type Of<T extends Challenge["type"]> = Extract<Challenge, { type: T }>;
 type Answer = (correct: boolean) => void;
 
 const KICKER: Record<Challenge["type"], string> = {
-  quiz: "Quiz", order: "Put in order", bug: "Find the bug", written: "Written answer", kata: "Kata",
+  quiz: "Quiz", order: "Put in order", bug: "Find the bug", written: "Written answer", kata: "Kata", flashcard: "Flashcard",
 };
 
 /** Records a result in the store, plays feedback sound and returns XP gained. */
-function report(c: Challenge, result: Result): number {
+function report(c: Challenge, result: Result, easy?: boolean): number {
   const before = getProgress().xp;
-  const after = dispatch({ type: "answer", id: c.id, ctype: c.type, result, now: Date.now() });
+  const after = dispatch({ type: "answer", id: c.id, ctype: c.type, result, easy, now: Date.now() });
   if (result === "ok") play(isMilestone(after.streak) ? "streak" : "ok");
   else if (result === "partial") play("submit");
   else play("bad");
@@ -137,9 +138,9 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
   const fxN = useRef(0);
   const done = result !== null;
 
-  const finish = (r: Result) => {
+  const finish = (r: Result, easy?: boolean) => {
     if (done) return;
-    const gained = report(c, r);
+    const gained = report(c, r, easy);
     setResult(r);
     setXp(gained);
     setFx({ kind: r === "ok" || r === "partial" ? "ok" : "bad", xp: gained, n: ++fxN.current });
@@ -154,6 +155,7 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
     case "written":
       body = <WrittenAnswer challenge={c} levelId={levelId} onDone={(s) => finish(s >= 7 ? "ok" : s >= 4 ? "partial" : "miss")} />;
       break;
+    case "flashcard": body = <Flashcard c={c} done={done} onRate={finish} />; break;
     case "kata":
       body = <KataScreen course={courseById(courseOf(c.id))!} kataId={c.kataId} onSolved={() => finish("ok")} />;
       break;
@@ -163,7 +165,7 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
     () => (c.type === "order" ? c.steps.map((s, i) => `${i + 1}. ${s}`).join("\n") : ""),
     [c],
   );
-  const showFeedback = done && (c.type === "quiz" || c.type === "order" || c.type === "bug" || !!c.explain);
+  const showFeedback = done && c.type !== "flashcard" && (c.type === "quiz" || c.type === "order" || c.type === "bug" || !!c.explain);
   const good = result === "ok";
 
   return (

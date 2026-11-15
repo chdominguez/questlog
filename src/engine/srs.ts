@@ -7,7 +7,7 @@ const f = fsrs({ enable_fuzz: false, learning_steps: [], relearning_steps: [] })
 /** ts-fsrs card with dates as epoch ms, so it survives JSON. */
 export type SrsCard = Omit<Card, "due" | "last_review"> & { due: number; last_review?: number };
 
-export const gradeOf = (r: Result): Grade => (r === "ok" ? Rating.Good : r === "partial" ? Rating.Hard : Rating.Again);
+export const gradeOf = (r: Result, easy?: boolean): Grade => (r === "ok" ? (easy ? Rating.Easy : Rating.Good) : r === "partial" ? Rating.Hard : Rating.Again);
 
 export function schedule(card: SrsCard | undefined, grade: Grade, now: number): SrsCard {
   const c: Card = card

@@ -69,6 +69,7 @@ export const ChallengeSchema = z.discriminatedUnion("type", [
     keyPoints: z.array(z.string().min(1)).min(2).describe("What a strong answer must mention; sent to the grader"),
     seconds: z.number().int().positive().optional().describe("Soft time limit"),
   }).strict(),
+  z.object({ ...base, type: z.literal("flashcard"), back: md("The back, shown on reveal; the prompt is the front") }).strict(),
   z.object({ ...base, type: z.literal("kata"), kataId: id.describe("Id of a kata in this course") }).strict(),
 ]);
 

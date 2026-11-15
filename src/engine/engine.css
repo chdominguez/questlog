@@ -152,3 +152,11 @@
 .step-btn svg { width: 18px; height: 18px; }
 .step-btn.play { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .step-btn:disabled { opacity: .4; cursor: default; }
+
+.fc-reveal { min-height: 56px; font-size: 1.05rem; }
+.fc-back { padding: 16px; background: var(--raise); border: 1px solid var(--line); border-radius: 14px; transform-origin: top; animation: fc-flip .28s ease-out; }
+.fc-rate { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.fc-btn { min-height: 52px; }
+@keyframes fc-flip { from { transform: rotateX(-70deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (max-width: 480px) { .fc-rate { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { .fc-back { animation: none; } }
