@@ -95,6 +95,7 @@ export const ChallengeSchema = z.discriminatedUnion("type", [
     buckets: z.array(md("Bucket label")).min(2).max(4),
     items: z.array(z.object({ text: md("Item"), bucket: z.number().int().min(0).describe("0-based index into buckets") }).strict()).min(4).max(12),
   }).strict().describe("Drop each item into the bucket it belongs to"),
+  z.object({ ...base, type: z.literal("flashcard"), back: md("The back, shown on reveal; the prompt is the front") }).strict(),
   z.object({ ...base, type: z.literal("kata"), kataId: id.describe("Id of a kata in this course") }).strict(),
 ]);
 

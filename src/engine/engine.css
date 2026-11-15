@@ -194,3 +194,11 @@ input.blank { max-width: 100%; }
 .chip:disabled { opacity: .4; }
 .cloze-fix { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 .cloze-fix .k { font-family: var(--f-mono); color: var(--muted); margin-right: 8px; }
+
+.fc-reveal { min-height: 56px; font-size: 1.05rem; }
+.fc-back { padding: 16px; background: var(--raise); border: 1px solid var(--line); border-radius: 14px; transform-origin: top; animation: fc-flip .28s ease-out; }
+.fc-rate { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.fc-btn { min-height: 52px; }
+@keyframes fc-flip { from { transform: rotateX(-70deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (max-width: 480px) { .fc-rate { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { .fc-back { animation: none; } }

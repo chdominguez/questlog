@@ -277,6 +277,7 @@ Why it matters: after a timeout the client can't tell whether the server acted. 
       ],
       model: "A timeout doesn't tell the client whether the server acted, so the only safe requests to resend blindly are idempotent ones. GET and HEAD don't change anything, and PUT and DELETE set the same final state no matter how many times they run: putting cart c-1042 twice leaves the same cart. POST and PATCH are different. Resending `POST /api/orders` can place two orders. If the checkout must retry a POST, I'd make it idempotent: the client sends a unique key with the order and the server stores it, so a repeat with the same key returns the first result instead of creating a new order.",
     },
+    { id: "req-flash-idempotent", type: "flashcard", prompt: "Which HTTP methods are idempotent?", back: "GET, HEAD, PUT and DELETE. POST and PATCH are not: repeating them can apply the change twice.", explain: "Idempotent means repeating the request leaves the same final state, which is what makes automatic retries safe." },
     { id: "req-kata-query", type: "kata", prompt: "Parse a query string the way a server does.", kataId: "parse-query" },
   ],
 };

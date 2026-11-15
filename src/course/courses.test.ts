@@ -58,6 +58,17 @@ test("sort buckets are checked", () => {
   expect(validateCourse(withSort({ ...sort, items: items([0, 0, 0, 0]) })).join("\n")).toMatch(/bucket 1 has no items/);
 });
 
+test("flashcard needs a back and rejects extras", () => {
+  const withCard = (card: Record<string, unknown>) => {
+    const c = course();
+    (c.levels as any)[0].challenges.push({ id: "f", type: "flashcard", prompt: "Front", ...card });
+    return validateCourse(c);
+  };
+  expect(withCard({ back: "Back", explain: "Why" })).toEqual([]);
+  expect(withCard({}).join("\n")).toMatch(/back/);
+  expect(withCard({ back: "B", options: ["a", "b"] }).length).toBeGreaterThan(0);
+});
+
 test("kata checks run the solution and the starter", () => {
   const kata = { id: "sum", title: "Sum", difficulty: "easy", statement: "S", examples: [{ input: "1", output: "1" }], complexity: "O(n)",
     starter: "export function sum(xs: number[]): number { return 0; }",

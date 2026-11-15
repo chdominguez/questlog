@@ -17,7 +17,7 @@ export const RANKS = [
   { name: "Sage", xp: 1900 },
 ] as const;
 
-export const BASE_XP: Record<ChallengeType, number> = { quiz: 10, order: 15, bug: 15, cloze: 20, written: 25, kata: 40, match: 15, sort: 15 };
+export const BASE_XP: Record<ChallengeType, number> = { quiz: 10, order: 15, bug: 15, cloze: 20, written: 25, kata: 40, match: 15, sort: 15, flashcard: 8 };
 /** Base XP for a challenge already cleared once, so replays can't farm ranks. */
 export const REPLAY_XP = 2;
 
@@ -42,7 +42,7 @@ export type Result = "ok" | "partial" | "miss" | "wrong";
 
 export type Action =
   | { type: "start"; levelId: string }
-  | { type: "answer"; id: string; ctype: ChallengeType; result: Result; now: number }
+  | { type: "answer"; id: string; ctype: ChallengeType; result: Result; easy?: boolean; now: number }
   | { type: "finish" } // run completed with lives left
   | { type: "quit" } // run ended without completion
   | { type: "markReview"; id: string; now: number }
@@ -77,7 +77,7 @@ export function reducer(s: Progress, a: Action): Progress {
       return { ...s, run: { levelId: a.levelId, lives: MAX_LIVES, startXp: s.xp } };
     case "answer": {
       const base = s.cleared.includes(a.id) ? REPLAY_XP : BASE_XP[a.ctype];
-      const cards = { ...s.cards, [a.id]: schedule(s.cards[a.id], gradeOf(a.result), a.now) };
+      const cards = { ...s.cards, [a.id]: schedule(s.cards[a.id], gradeOf(a.result, a.easy), a.now) };
       if (a.result === "ok") {
         const streak = s.streak + 1;
         return { ...s, streak, cards, xp: s.xp + Math.round(base * multiplier(streak)), cleared: withId(s.cleared, a.id) };
