@@ -30,7 +30,7 @@
   },
   "include": [
     "src",
-    "worker",
+    "server",
     "shared",
     "scripts",
     "mcp",

@@ -14,14 +14,12 @@ const guide = resolve(import.meta.dirname, "../plugins/questlog/skills/questlog-
 
 async function api(path: string) {
   const base = process.env.QUESTLOG_URL;
-  if (!base) return text("Notes live in the deployed Questlog app. Set QUESTLOG_URL (the app's base URL) and, if it is behind Cloudflare Access, CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET (a service token) in this MCP server's env, then restart it.", true);
-  const headers: Record<string, string> = {};
-  if (process.env.CF_ACCESS_CLIENT_ID) headers["CF-Access-Client-Id"] = process.env.CF_ACCESS_CLIENT_ID;
-  if (process.env.CF_ACCESS_CLIENT_SECRET) headers["CF-Access-Client-Secret"] = process.env.CF_ACCESS_CLIENT_SECRET;
+  if (!base) return text("Notes live in the deployed Questlog app. Set QUESTLOG_URL (the app's base URL) and, if a login proxy sits in front, QUESTLOG_HEADERS (JSON of the header it trusts, e.g. {\"x-auth-request-email\":\"me@x.com\"}) in this MCP server's env, then restart it.", true);
+  const headers: Record<string, string> = JSON.parse(process.env.QUESTLOG_HEADERS || "{}");
   try {
-    // Access answers a bad token with a redirect to its login page, so don't follow it.
+    // A login proxy answers a missing or bad credential with a redirect to its login page, so don't follow it.
     const res = await fetch(new URL(path, base), { headers, redirect: "manual" });
-    if (!res.ok) return text(`GET ${path} failed with ${res.status}.${res.status < 400 || res.status === 401 || res.status === 403 ? " Check CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET." : ""}`, true);
+    if (!res.ok) return text(`GET ${path} failed with ${res.status}.${res.status < 400 || res.status === 401 || res.status === 403 ? " Check QUESTLOG_HEADERS." : ""}`, true);
     return { ok: true as const, data: await res.json() };
   } catch (e) {
     return text(`GET ${new URL(path, base)} failed: ${e instanceof Error ? e.message : e}. Check QUESTLOG_URL.`, true);

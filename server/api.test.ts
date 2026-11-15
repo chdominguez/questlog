@@ -3,8 +3,8 @@ import { beforeEach, expect, test } from "vitest";
 import type { Grade, Note, Profile, SavedAnswer } from "../shared/api-types";
 import { CourseSchema } from "../src/course/schema";
 import { resolve } from "../src/course/registry";
-import { accessVerifier, createApi, MAX_ANSWER, type Env } from "./api";
-import { sqliteD1 } from "./d1-sqlite";
+import { createApi, MAX_ANSWER, type Env } from "./api";
+import { memoryDb } from "./db";
 import type { GradeInput } from "./grader";
 
 const course = resolve(CourseSchema.parse({
@@ -20,32 +20,19 @@ const json = (method: string, body: unknown) => ({ method, headers: { "Content-T
 const post = (body: unknown) => json("POST", body);
 
 let env: Env;
-beforeEach(() => { env = { DB: sqliteD1(), AUTH_DISABLED: "1" }; });
+beforeEach(() => { env = { DB: memoryDb() }; });
 
 const api = (opts: Parameters<typeof createApi>[0] = {}) => {
   const app = createApi({ courses: [course], grader: () => null, ...opts });
   return { req: (path: string, init?: RequestInit) => app.request(path, init, env) };
 };
 
-test("auth: 401 without or with a bad JWT, fails closed without AUD, bypass only with AUTH_DISABLED=1", async () => {
-  const seen: string[] = [];
-  const app = api({ verify: async (t) => { seen.push(t); return t === "good" ? "u@x.com" : ""; } });
-  env = { DB: env.DB, ACCESS_TEAM_DOMAIN: "team.cloudflareaccess.com", ACCESS_AUD: "aud" };
-  const jwt = (t: string) => ({ headers: { "Cf-Access-Jwt-Assertion": t } });
-  expect((await app.req("/health")).status).toBe(401);
-  expect((await app.req("/health", jwt("bad"))).status).toBe(401);
-  expect((await app.req("/notes", jwt("good"))).status).toBe(200);
-  expect(seen).toEqual(["bad", "good"]);
-  env.ACCESS_AUD = "";
-  expect((await app.req("/health", jwt("good"))).status).toBe(401);
-  env.AUTH_DISABLED = "0";
-  expect((await app.req("/health")).status).toBe(401);
-  env.AUTH_DISABLED = "1";
+test("auth: the proxy header is required when USER_HEADER is set; without it everyone is local", async () => {
+  const app = api();
   expect((await app.req("/health")).status).toBe(200);
-});
-
-test("the real verifier rejects a malformed token", async () => {
-  await expect(accessVerifier("nope", { DB: env.DB, ACCESS_TEAM_DOMAIN: "team.cloudflareaccess.com", ACCESS_AUD: "aud" })).rejects.toThrow();
+  env = { DB: env.DB, USER_HEADER: "x-auth-request-email" };
+  expect((await app.req("/health")).status).toBe(401);
+  expect((await app.req("/health", { headers: { "X-Auth-Request-Email": "u@x.com" } })).status).toBe(200);
 });
 
 test("health and grade report 503 without a grader", async () => {
@@ -205,7 +192,7 @@ test("unknown API paths return a JSON 404", async () => {
 
 test("users are isolated; the first user claims pre-existing rows; a proxy header is required when USER_HEADER is set", async () => {
   await env.DB.prepare("INSERT INTO notes VALUES ('old', 't', 'b', '[]', NULL, 'd', 'd', '')").run(); // pre-multi-user row
-  env = { DB: env.DB, AUTH_DISABLED: "1", USER_HEADER: "x-forwarded-email" };
+  env = { DB: env.DB, USER_HEADER: "x-forwarded-email" };
   const app = api();
   const as = (u: string, init: RequestInit = {}) => ({ ...init, headers: { ...(init.headers as object), "X-Forwarded-Email": u } });
   expect((await app.req("/notes")).status).toBe(401);
@@ -225,7 +212,7 @@ test("users are isolated; the first user claims pre-existing rows; a proxy heade
 });
 
 test("profile: per-user, validated; /me exposes the proxy name", async () => {
-  env = { DB: env.DB, AUTH_DISABLED: "1", USER_HEADER: "x-forwarded-email", NAME_HEADER: "x-name" };
+  env = { DB: env.DB, USER_HEADER: "x-forwarded-email", NAME_HEADER: "x-name" };
   const app = api();
   const as = (u: string, init: RequestInit = {}) => ({ ...init, headers: { ...(init.headers as object), "X-Forwarded-Email": u, "X-Name": "Ann" } });
   expect(await (await app.req("/me", as("a@x.com"))).json()).toEqual({ user: "a@x.com", name: "Ann" });

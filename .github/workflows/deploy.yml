@@ -1,0 +1,44 @@
+name: Deploy
+
+# Every push to main tests, rebuilds and restarts the container on the self-hosted runner.
+# Box-local files live in BOX (gitignored there): .env (ANTHROPIC_API_KEY), data/, courses-private/,
+# docker-compose.override.yml (joins Caddy's network).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  BOX: /home/cdominguez/Developer/questlog
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, questlog]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Private courses
+        run: |
+          git -C "$BOX/courses-private" pull --ff-only || true
+          rm -rf courses-private && cp -a "$BOX/courses-private" courses-private
+      - run: npm ci
+      - run: npx tsc --noEmit -p .
+      - run: npm test
+      - name: Build and restart
+        env:
+          DATA_DIR: ${{ env.BOX }}/data
+        run: docker compose --env-file "$BOX/.env" -f docker-compose.yml -f "$BOX/docker-compose.override.yml" up -d --build
+      - name: Health check
+        run: |
+          for i in $(seq 1 20); do
+            curl -fsS -H 'x-auth-request-email: deploy@ci' http://127.0.0.1:8790/api/health && exit 0
+            sleep 2
+          done
+          docker logs --tail 50 questlog
+          exit 1

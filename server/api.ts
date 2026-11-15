@@ -1,41 +1,25 @@
 import { Hono, type Context, type MiddlewareHandler } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import { createRemoteJWKSet, jwtVerify } from "jose";
 import type { Grade, Note, Profile, NoteInput, SavedAnswer } from "../shared/api-types";
 import { toMarkdown } from "../shared/export";
 import { COURSES, courseOf, type Course } from "../src/course/registry";
 import { claudeGrader, parseGrade, type Grader } from "./grader";
 
-// shortcut: hand-written subset of D1's types; @cloudflare/workers-types' globals clash with the DOM lib in the shared tsconfig.
-export interface D1Stmt {
-  bind(...values: unknown[]): D1Stmt;
+// The slice of the database the API uses; server/db.ts implements it over node:sqlite.
+export interface Stmt {
+  bind(...values: unknown[]): Stmt;
   first<T = Record<string, unknown>>(): Promise<T | null>;
   all<T = Record<string, unknown>>(): Promise<{ results: T[] }>;
   run(): Promise<{ meta: { changes: number } }>;
 }
-export interface D1 { prepare(sql: string): D1Stmt }
+export interface Db { prepare(sql: string): Stmt }
 
 export interface Env {
-  DB: D1;
+  DB: Db;
   ANTHROPIC_API_KEY?: string;
-  ACCESS_TEAM_DOMAIN?: string; // e.g. myteam.cloudflareaccess.com
-  ACCESS_AUD?: string; // Access application audience tag
-  AUTH_DISABLED?: string; // "1" only in .dev.vars
-  NAME_HEADER?: string; // with AUTH_DISABLED=1: header the proxy sets to the Keycloak display name
-  USER_HEADER?: string; // with AUTH_DISABLED=1: the header a trusted reverse proxy sets to the signed-in user (e.g. x-forwarded-email)
+  NAME_HEADER?: string; // header the proxy sets to the signed-in user's display name
+  USER_HEADER?: string; // header a trusted reverse proxy sets to the signed-in user (e.g. x-auth-request-email); unset = single local user
 }
-
-/** Resolves the user id (email, else sub) of a valid Access JWT; throws or resolves "" when it is not valid for this app. */
-export type Verifier = (token: string, env: Env) => Promise<string>;
-
-const jwks = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
-export const accessVerifier: Verifier = async (token, env) => {
-  const issuer = `https://${env.ACCESS_TEAM_DOMAIN!.replace(/^https:\/\/|\/+$/g, "")}`;
-  let keys = jwks.get(issuer);
-  if (!keys) jwks.set(issuer, (keys = createRemoteJWKSet(new URL(`${issuer}/cdn-cgi/access/certs`))));
-  const { payload } = await jwtVerify(token, keys, { issuer, audience: env.ACCESS_AUD });
-  return String(payload.email ?? payload.sub ?? "");
-};
 
 export const MAX_ANSWER = 8000;
 const MAX_TEXT = 20000;
@@ -111,18 +95,9 @@ type App = { Bindings: Env; Variables: { user: string } };
 
 const userId = (v: string | undefined | null) => { const u = v?.trim().toLowerCase(); return u && u.length <= 320 ? u : ""; };
 
-/**
- * Every /api call needs a user. Access JWT by default (no AUD configured fails closed). AUTH_DISABLED=1 trusts a reverse proxy:
- * the USER_HEADER it sets is the user (401 if missing); without USER_HEADER (local .dev.vars) everyone is "local".
- */
-const auth = (verify: Verifier): MiddlewareHandler<App> => async (c, next) => {
-  let user = "";
-  if (c.env.AUTH_DISABLED === "1") {
-    user = c.env.USER_HEADER ? userId(c.req.header(c.env.USER_HEADER)) : "local";
-  } else {
-    const token = c.req.header("cf-access-jwt-assertion");
-    if (token && c.env.ACCESS_AUD && c.env.ACCESS_TEAM_DOMAIN) user = userId(await verify(token, c.env).catch(() => ""));
-  }
+/** Every /api call needs a user: the USER_HEADER a trusted reverse proxy sets (401 if missing); without USER_HEADER everyone is "local". */
+const auth: MiddlewareHandler<App> = async (c, next) => {
+  const user = c.env.USER_HEADER ? userId(c.req.header(c.env.USER_HEADER)) : "local";
   if (!user) return c.json({ error: "Unauthorized" }, 401);
   c.set("user", user);
   await claimLegacy(c.env.DB, user);
@@ -130,7 +105,7 @@ const auth = (verify: Verifier): MiddlewareHandler<App> => async (c, next) => {
 };
 
 /** Rows from before multi-user (user_id '') go to the first user ever seen; the marker row makes it happen once. */
-async function claimLegacy(db: D1, user: string) {
+async function claimLegacy(db: Db, user: string) {
   const { meta } = await db.prepare("INSERT OR IGNORE INTO kv (user_id, key, value, updated_at) VALUES ('', 'claimed', ?, 0)").bind(JSON.stringify(user)).run();
   if (!meta.changes) return;
   for (const sql of [
@@ -140,7 +115,7 @@ async function claimLegacy(db: D1, user: string) {
   ]) await db.prepare(sql).bind(user).run();
 }
 
-/** Only this app's own pages may call the API: blocks cross-site requests riding the Access cookie, and simple (text/plain) writes. */
+/** Only this app's own pages may call the API: blocks cross-site requests riding the login cookie, and simple (text/plain) writes. */
 const guard: MiddlewareHandler<App> = async (c, next) => {
   const site = c.req.header("sec-fetch-site");
   if (site && site !== "same-origin" && site !== "none") return c.json({ error: "Origin not allowed" }, 403);
@@ -165,10 +140,9 @@ function written(courses: Course[], id: string) {
 }
 
 export function createApi({
-  verify = accessVerifier,
   grader = (env: Env) => (env.ANTHROPIC_API_KEY ? claudeGrader(env.ANTHROPIC_API_KEY) : null),
   courses = COURSES,
-}: { verify?: Verifier; grader?: (env: Env) => Grader | null; courses?: Course[] } = {}) {
+}: { grader?: (env: Env) => Grader | null; courses?: Course[] } = {}) {
   const json = async (c: Context<App>) => c.req.json().catch(() => undefined);
   const db = (c: Context<App>) => c.env.DB;
   const user = (c: Context<App>) => c.get("user");
@@ -183,12 +157,12 @@ export function createApi({
   };
 
   return new Hono<App>()
-    .use(auth(verify))
+    .use(auth)
     .use(guard)
     .use(bodyLimit({ maxSize: 256 * 1024, onError: (c) => c.json({ error: "Request too large" }, 413) }))
     .get("/health", (c) => c.json({ ok: true, grader: grader(c.env) !== null }))
     .get("/me", (c) => {
-      const name = c.env.AUTH_DISABLED === "1" && c.env.NAME_HEADER ? c.req.header(c.env.NAME_HEADER)?.trim().slice(0, 100) : undefined;
+      const name = c.env.NAME_HEADER ? c.req.header(c.env.NAME_HEADER)?.trim().slice(0, 100) : undefined;
       return c.json({ user: user(c), ...(name && { name }) });
     })
     .get("/profile", async (c) => {
