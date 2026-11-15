@@ -1,11 +1,9 @@
-// Usage: npx tsx scripts/import-answers.ts <answers.jsonl> --course <id> --user <email> [--remote | --persist-to <dir>]
-// Imports SavedAnswer records from the old Node server's JSONL into D1 (local by default). Re-running is safe: ids are kept.
-import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+// Usage: npx tsx scripts/import-answers.ts <answers.jsonl> --course <id> --user <email> [--db <file>]
+// Imports SavedAnswer records from the old Node server's JSONL into the SQLite file (default data/questlog.db). Re-running is safe: ids are kept.
+import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import type { SavedAnswer } from "../shared/api-types";
+import { openDb } from "../server/db";
 
 const lit = (v: unknown) =>
   typeof v === "string" ? `'${v.replaceAll("\0", "").replaceAll("'", "''")}'` : typeof v === "number" && Number.isFinite(v) ? String(v) : "NULL";
@@ -30,21 +28,17 @@ export function toSql(jsonl: string, course: string, user: string): { sql: strin
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const args = process.argv.slice(2);
-  const flag = (name: string) => args[args.indexOf(name) + 1];
-  const file = args.find((a, i) => !a.startsWith("--") && !["--course", "--user", "--persist-to"].includes(args[i - 1]));
+  const flag = (name: string) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined);
+  const file = args.find((a, i) => !a.startsWith("--") && !["--course", "--user", "--db"].includes(args[i - 1]));
   const course = flag("--course");
-  const user = flag("--user")?.trim().toLowerCase(); // the id the proxy sends (email); lowercased like the Worker does
+  const user = flag("--user")?.trim().toLowerCase(); // the id the proxy sends (email); lowercased like the API does
   if (!file || !user || !/^[a-z0-9][a-z0-9-]*$/.test(course ?? "")) {
-    console.error("Usage: npx tsx scripts/import-answers.ts <answers.jsonl> --course <id> --user <email> [--remote | --persist-to <dir>]");
+    console.error("Usage: npx tsx scripts/import-answers.ts <answers.jsonl> --course <id> --user <email> [--db <file>]");
     process.exit(1);
   }
-  const { sql, count, skipped } = toSql(readFileSync(file, "utf8"), course, user);
+  const { sql, count, skipped } = toSql(readFileSync(file, "utf8"), course!, user);
   if (!count) { console.error("No answers to import"); process.exit(1); }
-  const out = join(mkdtempSync(join(tmpdir(), "questlog-import-")), "answers.sql");
-  writeFileSync(out, sql);
-  console.log(`${count} answers${skipped ? `, ${skipped} invalid lines skipped` : ""} → ${out}`);
-  const persist = args.indexOf("--persist-to"); // the Docker image keeps D1 in /data
-  const extra = persist >= 0 ? ["--persist-to", args[persist + 1]] : [];
-  const r = spawnSync("npx", ["wrangler", "d1", "execute", "DB", "--file", out, args.includes("--remote") ? "--remote" : "--local", ...extra], { stdio: "inherit" });
-  process.exit(r.status ?? 1);
+  const db = openDb(flag("--db") ?? "data/questlog.db");
+  for (const stmt of sql.split("\n").filter(Boolean)) await db.prepare(stmt).run();
+  console.log(`${count} answers${skipped ? `, ${skipped} invalid lines skipped` : ""} imported`);
 }

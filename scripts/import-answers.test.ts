@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { sqliteD1 } from "../worker/d1-sqlite";
+import { memoryDb } from "../server/db";
 import { toSql } from "./import-answers";
 
 test("qualifies ids, escapes quotes and is idempotent", async () => {
@@ -8,7 +8,7 @@ test("qualifies ids, escapes quotes and is idempotent", async () => {
   const b = { ...a, id: "2", challengeId: "other:x", selfScore: 6, grade: undefined, seconds: undefined };
   const { sql, count, skipped } = toSql([JSON.stringify(a), "{bad", JSON.stringify({ id: 3 }), "", JSON.stringify(b)].join("\n"), "entrevista", "a@x.com");
   expect([count, skipped]).toEqual([2, 2]);
-  const db = sqliteD1();
+  const db = memoryDb();
   for (const s of [...sql.split("\n"), ...sql.split("\n")]) await db.prepare(s).run();
   const { results } = await db.prepare("SELECT * FROM answers ORDER BY id").all();
   expect(results).toEqual([

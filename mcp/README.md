@@ -21,7 +21,7 @@ Resources: `questlog://schema/course` (JSON Schema of a course) and `questlog://
 | --- | --- |
 | `QUESTLOG_COURSES` | Private courses folder (default `courses-private`) |
 | `QUESTLOG_URL` | Base URL of the deployed app, for the note tools |
-| `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET` | Cloudflare Access service token, if the app is behind Access |
+| `QUESTLOG_HEADERS` | JSON of headers to send, e.g. the user header a login proxy trusts (`{"x-auth-request-email":"me@x.com"}`) |
 
 ## Claude Code
 
@@ -40,8 +40,7 @@ Add this to `claude_desktop_config.json` (Settings > Developer > Edit Config), w
       "cwd": "/absolute/path/to/questlog",
       "env": {
         "QUESTLOG_URL": "https://questlog.example.com",
-        "CF_ACCESS_CLIENT_ID": "...",
-        "CF_ACCESS_CLIENT_SECRET": "..."
+        "QUESTLOG_HEADERS": "{\"x-auth-request-email\":\"me@example.com\"}"
       }
     }
   }

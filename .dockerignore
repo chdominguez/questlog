@@ -4,5 +4,4 @@ data
 .git
 courses-private/.git
 .env
-.dev.vars
-.wrangler
+dist-server

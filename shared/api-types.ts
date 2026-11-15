@@ -1,4 +1,4 @@
-/** HTTP contract between the browser (src/answers/api.ts) and the worker (worker/api.ts). */
+/** HTTP contract between the browser (src/answers/api.ts) and the server (server/api.ts). */
 
 export interface GradeRequest {
   challengeId: string; // qualified "<course>:<id>"; the worker looks up prompt, model answer and key points
@@ -42,7 +42,7 @@ export interface Profile { name: string; title: string; location: string; link: 
 
 export interface SyncedProgress { value: unknown; updatedAt: number }
 
-// Every /api route needs a Cloudflare Access JWT (Cf-Access-Jwt-Assertion) -> 401 otherwise.
+// Every /api route needs the signed-in user from the proxy header -> 401 otherwise.
 // POST   /api/grade        body GradeRequest           -> 200 Grade | 4xx/5xx { error: string }
 // POST   /api/answers      body Omit<SavedAnswer,"id"|"createdAt"> -> 201 SavedAnswer
 // GET    /api/answers      ?challengeId=              -> SavedAnswer[] (newest first)

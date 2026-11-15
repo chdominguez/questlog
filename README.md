@@ -13,18 +13,19 @@ Courses are plain files in git, validated by one schema, so you (or Claude) can 
 - **Spaced repetition.** Every challenge you meet becomes an [FSRS](https://github.com/open-spaced-repetition/ts-fsrs) card. Misses come back right away, hits come back days later. One review queue across all courses.
 - **XP, ranks, combo multipliers, sounds, confetti.**
 - **Notes** in Markdown, tagged and linked to courses, that Claude can turn into a course.
-- **Sync** across devices through a Cloudflare Worker + D1, behind Cloudflare Access or your own login proxy. Each user (the JWT email, or the proxy header) has separate progress, answers and notes.
+- **Sync** across devices through the self-hosted server (Node + SQLite), behind your login proxy. Each user (the proxy header) has separate progress, answers and notes.
 
 ## Run it
 
 ```bash
 npm install
-npm run dev        # app + API + local D1
+npm run server     # API on :8787 (SQLite in data/)
+npm run dev        # app on :5173, proxies /api
 npm test           # unit tests + every course validated, katas run
 npm run validate   # just the courses, with readable errors
 ```
 
-Grading needs `ANTHROPIC_API_KEY` in `.dev.vars` (see `.dev.vars.example`). Without it you rate your own answers.
+Grading needs `ANTHROPIC_API_KEY` in `.env` (see `.env.example`). Without it you rate your own answers.
 
 ## Add a course
 
@@ -61,15 +62,15 @@ Personal courses live in a separate private repo checked out at `courses-private
 
 ## Deploy
 
-One Cloudflare Worker serves the app and the API.
+One container serves the app and the API, with SQLite on the `/data` volume.
 
-1. `npx wrangler login`
-2. `npx wrangler d1 create questlog` and put the id in `wrangler.jsonc`
-3. `npx wrangler secret put ANTHROPIC_API_KEY`
-4. `npm run deploy`
-5. In the Cloudflare dashboard, enable Cloudflare Access on the Worker for your email, then set `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` in `wrangler.jsonc` and deploy again. The API refuses every request until Access is configured.
+```bash
+docker compose up -d --build   # http://127.0.0.1:8790
+```
 
-   Self-hosted instead: put a login proxy (e.g. oauth2-proxy with Keycloak) in front of the container. It must remove any client-sent `x-forwarded-email` and set it to the signed-in user (override the name with `USER_HEADER`). The first user to sign in after upgrading adopts the existing data. Import old answers with `--user <email>`.
+Put a login proxy (e.g. Caddy + oauth2-proxy + Keycloak) in front. It must remove any client-sent user header and set it to the signed-in user (`USER_HEADER`, default `x-auth-request-email`; `NAME_HEADER` carries the display name). The port is published on localhost only. Import old answers with `npx tsx scripts/import-answers.ts <file> --course <id> --user <email>`.
+
+Every push to `main` redeploys through `.github/workflows/deploy.yml` on a self-hosted runner on the host.
 
 ## License
 
