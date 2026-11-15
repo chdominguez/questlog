@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { getArt } from "../art";
 import { play } from "../audio/sfx";
 import { href, useRoute } from "../ui/route";
-import { dueKeys } from "./srs";
+import { courseDue } from "./srs";
 import { dispatch, multiplier, RANKS, rankIndex, rankProgress, useProgress } from "./store";
 import "./engine.css";
 
@@ -39,11 +39,14 @@ export function Hud() {
 
   const nav = [
     { href: href.home(), label: "Courses", on: r.name === "home" || "course" in r },
-    { href: href.review(), label: "Review", on: r.name === "review", count: dueKeys(p.cards, Date.now()).length },
-    { href: href.notes(), label: "Notes", on: r.name === "notes" },
-    { href: href.answers(), label: "Answers", on: r.name === "answers" },
     { href: href.profile(), label: "Profile", on: r.name === "profile" },
   ];
+  const tabs = "course" in r && r.name !== "level" && r.name !== "kata" ? [
+    { href: href.map(r.course), label: "Map", on: r.name === "map" || r.name === "mock" },
+    { href: href.review(r.course), label: "Review", on: r.name === "review", count: courseDue(p, r.course, Date.now()).length },
+    { href: href.notes(r.course), label: "Notes", on: r.name === "notes" },
+    { href: href.answers(r.course), label: "Answers", on: r.name === "answers" },
+  ] : [];
   const mult = multiplier(p.streak);
 
   return (
@@ -76,10 +79,19 @@ export function Hud() {
       <nav className="hud-nav">
         {nav.map((n) => (
           <a key={n.href} href={n.href} aria-current={n.on ? "page" : undefined}>
-            {n.label}{n.count ? <span className="count">{n.count}</span> : null}
+            {n.label}
           </a>
         ))}
       </nav>
+      {tabs.length > 0 && (
+        <nav className="hud-nav" aria-label="Course">
+          {tabs.map((n) => (
+            <a key={n.href} href={n.href} aria-current={n.on ? "page" : undefined}>
+              {n.label}{"count" in n && n.count ? <span className="count">{n.count}</span> : null}
+            </a>
+          ))}
+        </nav>
+      )}
     </header>
   );
 }

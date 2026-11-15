@@ -32,10 +32,10 @@ export function App() {
       {r.name === "level" && course && <LevelScreen course={course} id={q(course.id, r.id)} />}
       {r.name === "kata" && course && <KataScreen course={course} kataId={q(course.id, r.id)} />}
       {r.name === "mock" && course && <MockScreen course={course} />}
-      {r.name === "review" && <ReviewScreen />}
-      {r.name === "answers" && <AnswersScreen />}
+      {r.name === "review" && course && <ReviewScreen course={course} />}
+      {r.name === "answers" && course && <AnswersScreen course={course} />}
       {r.name === "profile" && <ProfileScreen />}
-      {r.name === "notes" && (r.id ? <NoteScreen id={r.id} /> : <NotesScreen />)}
+      {r.name === "notes" && course && (r.id ? <NoteScreen course={course} id={r.id} /> : <NotesScreen course={course} />)}
     </main>
   );
 }

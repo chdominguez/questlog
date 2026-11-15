@@ -1,5 +1,6 @@
 import { createEmptyCard, fsrs, Rating, type Card, type Grade } from "ts-fsrs";
 import type { Result } from "./store";
+import { courseOf } from "../course/registry";
 
 // No learning steps: a right answer goes days out; a miss is due right away (handled below), like the old review deck.
 const f = fsrs({ enable_fuzz: false, learning_steps: [], relearning_steps: [] });
@@ -24,6 +25,10 @@ export function schedule(card: SrsCard | undefined, grade: Grade, now: number): 
 /** Keys of cards due at `now`, most overdue first. */
 export const dueKeys = (cards: Record<string, SrsCard>, now: number) =>
   Object.entries(cards).filter(([, c]) => c.due <= now).sort((a, b) => a[1].due - b[1].due).map(([k]) => k);
+
+/** Due keys of one course, none once it is completed. */
+export const courseDue = (p: { cards: Record<string, SrsCard>; completed: string[] }, course: string, now: number) =>
+  p.completed.includes(course) ? [] : dueKeys(p.cards, now).filter((id) => courseOf(id) === course);
 
 export const isCard = (v: unknown): v is SrsCard => {
   const c = v as SrsCard;

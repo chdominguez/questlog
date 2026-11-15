@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { CHALLENGES, courseById, courseOf } from "../course/registry";
-import { dueKeys } from "../engine/srs";
+import { CHALLENGES, type Course } from "../course/registry";
+import { courseDue } from "../engine/srs";
 import { href } from "../ui/route";
 import { play } from "../audio/sfx";
 import { Hud } from "../engine/Hud";
@@ -11,22 +11,23 @@ import "./screens.css";
 
 export const DAILY_CAP = 25;
 
-/** Due cards, most overdue first, capped, then shuffled so courses and levels interleave. */
-const deck = () => {
-  const ids = dueKeys(getProgress().cards, Date.now()).filter((id) => CHALLENGES[id]).slice(0, DAILY_CAP);
+/** Due cards, most overdue first, capped, then shuffled so levels interleave. */
+const deck = (course: string) => {
+  const ids = courseDue(getProgress(), course, Date.now()).filter((id) => CHALLENGES[id]).slice(0, DAILY_CAP);
   return shuffled(ids.length).map((i) => ids[i]);
 };
 
-export function ReviewScreen() {
-  const cards = useProgress().cards;
+export function ReviewScreen({ course }: { course: Course }) {
+  const p = useProgress();
+  const cards = p.cards;
   const isDue = (id: string) => (cards[id]?.due ?? Infinity) <= Date.now();
-  const [round, setRound] = useState(() => ({ queue: deck(), startXp: getProgress().xp }));
+  const [round, setRound] = useState(() => ({ queue: deck(course.id), startXp: getProgress().xp }));
   const [i, setI] = useState(0);
   const [rankUp, setRankUp] = useState<number | null>(null);
   const { queue } = round;
   const finished = i >= queue.length;
   const cleared = queue.filter((id) => !isDue(id)).length;
-  const left = dueKeys(cards, Date.now()).filter((id) => CHALLENGES[id]).length;
+  const left = courseDue(p, course.id, Date.now()).filter((id) => CHALLENGES[id]).length;
 
   const next = () => {
     if (i + 1 < queue.length) { setI(i + 1); return; }
@@ -35,7 +36,7 @@ export function ReviewScreen() {
     if (r > rankIndex(round.startXp)) setRankUp(r);
     else { play(cleared > 0 ? "unlock" : "click"); if (cleared > 0) burst(); }
   };
-  const again = () => { setRound({ queue: deck(), startXp: getProgress().xp }); setI(0); play("click"); };
+  const again = () => { setRound({ queue: deck(course.id), startXp: getProgress().xp }); setI(0); play("click"); };
   const c = CHALLENGES[queue[i]];
 
   return (
@@ -43,14 +44,14 @@ export function ReviewScreen() {
       <Hud />
       <section className="level">
         <div className="level-head">
-          <a className="back" href={href.home()} aria-label="Home">←</a>
+          <a className="back" href={href.map(course.id)} aria-label={course.title}>←</a>
           <h1>Review</h1>
         </div>
 
         {queue.length === 0 && (
           <div className="result screen-in">
             <h2>Nothing due</h2>
-            <a className="btn" href={href.home()}>Home</a>
+            <a className="btn" href={href.map(course.id)}>{course.title}</a>
           </div>
         )}
 
@@ -62,7 +63,6 @@ export function ReviewScreen() {
               </div>
               <span className="count-label">{i + 1}/{queue.length}</span>
             </div>
-            <div className="kicker review-from">{courseById(courseOf(c.id))?.title}</div>
             <ChallengeCard c={c} levelId={c.levelId} onNext={next} nextLabel={i + 1 >= queue.length ? "Finish" : "Next"} />
           </div>
         )}
@@ -72,7 +72,7 @@ export function ReviewScreen() {
             <div className="kicker">Round complete</div>
             <div className="gain">{cleared}/{queue.length}</div>
             <div className="row center">
-              <a className={left ? "btn ghost" : "btn"} href={href.home()}>Home</a>
+              <a className={left ? "btn ghost" : "btn"} href={href.map(course.id)}>{course.title}</a>
               {left > 0 && <button type="button" className="btn" autoFocus onClick={again}>Another round</button>}
             </div>
           </div>

@@ -31,6 +31,7 @@ export interface Progress {
   streak: number;
   cards: Record<string, SrsCard>; // spaced-repetition state per challenge seen
   cleared: string[]; // challenge ids answered "ok" at least once
+  completed: string[]; // course ids the user marked done: no due reviews
   unlockAll: boolean;
   sound: { muted: boolean; volume: number };
   run: Run | null; // current level attempt, not persisted
@@ -47,10 +48,11 @@ export type Action =
   | { type: "quit" } // run ended without completion
   | { type: "markReview"; id: string; now: number }
   | { type: "unlockAll"; on: boolean }
+  | { type: "complete"; course: string; on: boolean }
   | { type: "sound"; muted?: boolean; volume?: number };
 
 export const initial: Progress = {
-  xp: 0, levels: {}, streak: 0, cards: {}, cleared: [], unlockAll: false, sound: { muted: false, volume: 0.7 }, run: null, updatedAt: 0,
+  xp: 0, levels: {}, streak: 0, cards: {}, cleared: [], completed: [], unlockAll: false, sound: { muted: false, volume: 0.7 }, run: null, updatedAt: 0,
 };
 
 export const multiplier = (streak: number) => (streak >= 5 ? 2 : streak >= 3 ? 1.5 : 1);
@@ -98,6 +100,8 @@ export function reducer(s: Progress, a: Action): Progress {
       return { ...s, cards: { ...s.cards, [a.id]: schedule(s.cards[a.id], Rating.Again, a.now) } };
     case "unlockAll":
       return { ...s, unlockAll: a.on };
+    case "complete":
+      return { ...s, completed: a.on ? withId(s.completed, a.course) : s.completed.filter((c) => c !== a.course) };
     case "sound":
       return {
         ...s,
@@ -128,6 +132,7 @@ export function hydrate(raw: unknown): Progress {
     streak: Math.max(0, num(r.streak, 0)),
     cards,
     cleared: strings(r.cleared),
+    completed: strings(r.completed),
     unlockAll: r.unlockAll === true,
     sound: { muted: r.sound?.muted === true, volume: clamp(num(r.sound?.volume, initial.sound.volume), 0, 1) },
     run: null,

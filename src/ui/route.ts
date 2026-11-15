@@ -1,26 +1,26 @@
 import { useSyncExternalStore } from "react";
 
-/** Hash routes: #/ · #/c/:course · #/c/:course/level/:id · #/c/:course/kata/:id · #/c/:course/mock · #/review · #/answers · #/profile · #/notes · #/notes/:id */
+/** Hash routes: #/ · #/c/:course · #/c/:course/level/:id · #/c/:course/kata/:id · #/c/:course/mock · #/c/:course/review · #/c/:course/answers · #/c/:course/notes · #/c/:course/notes/:id · #/profile */
 export type Route =
   | { name: "home" }
   | { name: "map"; course: string }
   | { name: "level"; course: string; id: string }
   | { name: "kata"; course: string; id: string }
   | { name: "mock"; course: string }
-  | { name: "review" }
-  | { name: "answers" }
-  | { name: "profile" }
-  | { name: "notes"; id?: string };
+  | { name: "review"; course: string }
+  | { name: "answers"; course: string }
+  | { name: "notes"; course: string; id?: string }
+  | { name: "profile" };
 
 export function parse(hash: string): Route {
   const [, a, b, c, d] = hash.replace(/^#/, "").split("/").map((x) => (x ? decodeURIComponent(x) : x));
   if (a === "c" && b) {
     if ((c === "level" || c === "kata") && d) return { name: c, course: b, id: d };
-    if (c === "mock") return { name: "mock", course: b };
+    if (c === "mock" || c === "review" || c === "answers") return { name: c, course: b };
+    if (c === "notes") return d ? { name: "notes", course: b, id: d } : { name: "notes", course: b };
     return { name: "map", course: b };
   }
-  if (a === "notes") return b ? { name: "notes", id: b } : { name: "notes" };
-  if (a === "review" || a === "answers" || a === "profile") return { name: a };
+  if (a === "profile") return { name: "profile" };
   return { name: "home" };
 }
 
@@ -32,10 +32,10 @@ export const href = {
   level: (course: string, id: string) => `#/c/${e(course)}/level/${e(id.slice(id.indexOf(":") + 1))}`,
   kata: (course: string, id: string) => `#/c/${e(course)}/kata/${e(id.slice(id.indexOf(":") + 1))}`,
   mock: (course: string) => `#/c/${e(course)}/mock`,
-  review: () => "#/review",
-  answers: () => "#/answers",
+  review: (course: string) => `#/c/${e(course)}/review`,
+  answers: (course: string) => `#/c/${e(course)}/answers`,
   profile: () => "#/profile",
-  notes: (id?: string) => (id ? `#/notes/${e(id)}` : "#/notes"),
+  notes: (course: string, id?: string) => `#/c/${e(course)}/notes${id ? `/${e(id)}` : ""}`,
 };
 
 export const go = (hash: string) => { location.hash = hash; };

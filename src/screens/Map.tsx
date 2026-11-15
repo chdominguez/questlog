@@ -5,6 +5,7 @@ import { play } from "../audio/sfx";
 import { Hud } from "../engine/Hud";
 import { dispatch, useProgress } from "../engine/store";
 import { isUnlocked } from "../engine/levels";
+import { deleteReminder } from "../answers/api";
 import { href } from "../ui/route";
 import { Stars } from "./Level";
 import "./screens.css";
@@ -22,6 +23,7 @@ const Lock = () => (
 export function MapScreen({ course }: { course: Course }) {
   const p = useProgress();
   const levels = course.levels;
+  const done = p.completed.includes(course.id);
   const [denied, setDenied] = useState<string | null>(null);
   const firstOpen = levels.findIndex((l, i) => isUnlocked(levels, i, p) && !p.levels[l.id]?.done);
   const pts = levels.map((_, i) => ({ x: XS[i % XS.length], y: i * ROW + ORB_Y }));
@@ -39,6 +41,12 @@ export function MapScreen({ course }: { course: Course }) {
         <div className="map-head">
           <h1>{course.title}</h1>
           {course.mock && <a className="btn ghost" href={href.mock(course.id)} onClick={() => play("click")}>{course.mock.title}</a>}
+          <button type="button" className="btn ghost" aria-pressed={done}
+            onClick={() => {
+              dispatch({ type: "complete", course: course.id, on: !done });
+              if (!done) deleteReminder(course.id).catch(() => {});
+              play("click");
+            }}>{done ? "Reopen" : "Mark completed"}</button>
           <label className="switch">
             <input type="checkbox" role="switch" checked={p.unlockAll}
               onChange={(e) => { dispatch({ type: "unlockAll", on: e.target.checked }); play(e.target.checked ? "unlock" : "click"); }} />

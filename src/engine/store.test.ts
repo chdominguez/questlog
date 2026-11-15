@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { dueKeys } from "./srs";
+import { courseDue, dueKeys } from "./srs";
 import { hydrate, initial, multiplier, rankIndex, rankProgress, reducer, type Action, type Progress } from "./store";
 
 const run = (actions: Action[], s: Progress = initial) => actions.reduce(reducer, s);
@@ -90,6 +90,15 @@ describe("settings and hydrate", () => {
     expect(reducer(initial, { type: "sound", volume: 4 }).sound).toEqual({ muted: false, volume: 1 });
     expect(reducer(initial, { type: "sound", muted: true }).sound.muted).toBe(true);
     expect(reducer(initial, { type: "unlockAll", on: true }).unlockAll).toBe(true);
+  });
+  test("completed course has nothing due", () => {
+    const s = run([wrong("a:q1"), wrong("b:q1")]);
+    expect(courseDue(s, "a", NOW)).toEqual(["a:q1"]);
+    const done = reducer(s, { type: "complete", course: "a", on: true });
+    expect(courseDue(done, "a", NOW)).toEqual([]);
+    expect(courseDue(done, "b", NOW)).toEqual(["b:q1"]);
+    expect(hydrate(JSON.parse(JSON.stringify(done))).completed).toEqual(["a"]);
+    expect(reducer(done, { type: "complete", course: "a", on: false }).completed).toEqual([]);
   });
   test("hydrate survives garbage", () => {
     expect(hydrate(null)).toEqual(initial);

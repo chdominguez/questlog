@@ -87,7 +87,7 @@ export function MockScreen({ course }: { course: Course }) {
             ))}
           </ol>
           <div className="wa-actions">
-            <a className="btn" href={href.answers()}>Answers</a>
+            <a className="btn" href={href.answers(course.id)}>Answers</a>
           </div>
         </>
       )}
