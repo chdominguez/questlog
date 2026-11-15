@@ -17,7 +17,7 @@ export const RANKS = [
   { name: "Sage", xp: 1900 },
 ] as const;
 
-export const BASE_XP: Record<ChallengeType, number> = { quiz: 10, order: 15, bug: 15, cloze: 20, written: 25, kata: 40, match: 15 };
+export const BASE_XP: Record<ChallengeType, number> = { quiz: 10, order: 15, bug: 15, cloze: 20, written: 25, kata: 40, match: 15, sort: 15 };
 /** Base XP for a challenge already cleared once, so replays can't farm ranks. */
 export const REPLAY_XP = 2;
 

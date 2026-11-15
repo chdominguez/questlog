@@ -90,6 +90,11 @@ export const ChallengeSchema = z.discriminatedUnion("type", [
     bank: z.array(z.string().min(1)).optional().describe("Word bank chips; each blank's first answer must be in it. Omit for typed blanks"),
     lang: CodeLangSchema.optional().describe("Render text as code in this language; default Markdown"),
   }).strict(),
+  z.object({
+    ...base, type: z.literal("sort"),
+    buckets: z.array(md("Bucket label")).min(2).max(4),
+    items: z.array(z.object({ text: md("Item"), bucket: z.number().int().min(0).describe("0-based index into buckets") }).strict()).min(4).max(12),
+  }).strict().describe("Drop each item into the bucket it belongs to"),
   z.object({ ...base, type: z.literal("kata"), kataId: id.describe("Id of a kata in this course") }).strict(),
 ]);
 
@@ -200,6 +205,10 @@ export const CourseSchema = z.object({
         ch.blanks.forEach((b, bi) => {
           if (ch.bank && !ch.bank.includes(b.answers[0])) issue([...at, "blanks", bi, "answers", 0], `"${b.answers[0]}" is not in bank`);
         });
+      }
+      if (ch.type === "sort") {
+        ch.items.forEach((it, ii) => { if (it.bucket >= ch.buckets.length) issue([...at, "items", ii, "bucket"], `bucket ${it.bucket} but only ${ch.buckets.length} buckets`); });
+        ch.buckets.forEach((_, bi) => { if (!ch.items.some((it) => it.bucket === bi)) issue([...at, "buckets", bi], `bucket ${bi} has no items`); });
       }
       if (ch.type === "kata" && !katas.has(ch.kataId)) issue([...at, "kataId"], `no kata "${ch.kataId}" in course.katas`);
     });

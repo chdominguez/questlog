@@ -225,6 +225,20 @@ Why it matters: after a timeout the client can't tell whether the server acted. 
       explain: "Name → connection → encryption → request → response → subresources. HTTPS needs the TLS handshake before any HTTP bytes are sent.",
     },
     {
+      id: "req-sort-methods",
+      type: "sort",
+      prompt: "Sort each request by whether it is safe to repeat.",
+      buckets: ["Idempotent", "Not idempotent"],
+      items: [
+        { text: "`GET /api/menu`", bucket: 0 },
+        { text: "`PUT /api/cart/c-1042`", bucket: 0 },
+        { text: "`DELETE /api/cart/c-1042`", bucket: 0 },
+        { text: "`POST /api/orders`", bucket: 1 },
+        { text: "`POST /api/cart/c-1042/items`", bucket: 1 },
+      ],
+      explain: "Repeating GET, PUT or DELETE leaves the server in the same state. Each POST creates something new.",
+    },
+    {
       id: "req-bug-encode",
       type: "bug",
       prompt: "`searchMenu(\"rye & spelt\")` must search for the whole phrase. Which line breaks that?",

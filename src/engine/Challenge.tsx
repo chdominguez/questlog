@@ -10,6 +10,7 @@ import { courseById, courseOf } from "../course/registry";
 import { isMilestone } from "./Hud";
 import { typingTarget } from "./Theory";
 import { clozeParts, gradeCloze } from "./cloze";
+import { gradeSort } from "./sort";
 import { permutation, shuffled } from "./shuffle";
 import { gradeMatch } from "./match";
 import "./engine.css";
@@ -18,7 +19,7 @@ type Of<T extends Challenge["type"]> = Extract<Challenge, { type: T }>;
 type Answer = (correct: boolean) => void;
 
 const KICKER: Record<Challenge["type"], string> = {
-  quiz: "Quiz", order: "Put in order", bug: "Find the bug", cloze: "Fill the blanks", written: "Written answer", kata: "Kata", match: "Match",
+  quiz: "Quiz", order: "Put in order", bug: "Find the bug", cloze: "Fill the blanks", written: "Written answer", kata: "Kata", match: "Match", sort: "Sort",
 };
 
 /** Records a result in the store, plays feedback sound and returns XP gained. */
@@ -160,6 +161,57 @@ function Match({ c, done, onResult }: { c: Of<"match">; done: boolean; onResult:
   );
 }
 
+function Sort({ c, done, onResult }: { c: Of<"sort">; done: boolean; onResult: (r: Result) => void }) {
+  const [pool] = useState(() => permutation(c.items.length));
+  const [placed, setPlaced] = useState<(number | null)[]>(() => c.items.map(() => null));
+  const [sel, setSel] = useState<number | null>(null);
+  const put = (b: number) => {
+    if (done || sel === null) return;
+    setPlaced(placed.map((p, i) => (i === sel ? b : p)));
+    setSel(null);
+    play("click");
+  };
+  const back = (i: number) => { if (!done) setPlaced(placed.map((p, j) => (j === i ? null : p))); };
+  const loose = pool.filter((i) => placed[i] === null);
+  return (
+    <>
+      {!done && (
+        <div className="sort-pool" role="group" aria-label="Items">
+          {loose.map((i) => (
+            <button key={i} type="button" className={`sort-item${sel === i ? " sel" : ""}`} aria-pressed={sel === i} onClick={() => setSel(sel === i ? null : i)}>
+              <Md text={c.items[i].text} inline />
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="sort-buckets">
+        {c.buckets.map((label, b) => (
+          <div key={b} className="sort-bucket">
+            <button type="button" className="sort-head" disabled={done || sel === null} onClick={() => put(b)}>
+              <Md text={label} inline />
+            </button>
+            {pool.filter((i) => placed[i] === b).map((i) => {
+              const bad = done && c.items[i].bucket !== b;
+              return (
+                <button key={i} type="button" className={`sort-item${done ? (bad ? " wrong" : " right") : ""}`} disabled={done} onClick={() => back(i)}>
+                  <Md text={c.items[i].text} inline />
+                  {bad && <span className="sort-fix"><Md text={c.buckets[c.items[i].bucket]} inline /></span>}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+      {!done && (
+        <div className="row end">
+          <button type="button" className="btn" disabled={loose.length > 0}
+            onClick={() => onResult(gradeSort(c.items, placed as number[]))}>Check</button>
+        </div>
+      )}
+    </>
+  );
+}
+
 function Bug({ c, done, onAnswer }: { c: Of<"bug">; done: boolean; onAnswer: Answer }) {
   const [pick, setPick] = useState<number | null>(null);
   return (
@@ -264,6 +316,7 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
     case "quiz": body = <Quiz c={c} done={done} onAnswer={onAnswer} />; break;
     case "order": body = <Order c={c} done={done} onAnswer={onAnswer} />; break;
     case "match": body = <Match c={c} done={done} onResult={finish} />; break;
+    case "sort": body = <Sort c={c} done={done} onResult={finish} />; break;
     case "bug": body = <Bug c={c} done={done} onAnswer={onAnswer} />; break;
     case "cloze": body = <Cloze c={c} done={done} onResult={finish} />; break;
     case "written":
@@ -279,7 +332,7 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
     [c],
   );
   const matchHint = useMemo(() => (c.type === "match" ? c.pairs.map((p) => `${p.left} → ${p.right}`).join("\n\n") : ""), [c]);
-  const showFeedback = done && (c.type === "quiz" || c.type === "order" || c.type === "bug" || c.type === "match" || c.type === "cloze" || !!c.explain);
+  const showFeedback = done && (c.type === "quiz" || c.type === "order" || c.type === "bug" || c.type === "match" || c.type === "cloze" || c.type === "sort" || !!c.explain);
   const good = result === "ok";
 
   return (
