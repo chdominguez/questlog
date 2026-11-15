@@ -35,6 +35,20 @@ test("validation explains what is wrong and where", () => {
   expect(CourseSchema.safeParse(course({ extra: 1 })).success).toBe(false);
 });
 
+test("match needs 3-8 pairs with unique sides", () => {
+  const withMatch = (pairs: unknown[]) => {
+    const c = course();
+    (c.levels as any)[0].challenges.push({ id: "m", type: "match", prompt: "P", pairs });
+    return validateCourse(c).join("\n");
+  };
+  const pair = (i: number) => ({ left: `l${i}`, right: `r${i}` });
+  expect(withMatch([1, 2, 3].map(pair))).toBe("");
+  expect(withMatch([1, 2].map(pair))).toMatch(/pairs/);
+  expect(withMatch([1, 2, 3, 4, 5, 6, 7, 8, 9].map(pair))).toMatch(/pairs/);
+  expect(withMatch([pair(1), pair(2), { left: "l1", right: "r3" }])).toMatch(/duplicate left item/);
+  expect(withMatch([pair(1), pair(2), { left: "l3", right: "r2" }])).toMatch(/duplicate right item/);
+});
+
 test("kata checks run the solution and the starter", () => {
   const kata = { id: "sum", title: "Sum", difficulty: "easy", statement: "S", examples: [{ input: "1", output: "1" }], complexity: "O(n)",
     starter: "export function sum(xs: number[]): number { return 0; }",
