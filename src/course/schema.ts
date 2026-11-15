@@ -69,6 +69,10 @@ export const ChallengeSchema = z.discriminatedUnion("type", [
     keyPoints: z.array(z.string().min(1)).min(2).describe("What a strong answer must mention; sent to the grader"),
     seconds: z.number().int().positive().optional().describe("Soft time limit"),
   }).strict(),
+  z.object({
+    ...base, type: z.literal("match"),
+    pairs: z.array(z.object({ left: md("Left item"), right: md("Matching right item") }).strict()).min(3).max(8).describe("Unique lefts and unique rights; the UI shuffles the right column"),
+  }).strict(),
   z.object({ ...base, type: z.literal("kata"), kataId: id.describe("Id of a kata in this course") }).strict(),
 ]);
 
@@ -161,6 +165,10 @@ export const CourseSchema = z.object({
       const at = ["levels", li, "challenges", ci];
       if (ch.type === "quiz" && ch.answer >= ch.options.length) issue([...at, "answer"], `answer ${ch.answer} but only ${ch.options.length} options`);
       if (ch.type === "bug" && ch.answer >= ch.lines.length) issue([...at, "answer"], `answer ${ch.answer} but only ${ch.lines.length} lines`);
+      if (ch.type === "match") for (const side of ["left", "right"] as const) {
+        const seen = new Set<string>();
+        ch.pairs.forEach((p, pi) => { if (seen.has(p[side])) issue([...at, "pairs", pi, side], `duplicate ${side} item`); seen.add(p[side]); });
+      }
       if (ch.type === "kata" && !katas.has(ch.kataId)) issue([...at, "kataId"], `no kata "${ch.kataId}" in course.katas`);
     });
   });

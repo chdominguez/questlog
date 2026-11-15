@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { Challenge } from "../course/schema";
 import { Md } from "../ui/Md";
 import { Snippet } from "../code/Snippet";
@@ -10,13 +10,14 @@ import { courseById, courseOf } from "../course/registry";
 import { isMilestone } from "./Hud";
 import { typingTarget } from "./Theory";
 import { permutation, shuffled } from "./shuffle";
+import { gradeMatch } from "./match";
 import "./engine.css";
 
 type Of<T extends Challenge["type"]> = Extract<Challenge, { type: T }>;
 type Answer = (correct: boolean) => void;
 
 const KICKER: Record<Challenge["type"], string> = {
-  quiz: "Quiz", order: "Put in order", bug: "Find the bug", written: "Written answer", kata: "Kata",
+  quiz: "Quiz", order: "Put in order", bug: "Find the bug", written: "Written answer", kata: "Kata", match: "Match",
 };
 
 /** Records a result in the store, plays feedback sound and returns XP gained. */
@@ -106,6 +107,58 @@ function Order({ c, done, onAnswer }: { c: Of<"order">; done: boolean; onAnswer:
   );
 }
 
+function Match({ c, done, onResult }: { c: Of<"match">; done: boolean; onResult: (r: Result) => void }) {
+  const n = c.pairs.length;
+  const [rights] = useState(() => shuffled(n)); // display position -> pair index
+  const [link, setLink] = useState<(number | null)[]>(() => Array(n).fill(null)); // left i -> right pair index
+  const [sel, setSel] = useState<number | null>(null);
+  const owner = (r: number) => link.indexOf(r);
+  const set = (i: number, r: number | null) => setLink(link.map((x, k) => (k === i ? r : x)));
+  const pickLeft = (i: number) => {
+    if (done) return;
+    if (link[i] !== null) { set(i, null); setSel(i); } else setSel(sel === i ? null : i);
+    play("click");
+  };
+  const pickRight = (r: number) => {
+    if (done) return;
+    const o = owner(r);
+    if (o >= 0) { set(o, null); return; }
+    if (sel === null) return;
+    set(sel, r);
+    setSel(null);
+    play("click");
+  };
+  const hue = (i: number) => ({ "--h": `${(i * 360) / n}` }) as CSSProperties;
+  return (
+    <>
+      <div className="match">
+        <div className="mcol">
+          {c.pairs.map((p, i) => (
+            <button key={i} type="button" style={hue(i)} aria-pressed={sel === i}
+              className={["mi", link[i] !== null && "linked", sel === i && "sel", done && (link[i] === i ? "right" : "wrong")].filter(Boolean).join(" ")}
+              onClick={() => pickLeft(i)}><Md text={p.left} inline /></button>
+          ))}
+        </div>
+        <div className="mcol">
+          {rights.map((r) => {
+            const o = owner(r);
+            return (
+              <button key={r} type="button" style={o >= 0 ? hue(o) : undefined}
+                className={["mi", o >= 0 && "linked", done && (o === r ? "right" : "wrong")].filter(Boolean).join(" ")}
+                onClick={() => pickRight(r)}><Md text={c.pairs[r].right} inline /></button>
+            );
+          })}
+        </div>
+      </div>
+      {!done && (
+        <div className="row end">
+          <button type="button" className="btn" disabled={link.some((r) => r === null)} onClick={() => onResult(gradeMatch(link as number[]))}>Check</button>
+        </div>
+      )}
+    </>
+  );
+}
+
 function Bug({ c, done, onAnswer }: { c: Of<"bug">; done: boolean; onAnswer: Answer }) {
   const [pick, setPick] = useState<number | null>(null);
   return (
@@ -150,6 +203,7 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
   switch (c.type) {
     case "quiz": body = <Quiz c={c} done={done} onAnswer={onAnswer} />; break;
     case "order": body = <Order c={c} done={done} onAnswer={onAnswer} />; break;
+    case "match": body = <Match c={c} done={done} onResult={finish} />; break;
     case "bug": body = <Bug c={c} done={done} onAnswer={onAnswer} />; break;
     case "written":
       body = <WrittenAnswer challenge={c} levelId={levelId} onDone={(s) => finish(s >= 7 ? "ok" : s >= 4 ? "partial" : "miss")} />;
@@ -163,7 +217,8 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
     () => (c.type === "order" ? c.steps.map((s, i) => `${i + 1}. ${s}`).join("\n") : ""),
     [c],
   );
-  const showFeedback = done && (c.type === "quiz" || c.type === "order" || c.type === "bug" || !!c.explain);
+  const matchHint = useMemo(() => (c.type === "match" ? c.pairs.map((p) => `${p.left} → ${p.right}`).join("\n\n") : ""), [c]);
+  const showFeedback = done && (c.type === "quiz" || c.type === "order" || c.type === "bug" || c.type === "match" || !!c.explain);
   const good = result === "ok";
 
   return (
@@ -177,6 +232,7 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
         <div role="status" className={`feedback ${good ? "ok" : result === "partial" ? "mid" : "bad"}`}>
           <strong>{good ? "Correct" : result === "partial" ? "Almost" : "Wrong"}{xp > 0 ? ` · +${xp} XP` : ""}</strong>
           {c.explain && <Md text={c.explain} />}
+          {c.type === "match" && !good && <Md text={matchHint} />}
           {c.type === "order" && !good && <Md text={orderHint} />}
         </div>
       )}

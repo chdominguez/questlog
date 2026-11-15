@@ -232,6 +232,17 @@ A client that doesn't know a code treats it as the \`x00\` of its class.`,
       explain: "Only a stale copy with a validator leads to a conditional request; a `304` lets the cache reuse the body it has.",
     },
     {
+      id: "cache-match-directives",
+      type: "match",
+      prompt: "Match each `Cache-Control` directive to what it does.",
+      pairs: [
+        { left: "`max-age=600`", right: "Fresh for ten minutes" },
+        { left: "`no-cache`", right: "Store it, but revalidate before every reuse" },
+        { left: "`no-store`", right: "Never keep a copy" },
+        { left: "`private`", right: "Only the browser may cache it" },
+      ],
+    },
+    {
       id: "cache-bug-store",
       type: "bug",
       prompt: "This cache may keep `no-cache` responses (it revalidates them before reuse) but must **never** keep `no-store` ones. Which line is wrong?",
