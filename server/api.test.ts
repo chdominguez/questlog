@@ -225,3 +225,19 @@ test("profile: per-user, validated; /me exposes the proxy name", async () => {
   expect((await app.req("/profile", as("a@x.com", json("PUT", { ...p, link: "javascript:alert(1)" })))).status).toBe(400);
   expect((await app.req("/profile", as("a@x.com", json("PUT", { ...p, bio: "x".repeat(2001) })))).status).toBe(400);
 });
+
+test("reminders: validate, upsert per course, list and delete; subscriptions are per user", async () => {
+  const app = api();
+  const r = { courseId: "t", title: "T", time: "08:30", tz: "Europe/Madrid" };
+  expect((await app.req("/reminders", json("PUT", { ...r, time: "8:30" }))).status).toBe(400);
+  expect((await app.req("/reminders", json("PUT", { ...r, tz: "Nope/Zone" }))).status).toBe(400);
+  expect((await app.req("/reminders", json("PUT", r))).status).toBe(200);
+  expect((await app.req("/reminders", json("PUT", { ...r, time: "09:00" }))).status).toBe(200);
+  expect(await (await app.req("/reminders")).json()).toEqual([{ ...r, time: "09:00" }]);
+  expect((await app.req("/reminders/t", { method: "DELETE" })).status).toBe(204);
+  expect(await (await app.req("/reminders")).json()).toEqual([]);
+
+  expect((await app.req("/push/subscription", json("POST", { endpoint: "http://x", p256dh: "k", auth: "a" }))).status).toBe(400);
+  expect((await app.req("/push/subscription", json("POST", { endpoint: "https://x/1", p256dh: "k", auth: "a" }))).status).toBe(204);
+  expect((await app.req("/push/key")).status).toBe(503);
+});

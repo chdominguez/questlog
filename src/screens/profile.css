@@ -3,3 +3,7 @@
 .profile-field { display: grid; gap: 6px; color: var(--muted); font-size: .85rem; }
 .profile-field input[readonly] { color: var(--muted); }
 .profile-bio { min-height: 8rem; resize: vertical; font: .92rem/1.55 var(--f-body, inherit); }
+
+.profile-reminders { display: grid; gap: 12px; max-width: 560px; margin-top: 32px; justify-items: start; }
+.profile-reminders h2 { margin: 0; font-size: 1.1rem; }
+.profile-reminder { grid-template-columns: 1fr auto; align-items: center; width: 100%; font-size: .95rem; color: var(--fg); }
