@@ -7,5 +7,5 @@ services:
     container_name: questlog
     restart: unless-stopped
     ports: ["127.0.0.1:8790:8787"]
-    environment: { ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}" } # read from .env
+    environment: { ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}", USER_HEADER: x-auth-request-email } # key from .env; header Caddy copies from oauth2-proxy
     volumes: ["./data:/data"]
