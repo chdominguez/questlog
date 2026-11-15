@@ -60,6 +60,10 @@
 .figure { margin: 0; display: grid; gap: 8px; justify-items: center; }
 .figure-art { width: min(100%, 420px); color: var(--accent); }
 .figure-art svg { width: 100%; height: auto; display: block; }
+.media { margin: 0; display: grid; gap: 8px; justify-items: center; }
+.media img, .media video { max-width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); }
+.media audio { width: min(100%, 420px); }
+.media figcaption { color: var(--muted); font-size: .9rem; text-align: center; }
 .figure figcaption { color: var(--muted); font-size: .9rem; text-align: center; }
 
 /* Challenges */

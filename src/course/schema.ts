@@ -3,6 +3,7 @@
  * Fields marked (md) are Markdown rendered by <Md> (src/ui/Md.tsx). A course must stay JSON-serializable.
  */
 import * as z from "zod";
+import { mediaRefProblem } from "../../shared/media";
 
 const md = (what: string) => z.string().min(1).describe(`${what} (Markdown)`);
 const id = z.string().regex(/^[a-z0-9][a-z0-9-]*$/, "lowercase letters, digits and dashes").describe("Stable id, lowercase-kebab");
@@ -33,6 +34,12 @@ export const TheoryBlockSchema = z.discriminatedUnion("kind", [
   }).strict(),
   z.object({ kind: z.literal("mermaid"), src: z.string().min(1), caption: z.string().optional() }).strict(),
   z.object({ kind: z.literal("figure"), art: z.string().describe("Key in the course art map or platform art"), caption: z.string().optional() }).strict(),
+  z.object({
+    kind: z.literal("media"), type: z.enum(["image", "video", "audio"]).describe("A GIF is an image"),
+    src: z.string().describe("Course-relative file, e.g. media/demo.mp4; upload it with media_upload"),
+    alt: z.string().min(1).describe("What the media shows or says"), caption: z.string().optional(),
+    poster: z.string().optional().describe("Video only: preview image, e.g. media/demo.jpg"),
+  }).strict(),
   z.object({
     kind: z.literal("trace"), lang: CodeLangSchema, src: z.string().min(1), title: z.string().optional(),
     steps: z.array(TraceStepSchema).min(2),
@@ -144,6 +151,14 @@ export const CourseSchema = z.object({
     l.theory.forEach((card, ti) => card.blocks.forEach((b, bi) => {
       const at = ["levels", li, "theory", ti, "blocks", bi];
       if (b.kind === "figure" && !art.has(b.art)) issue([...at, "art"], `art "${b.art}" is not in course.art`);
+      if (b.kind === "media") {
+        const p = mediaRefProblem(b.src, [b.type]);
+        if (p) issue([...at, "src"], p);
+        if (b.poster !== undefined) {
+          const q = b.type !== "video" ? "only videos have a poster" : mediaRefProblem(b.poster, ["image"]);
+          if (q) issue([...at, "poster"], q);
+        }
+      }
       const lines = "src" in b ? b.src.replace(/\n$/, "").split("\n").length : 0;
       if (b.kind === "trace") b.steps.forEach((s, si) => {
         if (s.line > lines) issue([...at, "steps", si, "line"], `line ${s.line} is past the end of src (${lines} lines)`);

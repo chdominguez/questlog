@@ -3,6 +3,7 @@
  * env QUESTLOG_COURSES). Ids are qualified as "<course>:<id>" so progress, answers and art never collide.
  */
 import { addArt } from "../art";
+import { mdMedia, mediaUrl } from "../../shared/media";
 import { mapOrder } from "../engine/levels";
 import { CourseSchema, formatIssues, type Challenge, type CourseInput, type Kata, type Level } from "./schema";
 
@@ -18,12 +19,18 @@ export const local = (key: string) => key.slice(key.indexOf(":") + 1);
 export function resolve(c: CourseInput): Course {
   const Q = (id: string) => q(c.id, id);
   const art = (k: string) => (c.art?.[k] ? Q(k) : k);
+  const md = (t: string) => mdMedia(c.id, t); // shortcut: only prompt/explain and md blocks; images in options, steps or notes stay unrewritten
+  const block = (b: Level["theory"][number]["blocks"][number]) =>
+    b.kind === "figure" ? { ...b, art: art(b.art) }
+    : b.kind === "md" ? { ...b, text: md(b.text) }
+    : b.kind === "media" ? { ...b, src: mediaUrl(c.id, b.src), ...(b.poster && { poster: mediaUrl(c.id, b.poster) }) }
+    : b;
   const levels = mapOrder(c.levels.map((l) => ({
       ...l,
       id: Q(l.id),
       ...(l.art && { art: art(l.art) }),
-      theory: l.theory.map((t) => ({ ...t, blocks: t.blocks.map((b) => (b.kind === "figure" ? { ...b, art: art(b.art) } : b)) })),
-      challenges: l.challenges.map((ch) => ({ ...ch, id: Q(ch.id), ...(ch.type === "kata" && { kataId: Q(ch.kataId) }) }) as Challenge),
+      theory: l.theory.map((t) => ({ ...t, blocks: t.blocks.map(block) })),
+      challenges: l.challenges.map((ch) => ({ ...ch, id: Q(ch.id), prompt: md(ch.prompt), ...(ch.explain && { explain: md(ch.explain) }), ...(ch.type === "kata" && { kataId: Q(ch.kataId) }) }) as Challenge),
     })));
   return { ...c, levels, katas: Object.fromEntries((c.katas ?? []).map((k) => [Q(k.id), { ...k, id: Q(k.id) }])) };
 }

@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { readFileSync } from "node:fs";
 import { createApi, type Env } from "./api";
 import { openDb } from "./db";
+import { createMedia } from "./media";
 import { runReminders, webPushSend } from "./reminders";
 
 const env: Env = {
@@ -20,6 +21,7 @@ const NO_CACHE = ["/sw.js", "/manifest.webmanifest", "/index.html"];
 // /api runs the API; everything else is the built app. Unknown paths without a file extension fall back to index.html (client-side routes).
 const app = new Hono<{ Bindings: Env }>()
   .route("/api", createApi())
+  .route("/", createMedia())
   .use(async (c, next) => {
     await next();
     if (c.res.status !== 200) return;

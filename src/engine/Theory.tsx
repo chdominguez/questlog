@@ -16,6 +16,14 @@ export function Block({ b }: { b: TheoryBlock }) {
     case "mermaid": return <Mermaid src={b.src} caption={b.caption} />;
     case "trace": return <Trace lang={b.lang} src={b.src} title={b.title} steps={b.steps} />;
     case "flow": return <Flow actors={b.actors} steps={b.steps} caption={b.caption} />;
+    case "media": return (
+      <figure className="media">
+        {b.type === "image" && <img src={b.src} alt={b.alt} loading="lazy" decoding="async" />}
+        {b.type === "video" && <video src={b.src} poster={b.poster} aria-label={b.alt} controls playsInline preload="metadata" />}
+        {b.type === "audio" && <audio src={b.src} aria-label={b.alt} controls />}
+        {b.caption && <figcaption>{b.caption}</figcaption>}
+      </figure>
+    );
     case "figure": {
       const svg = getArt(b.art);
       return (
