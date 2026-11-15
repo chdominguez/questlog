@@ -93,9 +93,23 @@ export function play(name: SfxName): void {
   try { playNow(name); } catch { /* never throw */ }
 }
 
+// iOS routes Web Audio through the "ambient" session, which the ringer switch mutes. "playback" ignores the switch
+// (Safari 16.4+); a looping silent <audio> element does the same on older iOS.
+const SILENT_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+let silent: HTMLAudioElement | null = null;
+function playbackSession() {
+  const nav = navigator as Navigator & { audioSession?: { type: string } };
+  if (nav.audioSession) { nav.audioSession.type = "playback"; return; }
+  if (silent) return;
+  silent = new Audio(SILENT_WAV);
+  silent.loop = true;
+  silent.play().catch(() => { silent = null; });
+}
+
 /** Call from every user gesture: cheap once running, and re-arms audio after Safari suspends it. */
 export function unlock(): void {
   try {
+    playbackSession();
     if (!zz) { void ensure(); return; }
     const ctx = zz.audioContext;
     if (ctx.state === "running") return;
