@@ -29,7 +29,7 @@ const api = (opts: Parameters<typeof createApi>[0] = {}) => {
 
 test("auth: 401 without or with a bad JWT, fails closed without AUD, bypass only with AUTH_DISABLED=1", async () => {
   const seen: string[] = [];
-  const app = api({ verify: async (t) => { seen.push(t); return t === "good"; } });
+  const app = api({ verify: async (t) => { seen.push(t); return t === "good" ? "u@x.com" : ""; } });
   env = { DB: env.DB, ACCESS_TEAM_DOMAIN: "team.cloudflareaccess.com", ACCESS_AUD: "aud" };
   const jwt = (t: string) => ({ headers: { "Cf-Access-Jwt-Assertion": t } });
   expect((await app.req("/health")).status).toBe(401);
@@ -201,4 +201,25 @@ test("unknown API paths return a JSON 404", async () => {
   const res = await app.request("/api/nope", undefined, env);
   expect(res.status).toBe(404);
   expect((await res.json()).error).toBeTruthy();
+});
+
+test("users are isolated; the first user claims pre-existing rows; a proxy header is required when USER_HEADER is set", async () => {
+  await env.DB.prepare("INSERT INTO notes VALUES ('old', 't', 'b', '[]', NULL, 'd', 'd', '')").run(); // pre-multi-user row
+  env = { DB: env.DB, AUTH_DISABLED: "1", USER_HEADER: "x-forwarded-email" };
+  const app = api();
+  const as = (u: string, init: RequestInit = {}) => ({ ...init, headers: { ...(init.headers as object), "X-Forwarded-Email": u } });
+  expect((await app.req("/notes")).status).toBe(401);
+  expect(((await (await app.req("/me", as(" A@X.com "))).json()) as { user: string }).user).toBe("a@x.com");
+  expect(((await (await app.req("/notes", as("a@x.com"))).json()) as Note[]).map((n) => n.id)).toEqual(["old"]);
+  expect(await (await app.req("/notes", as("b@x.com"))).json()).toEqual([]);
+  expect((await app.req("/notes/old", as("b@x.com"))).status).toBe(404);
+  expect((await app.req("/notes/old", as("b@x.com", { method: "DELETE" }))).status).toBe(404);
+  const body = { value: { xp: 1 }, updatedAt: 5 };
+  await app.req("/progress", as("a@x.com", json("PUT", body)));
+  expect((await app.req("/progress", as("b@x.com"))).status).toBe(404);
+  expect((await app.req("/progress", as("a@x.com"))).status).toBe(200);
+  const ans = { challengeId: "t:w", levelId: "l1", prompt: "p", answer: "x", source: "typed" };
+  await app.req("/answers", as("a@x.com", post(ans)));
+  expect(await (await app.req("/answers", as("b@x.com"))).json()).toEqual([]);
+  expect(((await (await app.req("/answers", as("a@x.com"))).json()) as SavedAnswer[]).length).toBe(1);
 });

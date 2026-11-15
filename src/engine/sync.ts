@@ -1,4 +1,17 @@
-import { adopt, snapshot, subscribe } from "./store";
+import { adopt, snapshot, STORAGE_KEY, subscribe } from "./store";
+
+const USER_KEY = "ql.user";
+
+/** Records the signed-in user; when it differs from the previous one, wipes their local progress and kata drafts. True if wiped. */
+function switchUser(user: string): boolean {
+  try {
+    const prev = localStorage.getItem(USER_KEY);
+    localStorage.setItem(USER_KEY, user);
+    if (prev === null || prev === user) return false; // first run keeps pre-multi-user local progress
+    for (const k of Object.keys(localStorage)) if (k === STORAGE_KEY || k.startsWith("ql.kata.")) localStorage.removeItem(k);
+    return true;
+  } catch { return false; }
+}
 
 const DEBOUNCE_MS = 2000;
 
@@ -19,7 +32,11 @@ export function startSync() {
     timer = undefined;
     push(keepalive);
   };
-  fetch("/api/progress")
+  // Local state belongs to whoever last used this browser; another account must not adopt or push it.
+  fetch("/api/me")
+    .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+    .then(({ user }: { user: string }) => { if (switchUser(user)) location.reload(); })
+    .then(() => fetch("/api/progress"))
     .then((r) => (r.status === 404 ? null : r.ok ? r.json() : Promise.reject(r.status)))
     // The server only stores newer copies, so pushing ours when it wasn't adopted is always safe.
     .then((remote) => { if (!(remote && adopt(remote.value))) push(); })

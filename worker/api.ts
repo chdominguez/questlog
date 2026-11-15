@@ -21,18 +21,19 @@ export interface Env {
   ACCESS_TEAM_DOMAIN?: string; // e.g. myteam.cloudflareaccess.com
   ACCESS_AUD?: string; // Access application audience tag
   AUTH_DISABLED?: string; // "1" only in .dev.vars
+  USER_HEADER?: string; // with AUTH_DISABLED=1: the header a trusted reverse proxy sets to the signed-in user (e.g. x-forwarded-email)
 }
 
-/** Resolves true, or throws / resolves false, when the Access JWT is not valid for this app. */
-export type Verifier = (token: string, env: Env) => Promise<boolean>;
+/** Resolves the user id (email, else sub) of a valid Access JWT; throws or resolves "" when it is not valid for this app. */
+export type Verifier = (token: string, env: Env) => Promise<string>;
 
 const jwks = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 export const accessVerifier: Verifier = async (token, env) => {
   const issuer = `https://${env.ACCESS_TEAM_DOMAIN!.replace(/^https:\/\/|\/+$/g, "")}`;
   let keys = jwks.get(issuer);
   if (!keys) jwks.set(issuer, (keys = createRemoteJWKSet(new URL(`${issuer}/cdn-cgi/access/certs`))));
-  await jwtVerify(token, keys, { issuer, audience: env.ACCESS_AUD });
-  return true;
+  const { payload } = await jwtVerify(token, keys, { issuer, audience: env.ACCESS_AUD });
+  return String(payload.email ?? payload.sub ?? "");
 };
 
 export const MAX_ANSWER = 8000;
@@ -93,16 +94,38 @@ const toNote = (r: NoteRow): Note => ({
   createdAt: r.created_at, updatedAt: r.updated_at,
 });
 
-type App = { Bindings: Env };
+type App = { Bindings: Env; Variables: { user: string } };
 
-/** Every /api call needs a valid Access JWT; AUTH_DISABLED=1 (local .dev.vars only) skips it. No AUD configured fails closed. */
+const userId = (v: string | undefined | null) => { const u = v?.trim().toLowerCase(); return u && u.length <= 320 ? u : ""; };
+
+/**
+ * Every /api call needs a user. Access JWT by default (no AUD configured fails closed). AUTH_DISABLED=1 trusts a reverse proxy:
+ * the USER_HEADER it sets is the user (401 if missing); without USER_HEADER (local .dev.vars) everyone is "local".
+ */
 const auth = (verify: Verifier): MiddlewareHandler<App> => async (c, next) => {
-  if (c.env.AUTH_DISABLED === "1") return next();
-  const token = c.req.header("cf-access-jwt-assertion");
-  const ok = !!token && !!c.env.ACCESS_AUD && !!c.env.ACCESS_TEAM_DOMAIN && (await verify(token, c.env).catch(() => false));
-  if (!ok) return c.json({ error: "Unauthorized" }, 401);
+  let user = "";
+  if (c.env.AUTH_DISABLED === "1") {
+    user = c.env.USER_HEADER ? userId(c.req.header(c.env.USER_HEADER)) : "local";
+  } else {
+    const token = c.req.header("cf-access-jwt-assertion");
+    if (token && c.env.ACCESS_AUD && c.env.ACCESS_TEAM_DOMAIN) user = userId(await verify(token, c.env).catch(() => ""));
+  }
+  if (!user) return c.json({ error: "Unauthorized" }, 401);
+  c.set("user", user);
+  await claimLegacy(c.env.DB, user);
   await next();
 };
+
+/** Rows from before multi-user (user_id '') go to the first user ever seen; the marker row makes it happen once. */
+async function claimLegacy(db: D1, user: string) {
+  const { meta } = await db.prepare("INSERT OR IGNORE INTO kv (user_id, key, value, updated_at) VALUES ('', 'claimed', ?, 0)").bind(JSON.stringify(user)).run();
+  if (!meta.changes) return;
+  for (const sql of [
+    "UPDATE answers SET user_id = ? WHERE user_id = ''",
+    "UPDATE notes SET user_id = ? WHERE user_id = ''",
+    "UPDATE kv SET user_id = ? WHERE user_id = '' AND key <> 'claimed'",
+  ]) await db.prepare(sql).bind(user).run();
+}
 
 /** Only this app's own pages may call the API: blocks cross-site requests riding the Access cookie, and simple (text/plain) writes. */
 const guard: MiddlewareHandler<App> = async (c, next) => {
@@ -135,13 +158,14 @@ export function createApi({
 }: { verify?: Verifier; grader?: (env: Env) => Grader | null; courses?: Course[] } = {}) {
   const json = async (c: Context<App>) => c.req.json().catch(() => undefined);
   const db = (c: Context<App>) => c.env.DB;
+  const user = (c: Context<App>) => c.get("user");
   const listAnswers = async (c: Context<App>, challengeId?: string) => {
-    const stmt = db(c).prepare(`SELECT * FROM answers ${challengeId ? "WHERE challenge_id = ?" : ""} ORDER BY created_at DESC, rowid DESC`);
-    const { results } = await (challengeId ? stmt.bind(challengeId) : stmt).all<AnswerRow>();
+    const stmt = db(c).prepare(`SELECT * FROM answers WHERE user_id = ? ${challengeId ? "AND challenge_id = ?" : ""} ORDER BY created_at DESC, rowid DESC`);
+    const { results } = await stmt.bind(...(challengeId ? [user(c), challengeId] : [user(c)])).all<AnswerRow>();
     return results.map(toAnswer);
   };
   const getNote = async (c: Context<App>, id: string) => {
-    const row = await db(c).prepare("SELECT * FROM notes WHERE id = ?").bind(id).first<NoteRow>();
+    const row = await db(c).prepare("SELECT * FROM notes WHERE id = ? AND user_id = ?").bind(id, user(c)).first<NoteRow>();
     return row && toNote(row);
   };
 
@@ -150,6 +174,7 @@ export function createApi({
     .use(guard)
     .use(bodyLimit({ maxSize: 256 * 1024, onError: (c) => c.json({ error: "Request too large" }, 413) }))
     .get("/health", (c) => c.json({ ok: true, grader: grader(c.env) !== null }))
+    .get("/me", (c) => c.json({ user: user(c) }))
     .post("/grade", async (c) => {
       const grade = grader(c.env);
       if (!grade) return c.json({ error: "Grader not configured (missing ANTHROPIC_API_KEY)" }, 503);
@@ -173,9 +198,9 @@ export function createApi({
       const body = parseSave(await json(c));
       if (typeof body === "string") return c.json({ error: body }, 400);
       const a: SavedAnswer = { id: crypto.randomUUID(), ...body, createdAt: new Date().toISOString() };
-      await db(c).prepare("INSERT INTO answers VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(
+      await db(c).prepare("INSERT INTO answers VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(
         a.id, courseOf(a.challengeId), a.challengeId, a.levelId, a.prompt, a.answer, a.source,
-        a.seconds ?? null, a.grade ? JSON.stringify(a.grade) : null, a.selfScore ?? null, a.createdAt,
+        a.seconds ?? null, a.grade ? JSON.stringify(a.grade) : null, a.selfScore ?? null, a.createdAt, user(c),
       ).run();
       return c.json(a, 201);
     })
@@ -186,7 +211,7 @@ export function createApi({
       return c.body(toMarkdown(await listAnswers(c)));
     })
     .get("/progress", async (c) => {
-      const row = await db(c).prepare("SELECT value, updated_at FROM kv WHERE key = 'progress'").first<{ value: string; updated_at: number }>();
+      const row = await db(c).prepare("SELECT value, updated_at FROM kv WHERE user_id = ? AND key = 'progress'").bind(user(c)).first<{ value: string; updated_at: number }>();
       return row ? c.json({ value: JSON.parse(row.value), updatedAt: row.updated_at }) : c.json({ error: "No progress" }, 404);
     })
     .put("/progress", async (c) => {
@@ -194,18 +219,18 @@ export function createApi({
       if (!b.value || typeof b.value !== "object" || Array.isArray(b.value)) return c.json({ error: "Invalid value" }, 400);
       if (!Number.isSafeInteger(b.updatedAt) || (b.updatedAt as number) < 0) return c.json({ error: "Invalid updatedAt" }, 400);
       const { meta } = await db(c).prepare(
-        `INSERT INTO kv (key, value, updated_at) VALUES ('progress', ?, ?)
-         ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at WHERE excluded.updated_at > kv.updated_at`,
-      ).bind(JSON.stringify(b.value), b.updatedAt).run();
+        `INSERT INTO kv (user_id, key, value, updated_at) VALUES (?, 'progress', ?, ?)
+         ON CONFLICT (user_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at WHERE excluded.updated_at > kv.updated_at`,
+      ).bind(user(c), JSON.stringify(b.value), b.updatedAt).run();
       return c.json({ stored: meta.changes > 0 });
     })
     .get("/notes", async (c) => {
       const { results } = await db(c).prepare(
         `SELECT * FROM notes
-         WHERE (?1 = '' OR instr(lower(title), lower(?1)) > 0 OR instr(lower(body), lower(?1)) > 0)
+         WHERE user_id = ?3 AND (?1 = '' OR instr(lower(title), lower(?1)) > 0 OR instr(lower(body), lower(?1)) > 0)
            AND (?2 = '' OR EXISTS (SELECT 1 FROM json_each(notes.tags) WHERE value = ?2))
          ORDER BY updated_at DESC, rowid DESC`,
-      ).bind(c.req.query("q")?.trim() ?? "", c.req.query("tag") ?? "").all<NoteRow>();
+      ).bind(c.req.query("q")?.trim() ?? "", c.req.query("tag") ?? "", user(c)).all<NoteRow>();
       return c.json(results.map(toNote));
     })
     .get("/notes/:id", async (c) => {
@@ -217,20 +242,20 @@ export function createApi({
       if (typeof n === "string") return c.json({ error: n }, 400);
       const now = new Date().toISOString();
       const note: Note = { id: crypto.randomUUID(), ...n, createdAt: now, updatedAt: now };
-      await db(c).prepare("INSERT INTO notes VALUES (?, ?, ?, ?, ?, ?, ?)")
-        .bind(note.id, note.title, note.body, JSON.stringify(note.tags), note.courseId ?? null, now, now).run();
+      await db(c).prepare("INSERT INTO notes VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+        .bind(note.id, note.title, note.body, JSON.stringify(note.tags), note.courseId ?? null, now, now, user(c)).run();
       return c.json(note, 201);
     })
     .put("/notes/:id", async (c) => {
       const n = parseNote(await json(c));
       if (typeof n === "string") return c.json({ error: n }, 400);
       const id = c.req.param("id");
-      const { meta } = await db(c).prepare("UPDATE notes SET title = ?, body = ?, tags = ?, course_id = ?, updated_at = ? WHERE id = ?")
-        .bind(n.title, n.body, JSON.stringify(n.tags), n.courseId ?? null, new Date().toISOString(), id).run();
+      const { meta } = await db(c).prepare("UPDATE notes SET title = ?, body = ?, tags = ?, course_id = ?, updated_at = ? WHERE id = ? AND user_id = ?")
+        .bind(n.title, n.body, JSON.stringify(n.tags), n.courseId ?? null, new Date().toISOString(), id, user(c)).run();
       return meta.changes ? c.json((await getNote(c, id))!) : c.json({ error: "Note not found" }, 404);
     })
     .delete("/notes/:id", async (c) => {
-      const { meta } = await db(c).prepare("DELETE FROM notes WHERE id = ?").bind(c.req.param("id")).run();
+      const { meta } = await db(c).prepare("DELETE FROM notes WHERE id = ? AND user_id = ?").bind(c.req.param("id"), user(c)).run();
       return meta.changes ? c.body(null, 204) : c.json({ error: "Note not found" }, 404);
     })
     // A route, not notFound(): mounted with app.route, a sub-app's notFound is ignored.

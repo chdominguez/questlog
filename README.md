@@ -13,7 +13,7 @@ Courses are plain files in git, validated by one schema, so you (or Claude) can 
 - **Spaced repetition.** Every challenge you meet becomes an [FSRS](https://github.com/open-spaced-repetition/ts-fsrs) card. Misses come back right away, hits come back days later. One review queue across all courses.
 - **XP, ranks, combo multipliers, sounds, confetti.**
 - **Notes** in Markdown, tagged and linked to courses, that Claude can turn into a course.
-- **Sync** across devices through a Cloudflare Worker + D1, behind Cloudflare Access.
+- **Sync** across devices through a Cloudflare Worker + D1, behind Cloudflare Access or your own login proxy. Each user (the JWT email, or the proxy header) has separate progress, answers and notes.
 
 ## Run it
 
@@ -68,6 +68,8 @@ One Cloudflare Worker serves the app and the API.
 3. `npx wrangler secret put ANTHROPIC_API_KEY`
 4. `npm run deploy`
 5. In the Cloudflare dashboard, enable Cloudflare Access on the Worker for your email, then set `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` in `wrangler.jsonc` and deploy again. The API refuses every request until Access is configured.
+
+   Self-hosted instead: put a login proxy (e.g. oauth2-proxy with Keycloak) in front of the container. It must remove any client-sent `x-forwarded-email` and set it to the signed-in user (override the name with `USER_HEADER`). The first user to sign in after upgrading adopts the existing data. Import old answers with `--user <email>`.
 
 ## License
 
