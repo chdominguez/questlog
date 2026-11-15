@@ -1,4 +1,4 @@
-import type { Grade, GradeRequest, Note, NoteInput, SavedAnswer } from "../../shared/api-types";
+import type { Grade, GradeRequest, Note, NoteInput, Profile, SavedAnswer } from "../../shared/api-types";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -34,3 +34,7 @@ export const deleteNote = async (id: string) => {
   const res = await fetch(`/api/notes/${encodeURIComponent(id)}`, { method: "DELETE" });
   if (!res.ok) throw new ApiError(res.status, `HTTP ${res.status}`);
 };
+
+export const getMe = () => call<{ user: string; name?: string }>("/me");
+export const getProfile = () => call<Profile>("/profile");
+export const saveProfile = (p: Profile) => call<Profile>("/profile", send("PUT", p));

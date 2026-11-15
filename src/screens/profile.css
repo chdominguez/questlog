@@ -1,0 +1,5 @@
+/* Profile form. Only tokens from src/ui/global.css. */
+.profile-form { display: grid; gap: 12px; min-width: 0; max-width: 560px; }
+.profile-field { display: grid; gap: 6px; color: var(--muted); font-size: .85rem; }
+.profile-field input[readonly] { color: var(--muted); }
+.profile-bio { min-height: 8rem; resize: vertical; font: .92rem/1.55 var(--f-body, inherit); }

@@ -9,6 +9,7 @@ test("parse", () => {
   expect(parse("#/c/x/mock")).toEqual({ name: "mock", course: "x" });
   expect(parse("#/review")).toEqual({ name: "review" });
   expect(parse("#/notes/abc")).toEqual({ name: "notes", id: "abc" });
+  expect(parse("#/profile")).toEqual({ name: "profile" });
   expect(parse("#/nope")).toEqual({ name: "home" });
 });
 

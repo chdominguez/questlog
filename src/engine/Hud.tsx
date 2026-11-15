@@ -42,6 +42,7 @@ export function Hud() {
     { href: href.review(), label: "Review", on: r.name === "review", count: dueKeys(p.cards, Date.now()).length },
     { href: href.notes(), label: "Notes", on: r.name === "notes" },
     { href: href.answers(), label: "Answers", on: r.name === "answers" },
+    { href: href.profile(), label: "Profile", on: r.name === "profile" },
   ];
   const mult = multiplier(p.streak);
 
