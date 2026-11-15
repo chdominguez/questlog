@@ -1,7 +1,9 @@
 /** Course files on disk for the MCP server: found the same way as scripts/validate.ts, saved as `<root>/<id>/course.json`. */
-import { globSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, globSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { mediaRefProblem } from "../shared/media";
+import { COURSE_DIR } from "../server/media";
 import { validateCourse } from "../src/course/validate";
 
 export type Visibility = "public" | "private";
@@ -45,4 +47,27 @@ export function saveCourse(course: unknown, visibility: Visibility, overwrite: b
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify(course, null, 2)}\n`);
   return { path };
+}
+
+export const MAX_MEDIA_BYTES = () => Number(process.env.MEDIA_MAX_BYTES ?? 50 * 1024 * 1024);
+
+/** Writes a media file for a course; returns the `media/<file>` ref to use in a course block. */
+export function uploadMedia(root: string, course: string, filename: string, bytes: Buffer, overwrite: boolean): { ref: string; bytes: number } | { error: string } {
+  if (!COURSE_DIR.test(course)) return { error: `Course id "${course}" must be lowercase letters, digits and dashes.` };
+  const p = mediaRefProblem(`media/${filename}`);
+  if (p) return { error: `filename ${p}` };
+  if (!bytes.length) return { error: "File is empty." };
+  if (bytes.length > MAX_MEDIA_BYTES()) return { error: `File is ${bytes.length} bytes; the limit is ${MAX_MEDIA_BYTES()} (env MEDIA_MAX_BYTES).` };
+  const path = resolve(root, course, filename);
+  if (existsSync(path) && !overwrite) return { error: `media/${filename} already exists for ${course}. Call media_upload again with overwrite: true to replace it.` };
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, bytes);
+  return { ref: `media/${filename}`, bytes: bytes.length };
+}
+
+export function listMedia(root: string, course: string): { ref: string; bytes: number }[] | { error: string } {
+  if (!COURSE_DIR.test(course)) return { error: `Course id "${course}" must be lowercase letters, digits and dashes.` };
+  const dir = resolve(root, course);
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir).filter((f) => mediaRefProblem(`media/${f}`) === null).sort().map((f) => ({ ref: `media/${f}`, bytes: statSync(resolve(dir, f)).size }));
 }

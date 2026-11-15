@@ -6,8 +6,8 @@ Courses are plain files in git, validated by one schema, so you (or Claude) can 
 
 ## What's inside
 
-- **Courses as maps.** Levels unlock in order. Each level is theory cards, then challenges: quiz, put-in-order, find-the-bug, written answer, coding kata. Three lives per level, up to three stars.
-- **Theory that moves.** Markdown, highlighted code, Mermaid diagrams, step-through code traces with live variables, and animated request flows with real payloads.
+- **Courses as maps.** Levels unlock in order. Each level is theory cards, then challenges: quiz, multi-select and true/false, match, cloze, sort, flashcard, put-in-order, find-the-bug, written answer, coding kata. Three lives per level, up to three stars.
+- **Theory that moves.** Markdown, highlighted code, Mermaid diagrams, step-through code traces with live variables, animated request flows with real payloads, and images, GIFs, video and audio.
 - **Katas.** TypeScript in a Monaco editor, tests run in a Web Worker.
 - **Written answers graded by Claude** against a model answer and key points, with a stronger version of your answer. Each course sets its grader persona and language.
 - **Spaced repetition.** Every challenge you meet becomes an [FSRS](https://github.com/open-spaced-repetition/ts-fsrs) card. Misses come back right away, hits come back days later. One review queue across all courses.
@@ -53,7 +53,7 @@ Three ways to write one:
    ```
    - `quest-design`: how to turn a topic into a learning quest (objectives, levels, challenge mix, item-writing rules, gamification that helps).
    - `questlog-course`: how to write, validate and ship a course in this repo.
-2. **With the MCP server** (Claude Code picks up `.mcp.json`; Claude Desktop config in [`mcp/README.md`](mcp/README.md)): `course_list`, `course_get`, `course_validate`, `course_save`, `note_search`, `note_get`.
+2. **With the MCP server** (Claude Code picks up `.mcp.json`; Claude Desktop config in [`mcp/README.md`](mcp/README.md)): `course_list`, `course_get`, `course_validate`, `course_save`, `media_upload`, `media_list`, `note_search`, `note_get`.
 3. **By hand.** See `courses/http-basics/`.
 
 ## Private courses

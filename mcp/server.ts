@@ -1,12 +1,13 @@
 // Questlog MCP server over stdio: `npm run mcp`. See mcp/README.md.
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
+import { mediaRoot } from "../server/media";
 import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import * as z from "zod";
 import { CourseSchema } from "../src/course/schema";
 import { validateCourse } from "../src/course/validate";
-import { defaultRoots, findCourses, listCourses, loadCourse, saveCourse } from "./courses";
+import { defaultRoots, findCourses, listCourses, listMedia, loadCourse, saveCourse, uploadMedia } from "./courses";
 
 const text = (t: string, isError = false) => ({ content: [{ type: "text" as const, text: t }], isError });
 const course = z.record(z.string(), z.unknown()).describe("The whole course object, shaped like the questlog://schema/course resource");
@@ -64,6 +65,32 @@ serveStdio(() => {
   }, ({ course, visibility, overwrite }) => {
     const r = saveCourse(course, visibility, overwrite ?? false, defaultRoots());
     return "error" in r ? text(r.error, true) : text(`Saved ${r.path}`);
+  });
+
+  server.registerTool("media_upload", {
+    description: "Stores an image, GIF, video or audio file for a course and returns the ref (media/<file>) to put in a course's media block src or poster, or in Markdown as ![alt](media/<file>). Allowed: png jpg jpeg webp gif avif mp4 webm mp3 ogg m4a wav. Give exactly one of data (base64) or path (a file on this machine). The file is stored in the media folder the Questlog server serves (MEDIA_DIR, else next to the database).",
+    inputSchema: z.object({
+      course_id: z.string().describe("Course id from course_list"),
+      filename: z.string().optional().describe("Name to store, e.g. demo.mp4; defaults to the name of path"),
+      data: z.string().optional().describe("File contents, base64"),
+      path: z.string().optional().describe("Absolute path of a local file"),
+      overwrite: z.boolean().optional().describe("Replace an existing file with the same name"),
+    }),
+  }, ({ course_id, filename, data, path, overwrite }) => {
+    if (!data === !path) return text("Give exactly one of data or path.", true);
+    const name = filename ?? (path ? basename(path) : "");
+    let bytes: Buffer;
+    try { bytes = data ? Buffer.from(data, "base64") : readFileSync(path!); } catch (e) { return text(`Cannot read ${path}: ${e instanceof Error ? e.message : e}`, true); }
+    const r = uploadMedia(mediaRoot(), course_id, name, bytes, overwrite ?? false);
+    return "error" in r ? text(r.error, true) : text(JSON.stringify(r));
+  });
+
+  server.registerTool("media_list", {
+    description: "Lists the media files stored for a course: ref (media/<file>) and size in bytes.",
+    inputSchema: z.object({ course_id: z.string().describe("Course id from course_list") }),
+  }, ({ course_id }) => {
+    const r = listMedia(mediaRoot(), course_id);
+    return "error" in r ? text(r.error, true) : text(JSON.stringify(r));
   });
 
   server.registerTool("note_search", {

@@ -22,6 +22,43 @@ Run this over the whole course before handing it over. Fix every "no". Do it as 
 - [ ] No grammar cues (articles, plurals, tense) and no stem keyword echoed only in the right option.
 - [ ] Negative stems are avoided or **bold**.
 
+## Multi and true/false
+
+- [ ] At least one option is wrong; the right set is unambiguous.
+- [ ] Prompt does not reveal how many are right.
+- [ ] True/false statements target a real misconception; not every answer is the same value.
+- [ ] Explanation covers each right option and the tempting wrong one.
+
+## Match
+
+- [ ] 3–8 pairs; lefts unique, rights unique, all rights the same kind and length.
+- [ ] Each right fits exactly one left.
+
+## Cloze
+
+- [ ] Markers `{{1}}..{{N}}` match the blanks; 1–3 blanks.
+- [ ] Each blank has one right term; accepted variants are listed in `answers`.
+- [ ] With a bank, the first answers are in it and decoys are plausible; `exact` only where case matters.
+- [ ] The text does not give the blank away.
+
+## Sort
+
+- [ ] 2–4 buckets with mutually exclusive labels; each has items.
+- [ ] Every item belongs to exactly one bucket, no argument needed.
+- [ ] Bucket sizes do not make the split guessable.
+
+## Flashcard
+
+- [ ] One cue, one fact; the back is the answer plus at most one line.
+- [ ] Stands alone in review (no "this", no "above").
+
+## Media
+
+- [ ] `alt` teaches what the media shows or says; a caption says what to watch for.
+- [ ] Clip is under 30 s; image or GIF for UI flows; audio for pronunciation.
+- [ ] The answer is also in text; media is never the only carrier.
+- [ ] Files uploaded before saving; no binaries in git.
+
 ## Order
 
 - [ ] Steps listed in the correct order.

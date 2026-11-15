@@ -3,6 +3,7 @@
  * Fields marked (md) are Markdown rendered by <Md> (src/ui/Md.tsx). A course must stay JSON-serializable.
  */
 import * as z from "zod";
+import { mediaRefProblem } from "../../shared/media";
 
 const md = (what: string) => z.string().min(1).describe(`${what} (Markdown)`);
 const id = z.string().regex(/^[a-z0-9][a-z0-9-]*$/, "lowercase letters, digits and dashes").describe("Stable id, lowercase-kebab");
@@ -34,6 +35,12 @@ export const TheoryBlockSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("mermaid"), src: z.string().min(1), caption: z.string().optional() }).strict(),
   z.object({ kind: z.literal("figure"), art: z.string().describe("Key in the course art map or platform art"), caption: z.string().optional() }).strict(),
   z.object({
+    kind: z.literal("media"), type: z.enum(["image", "video", "audio"]).describe("A GIF is an image"),
+    src: z.string().describe("Course-relative file, e.g. media/demo.mp4; upload it with media_upload"),
+    alt: z.string().min(1).describe("What the media shows or says"), caption: z.string().optional(),
+    poster: z.string().optional().describe("Video only: preview image, e.g. media/demo.jpg"),
+  }).strict(),
+  z.object({
     kind: z.literal("trace"), lang: CodeLangSchema, src: z.string().min(1), title: z.string().optional(),
     steps: z.array(TraceStepSchema).min(2),
   }).strict().describe("Step-through run of code with sample values"),
@@ -57,6 +64,12 @@ export const ChallengeSchema = z.discriminatedUnion("type", [
     options: z.array(md("Option")).min(2).max(6).describe("Author the right one first; the UI shuffles"),
     answer: z.number().int().min(0).describe("0-based index of the right option"),
   }).strict(),
+  z.object({
+    ...base, type: z.literal("multi"),
+    options: z.array(md("Option")).min(2).max(6).describe("Shuffled by the UI, except style truefalse"),
+    answers: z.array(z.number().int().min(0)).min(1).describe("0-based indexes of every right option; unique, fewer than options"),
+    style: z.literal("truefalse").optional().describe("Fixed order; options must be exactly [True, False] and one answer"),
+  }).strict(),
   z.object({ ...base, type: z.literal("order"), steps: z.array(md("Step")).min(3).describe("In CORRECT order; the UI shuffles") }).strict(),
   z.object({
     ...base, type: z.literal("bug"), lang: CodeLangSchema,
@@ -69,6 +82,26 @@ export const ChallengeSchema = z.discriminatedUnion("type", [
     keyPoints: z.array(z.string().min(1)).min(2).describe("What a strong answer must mention; sent to the grader"),
     seconds: z.number().int().positive().optional().describe("Soft time limit"),
   }).strict(),
+  z.object({
+    ...base, type: z.literal("match"),
+    pairs: z.array(z.object({ left: md("Left item"), right: md("Matching right item") }).strict()).min(3).max(8).describe("Unique lefts and unique rights; the UI shuffles the right column"),
+  }).strict(),
+  z.object({
+    ...base, type: z.literal("cloze"),
+    text: z.string().min(1).describe("Text with numbered markers {{1}}, {{2}}, ... each used once, contiguous from 1"),
+    blanks: z.array(z.object({
+      answers: z.array(z.string().min(1)).min(1).describe("Accepted variants; the first is shown as the answer"),
+      exact: z.boolean().optional().describe("Case- and whitespace-sensitive; default false"),
+    }).strict()).min(1),
+    bank: z.array(z.string().min(1)).optional().describe("Word bank chips; each blank's first answer must be in it. Omit for typed blanks"),
+    lang: CodeLangSchema.optional().describe("Render text as code in this language; default Markdown"),
+  }).strict(),
+  z.object({
+    ...base, type: z.literal("sort"),
+    buckets: z.array(md("Bucket label")).min(2).max(4),
+    items: z.array(z.object({ text: md("Item"), bucket: z.number().int().min(0).describe("0-based index into buckets") }).strict()).min(4).max(12),
+  }).strict().describe("Drop each item into the bucket it belongs to"),
+  z.object({ ...base, type: z.literal("flashcard"), back: md("The back, shown on reveal; the prompt is the front") }).strict(),
   z.object({ ...base, type: z.literal("kata"), kataId: id.describe("Id of a kata in this course") }).strict(),
 ]);
 
@@ -144,6 +177,14 @@ export const CourseSchema = z.object({
     l.theory.forEach((card, ti) => card.blocks.forEach((b, bi) => {
       const at = ["levels", li, "theory", ti, "blocks", bi];
       if (b.kind === "figure" && !art.has(b.art)) issue([...at, "art"], `art "${b.art}" is not in course.art`);
+      if (b.kind === "media") {
+        const p = mediaRefProblem(b.src, [b.type]);
+        if (p) issue([...at, "src"], p);
+        if (b.poster !== undefined) {
+          const q = b.type !== "video" ? "only videos have a poster" : mediaRefProblem(b.poster, ["image"]);
+          if (q) issue([...at, "poster"], q);
+        }
+      }
       const lines = "src" in b ? b.src.replace(/\n$/, "").split("\n").length : 0;
       if (b.kind === "trace") b.steps.forEach((s, si) => {
         if (s.line > lines) issue([...at, "steps", si, "line"], `line ${s.line} is past the end of src (${lines} lines)`);
@@ -160,7 +201,28 @@ export const CourseSchema = z.object({
     l.challenges.forEach((ch, ci) => {
       const at = ["levels", li, "challenges", ci];
       if (ch.type === "quiz" && ch.answer >= ch.options.length) issue([...at, "answer"], `answer ${ch.answer} but only ${ch.options.length} options`);
+      if (ch.type === "multi") {
+        if (ch.answers.some((a) => a >= ch.options.length)) issue([...at, "answers"], `answers ${JSON.stringify(ch.answers)} but only ${ch.options.length} options`);
+        if (new Set(ch.answers).size !== ch.answers.length) issue([...at, "answers"], "answers must be unique");
+        if (ch.answers.length >= ch.options.length) issue([...at, "answers"], "answers must be fewer than options (otherwise nothing is a wrong pick)");
+        if (ch.style === "truefalse" && (ch.options.length !== 2 || ch.answers.length !== 1)) issue([...at, "style"], "truefalse needs exactly 2 options and 1 answer");
+      }
       if (ch.type === "bug" && ch.answer >= ch.lines.length) issue([...at, "answer"], `answer ${ch.answer} but only ${ch.lines.length} lines`);
+      if (ch.type === "match") for (const side of ["left", "right"] as const) {
+        const seen = new Set<string>();
+        ch.pairs.forEach((p, pi) => { if (seen.has(p[side])) issue([...at, "pairs", pi, side], `duplicate ${side} item`); seen.add(p[side]); });
+      }
+      if (ch.type === "cloze") {
+        const marks = [...ch.text.matchAll(/\{\{(\d+)\}\}/g)].map((m) => Number(m[1]));
+        if (marks.length !== ch.blanks.length || marks.some((m, i) => m !== i + 1)) issue([...at, "text"], `markers must be {{1}}..{{${ch.blanks.length}}} in order, once each, matching blanks`);
+        ch.blanks.forEach((b, bi) => {
+          if (ch.bank && !ch.bank.includes(b.answers[0])) issue([...at, "blanks", bi, "answers", 0], `"${b.answers[0]}" is not in bank`);
+        });
+      }
+      if (ch.type === "sort") {
+        ch.items.forEach((it, ii) => { if (it.bucket >= ch.buckets.length) issue([...at, "items", ii, "bucket"], `bucket ${it.bucket} but only ${ch.buckets.length} buckets`); });
+        ch.buckets.forEach((_, bi) => { if (!ch.items.some((it) => it.bucket === bi)) issue([...at, "buckets", bi], `bucket ${bi} has no items`); });
+      }
       if (ch.type === "kata" && !katas.has(ch.kataId)) issue([...at, "kataId"], `no kata "${ch.kataId}" in course.katas`);
     });
   });

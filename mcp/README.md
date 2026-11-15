@@ -1,6 +1,6 @@
 # Questlog MCP server
 
-A local stdio MCP server that lets Claude list, read, validate and create courses, and read your notes from the deployed app. Run it by hand with `npm run mcp`.
+A local stdio MCP server that lets Claude list, read, validate and create courses, upload course media, and read your notes from the deployed app. Run it by hand with `npm run mcp`.
 
 ## Tools
 
@@ -10,6 +10,8 @@ A local stdio MCP server that lets Claude list, read, validate and create course
 | `course_get(course_id)` | The full course as JSON (TypeScript courses are evaluated) |
 | `course_validate(course)` | `valid`, or one problem per line (schema, cross-references, katas) |
 | `course_save(course, visibility, overwrite?)` | Validates, then writes `courses/<id>/course.json` (public) or `<private root>/<id>/course.json` (private). Never replaces a `course.ts`; replaces a `course.json` only with `overwrite: true` |
+| `media_upload(course_id, filename?, data? \| path?, overwrite?)` | Stores an image, GIF, video or audio file (png jpg jpeg webp gif avif mp4 webm mp3 ogg m4a wav, up to `MEDIA_MAX_BYTES`) and returns the `media/<file>` ref for a course's `media` block or Markdown image. Give exactly one of `data` (base64) or `path`. Upload before `course_save` |
+| `media_list(course_id)` | The stored media files of a course: ref and size in bytes |
 | `note_search(query?, tag?)` | Your notes from the deployed app, without bodies |
 | `note_get(note_id)` | One note in full |
 
@@ -20,6 +22,8 @@ Resources: `questlog://schema/course` (JSON Schema of a course) and `questlog://
 | Variable | Used for |
 | --- | --- |
 | `QUESTLOG_COURSES` | Private courses folder (default `courses-private`) |
+| `MEDIA_DIR` | Where media is stored and served from (default `media/` next to the database, `DB_PATH`) |
+| `MEDIA_MAX_BYTES` | Largest media upload in bytes (default 52428800, 50 MB) |
 | `QUESTLOG_URL` | Base URL of the deployed app, for the note tools |
 | `QUESTLOG_HEADERS` | JSON of headers to send, e.g. the user header a login proxy trusts (`{"x-auth-request-email":"me@x.com"}`) |
 

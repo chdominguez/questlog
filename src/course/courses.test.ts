@@ -21,6 +21,16 @@ const course = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+test("multi challenges validate answers and truefalse shape", () => {
+  const mk = (ch: object) => { const c = course(); (c.levels as any)[0].challenges = [{ id: "m", type: "multi", prompt: "P", ...ch }]; return validateCourse(c).join("\n"); };
+  expect(mk({ options: ["a", "b", "c"], answers: [0, 2] })).toBe("");
+  expect(mk({ options: ["True", "False"], answers: [0], style: "truefalse" })).toBe("");
+  expect(mk({ options: ["a", "b", "c"], answers: [0, 0] })).toMatch(/unique/);
+  expect(mk({ options: ["a", "b", "c"], answers: [3] })).toMatch(/only 3 options/);
+  expect(mk({ options: ["a", "b"], answers: [0, 1] })).toMatch(/fewer than options/);
+  expect(mk({ options: ["a", "b", "c"], answers: [0], style: "truefalse" })).toMatch(/truefalse needs/);
+});
+
 test("validation explains what is wrong and where", () => {
   expect(validateCourse(course())).toEqual([]);
   const bad = course();
@@ -35,6 +45,40 @@ test("validation explains what is wrong and where", () => {
   expect(CourseSchema.safeParse(course({ extra: 1 })).success).toBe(false);
 });
 
+test("match needs 3-8 pairs with unique sides", () => {
+  const withMatch = (pairs: unknown[]) => {
+    const c = course();
+    (c.levels as any)[0].challenges.push({ id: "m", type: "match", prompt: "P", pairs });
+    return validateCourse(c).join("\n");
+  };
+  const pair = (i: number) => ({ left: `l${i}`, right: `r${i}` });
+  expect(withMatch([1, 2, 3].map(pair))).toBe("");
+  expect(withMatch([1, 2].map(pair))).toMatch(/pairs/);
+  expect(withMatch([1, 2, 3, 4, 5, 6, 7, 8, 9].map(pair))).toMatch(/pairs/);
+  expect(withMatch([pair(1), pair(2), { left: "l1", right: "r3" }])).toMatch(/duplicate left item/);
+  expect(withMatch([pair(1), pair(2), { left: "l3", right: "r2" }])).toMatch(/duplicate right item/);
+});
+
+test("sort buckets are checked", () => {
+  const items = (bs: number[]) => bs.map((bucket) => ({ text: "x", bucket }));
+  const sort = { id: "s", type: "sort", prompt: "P", buckets: ["a", "b"], items: items([0, 0, 1, 1]) };
+  const withSort = (s: unknown) => course({ levels: [{ ...course().levels[0], challenges: [s] }] });
+  expect(validateCourse(withSort(sort))).toEqual([]);
+  expect(validateCourse(withSort({ ...sort, items: items([0, 0, 0, 5]) })).join("\n")).toMatch(/bucket 5 but only 2/);
+  expect(validateCourse(withSort({ ...sort, items: items([0, 0, 0, 0]) })).join("\n")).toMatch(/bucket 1 has no items/);
+});
+
+test("flashcard needs a back and rejects extras", () => {
+  const withCard = (card: Record<string, unknown>) => {
+    const c = course();
+    (c.levels as any)[0].challenges.push({ id: "f", type: "flashcard", prompt: "Front", ...card });
+    return validateCourse(c);
+  };
+  expect(withCard({ back: "Back", explain: "Why" })).toEqual([]);
+  expect(withCard({}).join("\n")).toMatch(/back/);
+  expect(withCard({ back: "B", options: ["a", "b"] }).length).toBeGreaterThan(0);
+});
+
 test("kata checks run the solution and the starter", () => {
   const kata = { id: "sum", title: "Sum", difficulty: "easy", statement: "S", examples: [{ input: "1", output: "1" }], complexity: "O(n)",
     starter: "export function sum(xs: number[]): number { return 0; }",
@@ -44,4 +88,12 @@ test("kata checks run the solution and the starter", () => {
   expect(validateCourse(course({ katas: [kata] }))).toEqual([]);
   expect(validateCourse(course({ katas: [{ ...kata, solution: kata.starter }] })).join()).toMatch(/solution fails "n1"/);
   expect(validateCourse(course({ katas: [{ ...kata, starter: kata.solution }] })).join()).toMatch(/starter already passes/);
+});
+
+test("cloze markers and bank are cross-checked", () => {
+  const cz = (over: Record<string, unknown>) => course({ levels: [{ ...course().levels[0], challenges: [{ id: "c", type: "cloze", prompt: "P", text: "a {{1}} b {{2}}", blanks: [{ answers: ["x"] }, { answers: ["y"] }], ...over }] }] });
+  expect(validateCourse(cz({}))).toEqual([]);
+  expect(validateCourse(cz({ text: "a {{1}} b {{3}}" })).join()).toMatch(/markers must be/);
+  expect(validateCourse(cz({ text: "a {{1}}" })).join()).toMatch(/markers must be/);
+  expect(validateCourse(cz({ bank: ["x", "z"] })).join()).toMatch(/"y" is not in bank/);
 });

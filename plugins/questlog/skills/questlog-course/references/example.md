@@ -74,6 +74,9 @@ export default defineCourse({
           blocks: [
             { kind: "flow", actors: ["Script", "Timers", "Task queue", "Microtasks"], steps: FLOW, caption: "Who hands each callback back" },
             { kind: "mermaid", src: "flowchart LR\n  S[Run script] --> M[Drain microtasks] --> T[Run one task] --> M", caption: "The loop" },
+            // media: upload the file first (MCP media_upload); src is flat media/<file>; alt is required; a GIF is type "image".
+            // The validator checks the ref's format, not that the file exists.
+            { kind: "media", type: "video", src: "media/loop.mp4", poster: "media/loop.jpg", alt: "Animation of the loop draining microtasks before taking the next task", caption: "One turn of the loop" },
           ],
         },
       ],
@@ -111,6 +114,59 @@ export default defineCourse({
           keyPoints: ["Timer callbacks are tasks; promise callbacks are microtasks", "The microtask queue drains completely before the next task", "0 ms is a minimum delay, not immediate execution"],
           model: "The timer callback goes to the task queue and the promise callback to the microtask queue. When the script finishes, the loop drains all microtasks before taking the next task, so the promise callback runs first. A 0 ms delay only means the task is ready soon, not that it runs now.",
         },
+        {
+          id: "queues-multi",
+          type: "multi",
+          prompt: "Which of these run as microtasks?",
+          options: ["`Promise.then` callbacks", "`queueMicrotask` callbacks", "`setTimeout` callbacks", "`setInterval` callbacks"], // UI shuffles
+          answers: [0, 1], // every right index; fewer than options
+          explain: "Promise and `queueMicrotask` callbacks are microtasks; timers are tasks.",
+        },
+        {
+          id: "queues-truefalse",
+          type: "multi",
+          style: "truefalse", // options exactly [True, False], one answer, fixed order
+          prompt: "`setTimeout(fn, 0)` runs `fn` before the script ends.",
+          options: ["True", "False"],
+          answers: [1],
+          explain: "The callback waits for the script to finish, then for the microtasks to drain.",
+        },
+        {
+          id: "queues-match",
+          type: "match",
+          prompt: "Match each API to the queue its callback uses.",
+          pairs: [ // 3-8 pairs, unique lefts and rights; the UI shuffles the right column
+            { left: "`Promise.then`", right: "Microtask queue" },
+            { left: "`setTimeout`", right: "Task queue" },
+            { left: "`queueMicrotask`", right: "Microtask queue (explicit)" },
+          ],
+        },
+        {
+          id: "queues-cloze",
+          type: "cloze",
+          prompt: "Fill in the blanks.",
+          text: "The loop drains every {{1}} before it takes the next {{2}}.", // markers {{1}}.. once each, in order
+          blanks: [{ answers: ["microtask", "microtasks"] }, { answers: ["task"], exact: false }], // first answer is shown; exact is case-sensitive
+          bank: ["microtask", "task", "timer"], // optional chips; omit for typed blanks
+        },
+        {
+          id: "queues-sort",
+          type: "sort",
+          prompt: "Which queue does each callback wait in?",
+          buckets: ["Microtask queue", "Task queue"],
+          items: [ // bucket = 0-based index into buckets; every bucket needs an item
+            { text: "`Promise.then`", bucket: 0 },
+            { text: "`queueMicrotask`", bucket: 0 },
+            { text: "`setTimeout`", bucket: 1 },
+            { text: "`click` handler", bucket: 1 },
+          ],
+        },
+        {
+          id: "queues-flashcard",
+          type: "flashcard",
+          prompt: "What drains first after the script ends?", // the front
+          back: "The **microtask** queue, completely, before the next task.", // the reveal; self-rated Again/Hard/Good/Easy
+        },
         { id: "queues-kata", type: "kata", prompt: "Write `chunk`.", kataId: "chunk" },
       ],
     },
@@ -147,7 +203,9 @@ export default defineCourse({
 | `md`, `figure` blocks | card "Two queues" |
 | `code` with `hl()`, `trace` with `at()` | card "Predict the output" |
 | `flow`, `mermaid` | card "Where callbacks wait" |
+| `media` (video with poster; also image, GIF, audio) | card "Where callbacks wait" |
 | quiz with `code`, order, bug, written, kata | `challenges` |
+| multi, true/false, match, cloze, sort, flashcard | `challenges` |
 | art used by `level.art` and `figure` | `art.loop` |
 | grader persona in the course language | `grader` |
 | kata with 3 visible and 2 hidden tests | `katas` |

@@ -5,10 +5,16 @@ How to write each type well. Examples use one sample world: a bakery site at `ww
 ## Contents
 
 - Quiz (multiple choice)
+- Multi (multi-select and true/false)
+- Match
+- Cloze
+- Sort
+- Flashcard
 - Order
 - Bug
 - Written (self-explanation, graded against key points)
 - Kata (coding exercise with tests)
+- Media in theory and prompts
 - Explanations
 
 ## Quiz (multiple choice)
@@ -31,6 +37,63 @@ How to write each type well. Examples use one sample world: a bakery site at `ww
 > - Store it only in memory, not on disk *(invented behavior that sounds plausible)*
 
 **Avoid:** trivia (port numbers nobody needs), "which is true" stems with four unrelated statements, a right answer that copies a phrase from the theory card verbatim while distractors don't.
+
+## Multi (multi-select and true/false)
+
+**Trains** knowing every fact that holds, and rejecting a plausible false one.
+
+**Write it:**
+- Multi-select: 4–6 options, 2–3 of them right, at least one wrong. The prompt says "Which of these…" without a count, so guessing the count does not help.
+- Grading is strict: the exact set is right; only right picks and at least half of them is partial credit; any wrong pick is wrong. Do not make an option right only under a reading the explanation has to defend.
+- **True/false** (`style: "truefalse"`) is one statement with options `["True", "False"]`. Use it for a **misconception**: a statement a half-learner believes. Most should be false, but not all, or the answer becomes a habit.
+- Each option stands alone; no "both of the above".
+
+**Example.** "`no-cache` means the browser never stores the response." True / False. (False: it may store it but must revalidate.)
+
+## Match
+
+**Trains** term-to-definition and cause-to-effect links.
+
+**Write it:**
+- 3–8 pairs (aim for 4–6); every left and every right is unique.
+- All rights are the same kind of thing, similar in length, and each belongs to exactly one left. No right that fits two lefts.
+- Wrong links cost nothing but the result: all right is ok; up to 2 wrong, and under half, is partial.
+
+**Example.** `404` → "No such resource"; `403` → "Known, not allowed"; `301` → "Moved for good"; `503` → "Try again later".
+
+## Cloze
+
+**Trains** recall of exact syntax or terms in context.
+
+**Write it:**
+- Text with `{{1}}`, `{{2}}`… markers; 1–3 blanks. More than three turns it into a guessing chain.
+- A blank must have one right term. List accepted variants in `answers` (first is shown as the answer). Use `exact: true` only where case or spacing matters (code).
+- Typed blanks train recall; a `bank` of chips (include 1–2 decoys) is easier and fits phones. Use typed for syntax the learner must produce.
+- For code use `lang`, and keep blanks to keywords or names the level taught.
+
+**Example.** "To make a browser revalidate before every reuse, send `Cache-Control: {{1}}`." Answer: `no-cache`.
+
+## Sort
+
+**Trains** classification into categories.
+
+**Write it:**
+- 2–4 buckets, 4–12 items, every bucket with at least one item.
+- Categories are mutually exclusive and clear from their labels; every item belongs to exactly one. Avoid edge cases that need an argument.
+- Mix item sizes so the buckets are not guessable by count.
+
+**Example.** Buckets "Safe method" / "Unsafe method"; items `GET`, `HEAD`, `POST`, `DELETE`.
+
+## Flashcard
+
+**Trains** high-volume recall with the learner's own judgment.
+
+**Write it:**
+- The prompt is the front: one cue, one answer. The `back` is the answer plus at most one line of context.
+- Self-rated Again/Hard/Good/Easy; the rating sets the review interval (FSRS). It pays little XP and never costs a life, so use it for facts worth memorizing, not for reasoning.
+- One fact per card; reversible facts get two cards. Keep cards findable in review: no "this", no "the above".
+
+**Example.** Front: "Which header makes a response cacheable for an hour?" Back: "`Cache-Control: max-age=3600`".
 
 ## Order
 
@@ -89,9 +152,16 @@ How to write each type well. Examples use one sample world: a bakery site at `ww
 
 **Avoid:** tests that depend on unstated behavior, floating-point equality without rounding, order of object keys, randomness, time.
 
+## Media in theory and prompts
+
+- A `media` block (image, GIF, video, audio) goes in a theory card after the sentence that introduces it; a Markdown image `![alt](media/x.png)` works in `md` blocks and in challenge prompts and explanations.
+- Clips under 30 s, with a caption naming what to watch for. Alt text states what the media shows or says.
+- Image or GIF for UI flows; audio for pronunciation and listening; video when motion or narration matters.
+- A challenge may show media, but the correct answer must also be derivable from text the learner studied. Media alone must not be the only carrier of a fact.
+
 ## Explanations
 
-Every quiz, order and bug item gets an explanation shown after answering:
+Every quiz, multi, match, cloze, sort, order and bug item gets an explanation shown after answering:
 - 1–3 sentences.
 - Why the right answer is right, and why the most tempting wrong answer is wrong.
 - A source or the card it came from when the fact is not obvious ("RFC 9111 §5.2.2.4").

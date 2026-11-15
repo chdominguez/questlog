@@ -1,28 +1,33 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { Challenge } from "../course/schema";
 import { Md } from "../ui/Md";
 import { Snippet } from "../code/Snippet";
 import { WrittenAnswer } from "../answers/WrittenAnswer";
 import { KataScreen } from "../code/KataScreen";
+import { Flashcard } from "./Flashcard";
 import { play } from "../audio/sfx";
 import { dispatch, getProgress, useProgress, type Result } from "./store";
 import { courseById, courseOf } from "../course/registry";
 import { isMilestone } from "./Hud";
 import { typingTarget } from "./Theory";
+import { clozeParts, gradeCloze } from "./cloze";
+import { gradeSort } from "./sort";
 import { permutation, shuffled } from "./shuffle";
+import { gradeMatch } from "./match";
+import { gradeMulti } from "./grade";
 import "./engine.css";
 
 type Of<T extends Challenge["type"]> = Extract<Challenge, { type: T }>;
 type Answer = (correct: boolean) => void;
 
 const KICKER: Record<Challenge["type"], string> = {
-  quiz: "Quiz", order: "Put in order", bug: "Find the bug", written: "Written answer", kata: "Kata",
+  quiz: "Quiz", multi: "Select all", order: "Put in order", bug: "Find the bug", cloze: "Fill the blanks", written: "Written answer", kata: "Kata", match: "Match", sort: "Sort", flashcard: "Flashcard",
 };
 
 /** Records a result in the store, plays feedback sound and returns XP gained. */
-function report(c: Challenge, result: Result): number {
+function report(c: Challenge, result: Result, easy?: boolean): number {
   const before = getProgress().xp;
-  const after = dispatch({ type: "answer", id: c.id, ctype: c.type, result, now: Date.now() });
+  const after = dispatch({ type: "answer", id: c.id, ctype: c.type, result, easy, now: Date.now() });
   if (result === "ok") play(isMilestone(after.streak) ? "streak" : "ok");
   else if (result === "partial") play("submit");
   else play("bad");
@@ -66,6 +71,44 @@ function Quiz({ c, done, onAnswer }: { c: Of<"quiz">; done: boolean; onAnswer: A
   );
 }
 
+function Multi({ c, done, onAnswer }: { c: Of<"multi">; done: boolean; onAnswer: (r: Result) => void }) {
+  const [order] = useState(() => (c.style === "truefalse" ? c.options.map((_, i) => i) : permutation(c.options.length)));
+  const [sel, setSel] = useState<number[]>([]); // original option indexes
+  const toggle = (oi: number) => setSel((s) => (done ? s : s.includes(oi) ? s.filter((x) => x !== oi) : [...s, oi]));
+  const check = () => onAnswer(gradeMulti(c.answers, sel));
+  useEffect(() => {
+    if (done) return;
+    const on = (e: KeyboardEvent) => {
+      if (typingTarget(e) || e.altKey || e.ctrlKey || e.metaKey) return;
+      if (e.key === "Enter" && sel.length) { e.preventDefault(); check(); return; }
+      if (/^[1-9]$/.test(e.key) && Number(e.key) <= order.length) { e.preventDefault(); toggle(order[Number(e.key) - 1]); }
+    };
+    addEventListener("keydown", on);
+    return () => removeEventListener("keydown", on);
+  });
+  return (
+    <>
+      <div className="opts">
+        {order.map((oi) => {
+          const on = sel.includes(oi), right = c.answers.includes(oi);
+          const state = done ? (right ? (on ? "right" : "missed") : on ? "wrong" : "") : on ? "on" : "";
+          return (
+            <button key={oi} type="button" role="checkbox" aria-checked={on} className={`opt multi ${state}`} onClick={() => toggle(oi)}>
+              <span className="k" aria-hidden="true">{on ? "■" : "□"}</span>
+              <Md text={c.options[oi]} inline />
+            </button>
+          );
+        })}
+      </div>
+      {!done && (
+        <div className="row end">
+          <button type="button" className="btn" disabled={!sel.length} onClick={check}>Check</button>
+        </div>
+      )}
+    </>
+  );
+}
+
 function Order({ c, done, onAnswer }: { c: Of<"order">; done: boolean; onAnswer: Answer }) {
   const [items, setItems] = useState(() => shuffled(c.steps.length));
   const [drag, setDrag] = useState<number | null>(null);
@@ -106,6 +149,109 @@ function Order({ c, done, onAnswer }: { c: Of<"order">; done: boolean; onAnswer:
   );
 }
 
+function Match({ c, done, onResult }: { c: Of<"match">; done: boolean; onResult: (r: Result) => void }) {
+  const n = c.pairs.length;
+  const [rights] = useState(() => shuffled(n)); // display position -> pair index
+  const [link, setLink] = useState<(number | null)[]>(() => Array(n).fill(null)); // left i -> right pair index
+  const [sel, setSel] = useState<number | null>(null);
+  const owner = (r: number) => link.indexOf(r);
+  const set = (i: number, r: number | null) => setLink(link.map((x, k) => (k === i ? r : x)));
+  const pickLeft = (i: number) => {
+    if (done) return;
+    if (link[i] !== null) { set(i, null); setSel(i); } else setSel(sel === i ? null : i);
+    play("click");
+  };
+  const pickRight = (r: number) => {
+    if (done) return;
+    const o = owner(r);
+    if (o >= 0) { set(o, null); return; }
+    if (sel === null) return;
+    set(sel, r);
+    setSel(null);
+    play("click");
+  };
+  const hue = (i: number) => ({ "--h": `${(i * 360) / n}` }) as CSSProperties;
+  return (
+    <>
+      <div className="match">
+        <div className="mcol">
+          {c.pairs.map((p, i) => (
+            <button key={i} type="button" style={hue(i)} aria-pressed={sel === i}
+              className={["mi", link[i] !== null && "linked", sel === i && "sel", done && (link[i] === i ? "right" : "wrong")].filter(Boolean).join(" ")}
+              onClick={() => pickLeft(i)}><Md text={p.left} inline /></button>
+          ))}
+        </div>
+        <div className="mcol">
+          {rights.map((r) => {
+            const o = owner(r);
+            return (
+              <button key={r} type="button" style={o >= 0 ? hue(o) : undefined}
+                className={["mi", o >= 0 && "linked", done && (o === r ? "right" : "wrong")].filter(Boolean).join(" ")}
+                onClick={() => pickRight(r)}><Md text={c.pairs[r].right} inline /></button>
+            );
+          })}
+        </div>
+      </div>
+      {!done && (
+        <div className="row end">
+          <button type="button" className="btn" disabled={link.some((r) => r === null)} onClick={() => onResult(gradeMatch(link as number[]))}>Check</button>
+        </div>
+      )}
+    </>
+  );
+}
+
+function Sort({ c, done, onResult }: { c: Of<"sort">; done: boolean; onResult: (r: Result) => void }) {
+  const [pool] = useState(() => permutation(c.items.length));
+  const [placed, setPlaced] = useState<(number | null)[]>(() => c.items.map(() => null));
+  const [sel, setSel] = useState<number | null>(null);
+  const put = (b: number) => {
+    if (done || sel === null) return;
+    setPlaced(placed.map((p, i) => (i === sel ? b : p)));
+    setSel(null);
+    play("click");
+  };
+  const back = (i: number) => { if (!done) setPlaced(placed.map((p, j) => (j === i ? null : p))); };
+  const loose = pool.filter((i) => placed[i] === null);
+  return (
+    <>
+      {!done && (
+        <div className="sort-pool" role="group" aria-label="Items">
+          {loose.map((i) => (
+            <button key={i} type="button" className={`sort-item${sel === i ? " sel" : ""}`} aria-pressed={sel === i} onClick={() => setSel(sel === i ? null : i)}>
+              <Md text={c.items[i].text} inline />
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="sort-buckets">
+        {c.buckets.map((label, b) => (
+          <div key={b} className="sort-bucket">
+            <button type="button" className="sort-head" disabled={done || sel === null} onClick={() => put(b)}>
+              <Md text={label} inline />
+            </button>
+            {pool.filter((i) => placed[i] === b).map((i) => {
+              const bad = done && c.items[i].bucket !== b;
+              return (
+                <button key={i} type="button" className={`sort-item${done ? (bad ? " wrong" : " right") : ""}`} disabled={done} onClick={() => back(i)}>
+                  <Md text={c.items[i].text} inline />
+                  {bad && <span className="sort-fix"><Md text={c.buckets[c.items[i].bucket]} inline /></span>}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+      {!done && (
+        <div className="row end">
+          <button type="button" className="btn" disabled={loose.length > 0}
+            onClick={() => onResult(gradeSort(c.items, placed as number[]))}>Check</button>
+        </div>
+      )}
+    </>
+  );
+}
+
 function Bug({ c, done, onAnswer }: { c: Of<"bug">; done: boolean; onAnswer: Answer }) {
   const [pick, setPick] = useState<number | null>(null);
   return (
@@ -123,6 +269,65 @@ function Bug({ c, done, onAnswer }: { c: Of<"bug">; done: boolean; onAnswer: Ans
   );
 }
 
+function Cloze({ c, done, onResult }: { c: Of<"cloze">; done: boolean; onResult: (r: Result) => void }) {
+  const parts = useMemo(() => clozeParts(c.text), [c.text]);
+  const [vals, setVals] = useState<string[]>(() => c.blanks.map(() => ""));
+  const [active, setActive] = useState(0);
+  const [graded, setGraded] = useState<boolean[] | null>(null);
+  const set = (i: number, v: string) => setVals((p) => p.map((x, j) => (j === i ? v : x)));
+  const used = (w: string) => vals.includes(w);
+  const tap = (w: string) => {
+    if (done || used(w)) return;
+    const i = vals[active] === "" ? active : vals.indexOf("");
+    if (i < 0) return;
+    set(i, w);
+    const next = vals.findIndex((v, j) => j !== i && v === "");
+    if (next >= 0) setActive(next);
+    play("click");
+  };
+  const check = () => {
+    const g = gradeCloze(c.blanks, vals);
+    setGraded(g.right);
+    onResult(g.result);
+  };
+  const blank = (i: number) => {
+    const state = graded ? (graded[i] ? "right" : "wrong") : "";
+    if (c.bank) {
+      return (
+        <button key={i} type="button" className={`blank ${state}${active === i ? " on" : ""}`} disabled={done}
+          onClick={() => (vals[i] ? set(i, "") : setActive(i))}>{vals[i] || "\u00a0"}</button>
+      );
+    }
+    return (
+      <input key={i} className={`blank ${state}`} value={vals[i]} disabled={done} size={Math.max(4, vals[i].length + 1)}
+        aria-label={`Blank ${i + 1}`} autoCapitalize="off" autoCorrect="off" spellCheck={false} inputMode="text" enterKeyHint="next"
+        onChange={(e) => set(i, e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter" && !done && vals.every(Boolean)) check(); }} />
+    );
+  };
+  const pieces = parts.map((p, k) => (typeof p === "number" ? blank(p) : c.lang ? <span key={k}>{p}</span> : <Md key={k} text={p} inline />));
+  return (
+    <>
+      {c.lang ? <pre className="cloze code">{pieces}</pre> : <div className="cloze">{pieces}</div>}
+      {c.bank && (
+        <div className="chips" role="group" aria-label="Word bank">
+          {c.bank.map((w, i) => <button key={i} type="button" className="chip" disabled={done || used(w)} onClick={() => tap(w)}>{w}</button>)}
+        </div>
+      )}
+      {graded && (
+        <ul className="cloze-fix">
+          {c.blanks.map((b, i) => !graded[i] && <li key={i}><span className="k">{i + 1}</span><code>{b.answers[0]}</code></li>)}
+        </ul>
+      )}
+      {!done && (
+        <div className="row end">
+          <button type="button" className="btn" disabled={!vals.every(Boolean)} onClick={check}>Check</button>
+        </div>
+      )}
+    </>
+  );
+}
+
 interface Fx { kind: "ok" | "bad"; xp: number; n: number }
 
 /** One challenge: renders the right input, records the result, shows feedback and "next". */
@@ -137,9 +342,9 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
   const fxN = useRef(0);
   const done = result !== null;
 
-  const finish = (r: Result) => {
+  const finish = (r: Result, easy?: boolean) => {
     if (done) return;
-    const gained = report(c, r);
+    const gained = report(c, r, easy);
     setResult(r);
     setXp(gained);
     setFx({ kind: r === "ok" || r === "partial" ? "ok" : "bad", xp: gained, n: ++fxN.current });
@@ -149,11 +354,16 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
   let body: ReactNode;
   switch (c.type) {
     case "quiz": body = <Quiz c={c} done={done} onAnswer={onAnswer} />; break;
+    case "multi": body = <Multi c={c} done={done} onAnswer={finish} />; break;
     case "order": body = <Order c={c} done={done} onAnswer={onAnswer} />; break;
+    case "match": body = <Match c={c} done={done} onResult={finish} />; break;
+    case "sort": body = <Sort c={c} done={done} onResult={finish} />; break;
     case "bug": body = <Bug c={c} done={done} onAnswer={onAnswer} />; break;
+    case "cloze": body = <Cloze c={c} done={done} onResult={finish} />; break;
     case "written":
       body = <WrittenAnswer challenge={c} levelId={levelId} onDone={(s) => finish(s >= 7 ? "ok" : s >= 4 ? "partial" : "miss")} />;
       break;
+    case "flashcard": body = <Flashcard c={c} done={done} onRate={finish} />; break;
     case "kata":
       body = <KataScreen course={courseById(courseOf(c.id))!} kataId={c.kataId} onSolved={() => finish("ok")} />;
       break;
@@ -163,7 +373,8 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
     () => (c.type === "order" ? c.steps.map((s, i) => `${i + 1}. ${s}`).join("\n") : ""),
     [c],
   );
-  const showFeedback = done && (c.type === "quiz" || c.type === "order" || c.type === "bug" || !!c.explain);
+  const matchHint = useMemo(() => (c.type === "match" ? c.pairs.map((p) => `${p.left} → ${p.right}`).join("\n\n") : ""), [c]);
+  const showFeedback = done && c.type !== "flashcard" && (c.type === "quiz" || c.type === "multi" || c.type === "order" || c.type === "bug" || c.type === "match" || c.type === "cloze" || c.type === "sort" || !!c.explain);
   const good = result === "ok";
 
   return (
@@ -177,6 +388,7 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
         <div role="status" className={`feedback ${good ? "ok" : result === "partial" ? "mid" : "bad"}`}>
           <strong>{good ? "Correct" : result === "partial" ? "Almost" : "Wrong"}{xp > 0 ? ` · +${xp} XP` : ""}</strong>
           {c.explain && <Md text={c.explain} />}
+          {c.type === "match" && !good && <Md text={matchHint} />}
           {c.type === "order" && !good && <Md text={orderHint} />}
         </div>
       )}
