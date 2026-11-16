@@ -10,7 +10,7 @@ import { dispatch, getProgress, MAX_LIVES, rankIndex, useProgress } from "../eng
 import { isUnlocked } from "../engine/levels";
 import "./screens.css";
 
-type Phase = "theory" | "play" | "result" | "fail";
+type Phase = "choose" | "theory" | "play" | "result" | "fail";
 interface Outcome { stars: number; xp: number; rankUp: number | null }
 
 export function Stars({ n, big = false }: { n: number; big?: boolean }) {
@@ -36,7 +36,7 @@ function LevelRun({ course, id }: { course: Course; id: string }) {
   const level = levelByKey(id);
   const progress = useProgress();
   const run = progress.run;
-  const [phase, setPhase] = useState<Phase>(level?.theory.length ? "theory" : "play");
+  const [phase, setPhase] = useState<Phase>(level?.theory.length ? "choose" : "play");
   const [i, setI] = useState(0);
   const [out, setOut] = useState<Outcome | null>(null);
   const [showRank, setShowRank] = useState(false);
@@ -102,6 +102,15 @@ function LevelRun({ course, id }: { course: Course; id: string }) {
           <h1>{level.title}</h1>
           {phase === "play" && <Lives n={lives} />}
         </div>
+
+        {phase === "choose" && (
+          <div className="result screen-in">
+            <div className="row center">
+              <button type="button" className="btn ghost" onClick={() => { play("click"); setPhase("theory"); }}>Theory</button>
+              <button type="button" className="btn" autoFocus onClick={startPlay}>Challenge</button>
+            </div>
+          </div>
+        )}
 
         {phase === "theory" && <Theory key={`t-${id}`} cards={level.theory} onDone={startPlay} />}
 
