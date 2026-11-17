@@ -79,6 +79,14 @@ test("flashcard needs a back and rejects extras", () => {
   expect(withCard({ back: "B", options: ["a", "b"] }).length).toBeGreaterThan(0);
 });
 
+test("python kata: solution passes, starter fails", () => {
+  const kata = { id: "sum", title: "Sum", lang: "python", difficulty: "easy", statement: "S", examples: [{ input: "1", output: "1" }], complexity: "O(n)",
+    starter: "def total(xs):\n    return 0", solution: "def total(xs):\n    return sum(xs)",
+    tests: [1, 2, 3].map((n) => ({ name: `n${n}`, code: `return eq(total([${n}]), ${n})` })), hidden: [{ name: "h1", code: "return eq(total([]), 0)" }, { name: "h2", code: "return eq(total([2, 2]), 4)" }] };
+  expect(validateCourse(course({ katas: [kata] }))).toEqual([]);
+  expect(validateCourse(course({ katas: [{ ...kata, solution: kata.starter }] })).join()).toMatch(/solution fails "n1"/);
+});
+
 test("kata checks run the solution and the starter", () => {
   const kata = { id: "sum", title: "Sum", difficulty: "easy", statement: "S", examples: [{ input: "1", output: "1" }], complexity: "O(n)",
     starter: "export function sum(xs: number[]): number { return 0; }",

@@ -58,13 +58,13 @@ function defineTheme() {
   });
 }
 
-export default function Editor({ path, value, onChange }: { path: string; value: string; onChange: (v: string) => void }) {
+export default function Editor({ path, value, onChange, language = "typescript" }: { path: string; value: string; onChange: (v: string) => void; language?: "typescript" | "python" }) {
   defineTheme();
   return (
     <MonacoEditor
       height="100%"
       path={path}
-      language="typescript"
+      language={language}
       theme="quest"
       value={value}
       onChange={(v) => onChange(v ?? "")}
@@ -74,7 +74,7 @@ export default function Editor({ path, value, onChange }: { path: string; value:
         fontSize: 14,
         fontLigatures: false,
         lineHeight: 22,
-        tabSize: 2,
+        tabSize: language === "python" ? 4 : 2,
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
         automaticLayout: true,

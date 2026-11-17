@@ -59,7 +59,7 @@ function Kata({ course, kataId, onSolved }: Props) {
     if (running) return;
     if (submit) play("submit");
     setRunning(true);
-    const r = await runInWorker(code, submit ? [...kata.tests, ...kata.hidden] : kata.tests);
+    const r = await runInWorker(code, submit ? [...kata.tests, ...kata.hidden] : kata.tests, kata.lang);
     setRunning(false);
     setResults(r);
     setSubmitted(submit);
@@ -83,6 +83,7 @@ function Kata({ course, kataId, onSolved }: Props) {
     }
   };
 
+  const py = kata.lang === "python";
   const passed = results?.filter((r) => r.pass).length ?? 0;
   const logs = results?.filter((r) => r.logs.length) ?? [];
   const allPass = !!results && passed === results.length;
@@ -120,7 +121,7 @@ function Kata({ course, kataId, onSolved }: Props) {
         <section className="kata-right">
           <div className="kata-editor">
             <Suspense fallback={<pre className="kata-editor-fallback">{code}</pre>}>
-              <Editor key={kataId} path={`file:///kata/${kataId}.ts`} value={code} onChange={setCode} />
+              <Editor key={kataId} path={`file:///kata/${kataId}.${py ? "py" : "ts"}`} value={code} onChange={setCode} language={py ? "python" : "typescript"} />
             </Suspense>
           </div>
 
@@ -184,7 +185,7 @@ function Kata({ course, kataId, onSolved }: Props) {
 
       {showSolution && (
         <section className="kata-solution">
-          <Snippet lang="ts" src={kata.solution} title="Solution" />
+          <Snippet lang={py ? "python" : "ts"} src={kata.solution} title="Solution" />
         </section>
       )}
     </div>
