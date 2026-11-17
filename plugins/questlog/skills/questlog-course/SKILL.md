@@ -115,6 +115,8 @@ All types accept `explain` (shown after answering); give it to every quiz, order
 
 Tests are JavaScript that runs after the learner's code and must `return eq(got, expected)` (deep equality; Map/Set compare order-insensitively). `export` in starter or solution is stripped, so either style works. The validator runs the solution against all tests (must pass) and the starter (must compile and fail at least one). Need ≥3 `tests` and ≥2 `hidden`. Test only behavior the statement states.
 
+**Python katas**: set `lang: "python"` on the kata. `starter` and `solution` are Python; each test `code` is a Python function body that ends in `return eq(got, expected)` (`eq` compares with `==`, so lists, dicts and sets work). `print` shows in the Console tab. The browser runs it in Pyodide (downloaded on first run); the validator needs `python3` on the machine. Standard library only.
+
 ### Art
 
 `course.art` maps keys to inline SVG strings; use them in `level.art` (the map node) and `figure` blocks. Rules enforced by `artProblem` in the schema:

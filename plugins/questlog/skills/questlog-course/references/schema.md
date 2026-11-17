@@ -100,13 +100,14 @@ Cloze answers match after trim, whitespace collapse and lowercase, unless the bl
 | `difficulty` | `easy` \| `medium` \| `hard` | |
 | `statement` | md | Every rule the tests check. |
 | `examples` | `{ input, output, note? }[]` ≥1 | Strings, shown as-is. |
-| `starter` | TS string | Must compile and fail ≥1 test. |
-| `solution` | TS string | Must pass every test. |
+| `lang` | `ts` \| `python`? | Default `ts`. Python runs in the browser (Pyodide) and in the validator (`python3`). |
+| `starter` | code string (in `lang`) | Must compile and fail ≥1 test. |
+| `solution` | code string (in `lang`) | Must pass every test. |
 | `complexity` | md | |
 | `tests` | KataTest[] ≥3 | Visible (Run). |
 | `hidden` | KataTest[] ≥2 | Extra on Submit. |
 
-**KataTest**: `{ name: string, code: string }`. `code` is JavaScript run after the user's code and must `return eq(got, expected)`. `eq` is deep equality (NaN equals NaN; Map/Set order-insensitive). `console.log` output is shown to the learner. `export` is stripped before running.
+**KataTest**: `{ name: string, code: string }`. `code` is JavaScript (Python when `lang: "python"`: a function body, so `return eq(...)` still works; `eq` is `==`) run after the user's code and must `return eq(got, expected)`. `eq` is deep equality (NaN equals NaN; Map/Set order-insensitive). `console.log` output is shown to the learner. `export` is stripped before running.
 
 ## Art
 

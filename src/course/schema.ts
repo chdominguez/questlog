@@ -117,7 +117,7 @@ export const LevelSchema = z.object({
 
 export const KataTestSchema = z.object({
   name: z.string().min(1),
-  code: z.string().min(1).describe('JS run after the user code; must `return eq(got, expected)`, e.g. "return eq(sum([1,2]), 3)"'),
+  code: z.string().min(1).describe('Run after the user code, in the kata lang (JS or Python); a function body that must `return eq(got, expected)`, e.g. "return eq(sum([1,2]), 3)"'),
 }).strict();
 
 export const KataSchema = z.object({
@@ -126,8 +126,9 @@ export const KataSchema = z.object({
   difficulty: z.enum(["easy", "medium", "hard"]),
   statement: md("Problem statement"),
   examples: z.array(z.object({ input: z.string(), output: z.string(), note: z.string().optional() }).strict()).min(1),
-  starter: z.string().min(1).describe("TypeScript the user starts from; must compile and fail at least one test"),
-  solution: z.string().min(1).describe("TypeScript reference solution; must pass every test"),
+  lang: z.enum(["ts", "python"]).optional().describe("Language the learner writes; default ts. Python runs in the browser through Pyodide"),
+  starter: z.string().min(1).describe("Code the user starts from (in lang); must compile and fail at least one test"),
+  solution: z.string().min(1).describe("Reference solution (in lang); must pass every test"),
   complexity: md("Time and space complexity"),
   tests: z.array(KataTestSchema).min(3).describe("Visible tests (Run)"),
   hidden: z.array(KataTestSchema).min(2).describe("Extra tests on Submit"),
