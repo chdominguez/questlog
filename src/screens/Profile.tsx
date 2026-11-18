@@ -48,10 +48,13 @@ function Reminders({ user }: { user: string }) {
       {state === "off" && <button type="button" className="btn" onClick={enable}>Enable notifications</button>}
       {failed && <p className="wa-notice" role="alert">Couldn't save</p>}
       {state === "on" && visibleTo(user).filter((c) => !completed.includes(c.id)).map((c) => (
-        <label key={c.id} className="profile-field profile-reminder">{c.title}
-          <input type="time" className="scr-input" value={mine[c.id]?.time ?? ""} onChange={(e) => set(c.id, c.title, e.target.value)} />
+        <div key={c.id} className="profile-reminder">
+          {/* button outside the label: a tap inside the label reopens the time picker on iOS */}
+          <label className="profile-field">{c.title}
+            <input type="time" className="scr-input" value={mine[c.id]?.time ?? ""} onChange={(e) => set(c.id, c.title, e.target.value)} />
+          </label>
           {mine[c.id] && <button type="button" className="btn ghost" onClick={() => set(c.id, c.title, "")}>Remove</button>}
-        </label>
+        </div>
       ))}
     </section>
   );
