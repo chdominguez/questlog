@@ -11,6 +11,8 @@ import { ProfileScreen } from "./screens/Profile";
 import { NoteScreen, NotesScreen } from "./screens/Notes";
 import { MockScreen } from "./screens/Mock";
 import { NotFound } from "./screens/NotFound";
+import { ArcadeScreen } from "./games/Arcade";
+import { GameScreen } from "./games/Game";
 import { KataScreen } from "./code/KataScreen";
 import { q } from "./course/registry";
 
@@ -32,6 +34,8 @@ export function App() {
       {r.name === "level" && course && <LevelScreen course={course} id={q(course.id, r.id)} />}
       {r.name === "kata" && course && <KataScreen course={course} kataId={q(course.id, r.id)} />}
       {r.name === "mock" && course && <MockScreen course={course} />}
+      {r.name === "arcade" && course && <ArcadeScreen course={course} />}
+      {r.name === "game" && course && <GameScreen key={r.game} course={course} game={r.game} />}
       {r.name === "review" && course && <ReviewScreen course={course} />}
       {r.name === "answers" && course && <AnswersScreen course={course} />}
       {r.name === "profile" && <ProfileScreen />}

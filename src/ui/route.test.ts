@@ -7,6 +7,8 @@ test("parse", () => {
   expect(parse("#/c/x/level/01-intro")).toEqual({ name: "level", course: "x", id: "01-intro" });
   expect(parse("#/c/x/kata/two-sum")).toEqual({ name: "kata", course: "x", id: "two-sum" });
   expect(parse("#/c/x/mock")).toEqual({ name: "mock", course: "x" });
+  expect(parse(href.arcade("x"))).toEqual({ name: "arcade", course: "x" });
+  expect(parse(href.game("x", "quiz"))).toEqual({ name: "game", course: "x", game: "quiz" });
   expect(parse("#/c/x/review")).toEqual({ name: "review", course: "x" });
   expect(parse("#/c/x/answers")).toEqual({ name: "answers", course: "x" });
   expect(parse("#/c/x/notes")).toEqual({ name: "notes", course: "x" });
