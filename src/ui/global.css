@@ -21,7 +21,13 @@
   --bad: #ff6b81;
   --gold: #ffcb5c;
   --info: #7aa7ff;
-  --radius: 14px;
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px;
+  --t-xs: 12px; --t-sm: 14px; --t-base: 16px; --t-lg: 20px; --t-xl: 24px; --t-2xl: 32px; --t-3xl: 44px;
+  --r-sm: 6px; --r-md: 10px; --r-lg: 16px; --r-full: 999px;
+  --radius: var(--r-lg);
+  /* Game answer tiles (Arcade); agent A tunes these per theme. */
+  --tile-1: #e5484d; --tile-2: #3e7bfa; --tile-3: #e9a800; --tile-4: #2f9e5a;
+  --shadow-press: 0 4px 0 rgb(0 0 0 / .28);
   --f-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
   --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --f-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
