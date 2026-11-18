@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { ArrowLeft } from "@phosphor-icons/react";
 import type { Course } from "../course/registry";
 import { href } from "../ui/route";
 import { Md } from "../ui/Md";
@@ -49,7 +50,7 @@ function Kata({ course, kataId, onSolved }: Props) {
   if (!kata) {
     return (
       <div className="kata">
-        <a className="kata-back" href={href.map(course.id)}>← Map</a>
+        <a className="btn quiet kata-back" href={href.map(course.id)}><ArrowLeft aria-hidden />Map</a>
         <div className="card">Kata not found</div>
       </div>
     );
@@ -92,7 +93,7 @@ function Kata({ course, kataId, onSolved }: Props) {
     <>
     {standalone && <Hud />}
     <div className="kata" onKeyDownCapture={onKey}>
-      {standalone && <a className="back kata-back" href={href.map(course.id)} aria-label="Map">←</a>}
+      {standalone && <a className="back kata-back" href={href.map(course.id)} aria-label="Map"><ArrowLeft aria-hidden /></a>}
       <div className="kata-grid">
         <section className="kata-left card">
           <header className="kata-head">

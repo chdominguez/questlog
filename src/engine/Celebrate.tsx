@@ -3,12 +3,12 @@ import confetti from "canvas-confetti";
 import { play } from "../audio/sfx";
 import { RANKS } from "./store";
 import { RankBadge } from "./Hud";
+import { token } from "../ui/theme";
 import "./engine.css";
-
-const COLORS = ["#ff8a5c", "#ffcb5c", "#56d6a8", "#7aa7ff", "#eeecf7"]; // canvas needs literal colors (mirror of global.css tokens)
 
 export function burst(big = false) {
   try {
+    const COLORS = ["--accent", "--gold", "--ok", "--info", "--fg"].map(token);
     confetti({ particleCount: big ? 160 : 70, spread: big ? 100 : 70, origin: { y: 0.6 }, colors: COLORS, disableForReducedMotion: true });
     if (big) setTimeout(() => confetti({ particleCount: 80, angle: 60, spread: 60, origin: { x: 0, y: 0.7 }, colors: COLORS, disableForReducedMotion: true }), 250);
     if (big) setTimeout(() => confetti({ particleCount: 80, angle: 120, spread: 60, origin: { x: 1, y: 0.7 }, colors: COLORS, disableForReducedMotion: true }), 400);

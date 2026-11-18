@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ArrowLeft, Star } from "@phosphor-icons/react";
 import { levelByKey, type Course } from "../course/registry";
 import { play } from "../audio/sfx";
 import { go, href } from "../ui/route";
@@ -16,7 +17,7 @@ interface Outcome { stars: number; xp: number; rankUp: number | null }
 export function Stars({ n, big = false }: { n: number; big?: boolean }) {
   return (
     <span className={big ? "stars big" : "stars"} role="img" aria-label={`${n} of 3 stars`}>
-      {[0, 1, 2].map((i) => <span key={i} className={i < n ? "on" : "off"} style={{ animationDelay: `${0.25 + i * 0.18}s` }}>★</span>)}
+      {[0, 1, 2].map((i) => <span key={i} className={i < n ? "on" : "off"} style={{ animationDelay: `${0.2 + i * 0.12}s` }}><Star weight="fill" aria-hidden /></span>)}
     </span>
   );
 }
@@ -98,7 +99,7 @@ function LevelRun({ course, id }: { course: Course; id: string }) {
       <Hud />
       <section className="level">
         <div className="level-head">
-          <a className="back" href={href.map(course.id)} aria-label="Map">←</a>
+          <a className="back" href={href.map(course.id)} aria-label="Map"><ArrowLeft aria-hidden /></a>
           <h1>{level.title}</h1>
           {phase === "play" && <Lives n={lives} />}
         </div>
@@ -129,7 +130,7 @@ function LevelRun({ course, id }: { course: Course; id: string }) {
 
         {phase === "result" && out && (
           <div className="result screen-in">
-            <div className="kicker">{level.boss ? "Final level cleared" : "Level cleared"}</div>
+            <h2>{level.boss ? "Final level cleared" : "Level cleared"}</h2>
             <Stars n={out.stars} big />
             <div className="gain">+{out.xp} XP</div>
             <div className="row center">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ArrowLeft } from "@phosphor-icons/react";
 import type { Course } from "../course/registry";
 import { href } from "../ui/route";
 import { Md } from "../ui/Md";
@@ -40,7 +41,7 @@ export function MockScreen({ course }: { course: Course }) {
     <Hud />
     <div className="scr">
       <div className="scr-head">
-        <a className="back" href={href.map(course.id)} aria-label="Map">←</a>
+        <a className="back" href={href.map(course.id)} aria-label="Map"><ArrowLeft aria-hidden /></a>
         <h1>{course.mock?.title ?? "Exam"}</h1>
         {phase === "run" && <span className={`mock-clock${left <= 60 ? " low" : ""}`} role="timer" aria-label="Time left">{mmss(left)}</span>}
       </div>
