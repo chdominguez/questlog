@@ -59,7 +59,7 @@ export interface SyncedProgress { value: unknown; updatedAt: number }
 // POST   /api/notes        body NoteInput             -> 201 Note
 // PUT    /api/notes/:id    body NoteInput             -> Note | 404
 // DELETE /api/notes/:id                               -> 204 | 404
-// GET    /api/me                                      -> { user, name? } (name: Keycloak display name from NAME_HEADER)
+// GET    /api/me                                      -> { user, name?, logout? } (name: Keycloak display name from NAME_HEADER; logout: LOGOUT_URL)
 // GET    /api/profile                                 -> Profile (empty strings when unset)
 // PUT    /api/profile      body Profile               -> Profile
 // GET    /api/push/key                               -> { key } (VAPID public) | 503 when reminders are off

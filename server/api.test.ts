@@ -212,10 +212,10 @@ test("users are isolated; the first user claims pre-existing rows; a proxy heade
 });
 
 test("profile: per-user, validated; /me exposes the proxy name", async () => {
-  env = { DB: env.DB, USER_HEADER: "x-forwarded-email", NAME_HEADER: "x-name" };
+  env = { DB: env.DB, USER_HEADER: "x-forwarded-email", NAME_HEADER: "x-name", LOGOUT_URL: "/bye" };
   const app = api();
   const as = (u: string, init: RequestInit = {}) => ({ ...init, headers: { ...(init.headers as object), "X-Forwarded-Email": u, "X-Name": "Ann" } });
-  expect(await (await app.req("/me", as("a@x.com"))).json()).toEqual({ user: "a@x.com", name: "Ann" });
+  expect(await (await app.req("/me", as("a@x.com"))).json()).toEqual({ user: "a@x.com", name: "Ann", logout: "/bye" });
   const empty = { name: "", title: "", location: "", link: "", bio: "" };
   expect(await (await app.req("/profile", as("a@x.com"))).json()).toEqual(empty);
   const p = { ...empty, name: " Ann ", bio: "Hi", link: "https://a.dev" };

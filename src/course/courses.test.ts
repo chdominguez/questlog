@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { COURSE_ERRORS, COURSES } from "./registry";
+import { COURSE_ERRORS, COURSES, visibleTo } from "./registry";
 import { validateCourse } from "./validate";
 import { CourseSchema } from "./schema";
 
@@ -104,4 +104,11 @@ test("cloze markers and bank are cross-checked", () => {
   expect(validateCourse(cz({ text: "a {{1}} b {{3}}" })).join()).toMatch(/markers must be/);
   expect(validateCourse(cz({ text: "a {{1}}" })).join()).toMatch(/markers must be/);
   expect(validateCourse(cz({ bank: ["x", "z"] })).join()).toMatch(/"y" is not in bank/);
+});
+
+test("visibleTo: courses with users show only to them, case-insensitive", () => {
+  const [a, b] = COURSES;
+  const cs = [{ ...a, users: ["Me@X.com"] }, { ...b, users: undefined }];
+  expect(visibleTo("me@x.com", cs)).toEqual(cs);
+  expect(visibleTo("other@x.com", cs)).toEqual([cs[1]]);
 });
