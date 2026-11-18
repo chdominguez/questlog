@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { ArrowLeft } from "@phosphor-icons/react";
 import type { Note } from "../../shared/api-types";
 import type { Course } from "../course/registry";
 import { ApiError, createNote, deleteNote, getNote, listNotes, updateNote } from "../answers/api";
@@ -32,7 +33,7 @@ export function NotesScreen({ course }: { course: Course }) {
     <Hud />
     <div className="scr">
       <div className="scr-head">
-        <a className="back" href={href.map(course.id)} aria-label={course.title}>←</a>
+        <a className="back" href={href.map(course.id)} aria-label={course.title}><ArrowLeft aria-hidden /></a>
         <h1>Notes</h1>
         <a className="btn" href={href.notes(course.id, "new")}>New note</a>
       </div>
@@ -128,7 +129,7 @@ export function NoteScreen({ course, id }: { course: Course; id: string }) {
     <Hud />
     <div className="scr">
       <div className="scr-head">
-        <a className="back" href={href.notes(course.id)} aria-label="Notes">←</a>
+        <a className="back" href={href.notes(course.id)} aria-label="Notes"><ArrowLeft aria-hidden /></a>
         <h1>{isNew ? "New note" : "Note"}</h1>
       </div>
       {status === "missing" && <p className="scr-empty">Note not found</p>}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Star } from "@phosphor-icons/react";
 import { getMe } from "../answers/api";
 import { COURSE_ERRORS, visibleTo } from "../course/registry";
 import { getArt } from "../art";
@@ -34,7 +35,7 @@ export function HomeScreen() {
                   <span className="course-body">
                     <b>{c.title}</b>
                     {c.summary && <span className="course-summary">{c.summary}</span>}
-                    <span className="course-meta">{done}/{c.levels.length} levels · {stars}★{p.completed.includes(c.id) ? " · Completed" : due > 0 ? ` · ${due} due` : ""}</span>
+                    <span className="course-meta">{done}/{c.levels.length} levels · {stars}<Star weight="fill" aria-hidden /><span className="sr">stars</span>{p.completed.includes(c.id) ? " · Completed" : due > 0 ? ` · ${due} due` : ""}</span>
                     <span className="bar" aria-hidden="true"><span style={{ width: `${(done / c.levels.length) * 100}%` }} /></span>
                   </span>
                 </a>

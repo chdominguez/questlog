@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Flame, SpeakerHigh, SpeakerSlash } from "@phosphor-icons/react";
 import { getArt } from "../art";
 import { play } from "../audio/sfx";
 import { href, useRoute } from "../ui/route";
@@ -14,16 +15,6 @@ export function RankBadge({ index, className = "" }: { index: number; className?
     ? <span className={`rank-badge ${className}`} aria-hidden="true" dangerouslySetInnerHTML={{ __html: art }} />
     : <span className={`rank-badge text ${className}`} aria-hidden="true">{index + 1}</span>;
 }
-
-const Flame = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c1 3.5-2.5 5-2.5 8.5 0 1.3.8 2.4 2 2.8-.3-1.8.8-3.3 2.3-4.3.2 2.2 2.2 3 2.2 5.5a4 4 0 0 1-8 0c0-.6.1-1.2.3-1.7C6.8 14 6 15.5 6 17a6 6 0 0 0 12 0c0-6-6-8.5-6-15Z" /></svg>
-);
-const Speaker = ({ off }: { off: boolean }) => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 9h4l5-4v14l-5-4H4z" />
-    {off ? <path d="m17 9 5 6m0-6-5 6" /> : <path d="M17 8.5a5 5 0 0 1 0 7M19.5 6a8.5 8.5 0 0 1 0 12" />}
-  </svg>
-);
 
 export function Hud() {
   const p = useProgress();
@@ -53,6 +44,13 @@ export function Hud() {
     <header className="hud">
       <div className="hud-row">
         <a className="brand" href={href.home()}>Questlog</a>
+        <nav className="hud-nav">
+          {nav.map((n) => (
+            <a key={n.href} href={n.href} aria-current={n.on ? "page" : undefined}>
+              {n.label}
+            </a>
+          ))}
+        </nav>
         <div className="hud-rank">
           <RankBadge index={ri} />
           <div className="hud-rank-body">
@@ -64,27 +62,20 @@ export function Hud() {
           </div>
         </div>
         <div key={pulse} className={`hud-streak${p.streak > 0 ? " on" : ""}${pulse ? " pulse" : ""}`} aria-label={`Streak ${p.streak}`}>
-          <Flame /><b>{p.streak}</b>{mult > 1 && <span className="mult">x{mult}</span>}
+          <Flame weight={p.streak > 0 ? "fill" : "regular"} aria-hidden /><b>{p.streak}</b>{mult > 1 && <span className="mult">x{mult}</span>}
         </div>
         <div className="hud-sound">
           <button type="button" className="iconbtn" aria-label={p.sound.muted ? "Unmute" : "Mute"} aria-pressed={p.sound.muted}
             onClick={() => { dispatch({ type: "sound", muted: !p.sound.muted }); play("click"); }}>
-            <Speaker off={p.sound.muted || p.sound.volume === 0} />
+            {p.sound.muted || p.sound.volume === 0 ? <SpeakerSlash aria-hidden /> : <SpeakerHigh aria-hidden />}
           </button>
           <input type="range" min={0} max={1} step={0.05} value={p.sound.volume} aria-label="Volume" disabled={p.sound.muted}
             onChange={(e) => dispatch({ type: "sound", volume: Number(e.target.value) })}
             onPointerUp={() => play("click")} onKeyUp={() => play("click")} />
         </div>
       </div>
-      <nav className="hud-nav">
-        {nav.map((n) => (
-          <a key={n.href} href={n.href} aria-current={n.on ? "page" : undefined}>
-            {n.label}
-          </a>
-        ))}
-      </nav>
       {tabs.length > 0 && (
-        <nav className="hud-nav" aria-label="Course">
+        <nav className="hud-nav hud-tabs" aria-label="Course">
           {tabs.map((n) => (
             <a key={n.href} href={n.href} aria-current={n.on ? "page" : undefined}>
               {n.label}{"count" in n && n.count ? <span className="count">{n.count}</span> : null}

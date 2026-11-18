@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Microphone } from "@phosphor-icons/react";
 import type { Challenge } from "../course/schema";
 import type { Grade, SavedAnswer } from "../../shared/api-types";
 import { Md } from "../ui/Md";
@@ -171,10 +172,7 @@ export function WrittenAnswer({ challenge, levelId, onDone, saveOnExit = false }
             aria-pressed={dict.recording}
             onClick={toggleMic}
           >
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-              <rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor" />
-              <path d="M6 11a6 6 0 0 0 12 0M12 17v4" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-            </svg>
+            <Microphone size={20} weight={dict.recording ? "fill" : "regular"} aria-hidden />
           </button>
         )}
       </div>

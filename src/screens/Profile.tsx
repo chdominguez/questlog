@@ -1,4 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from "react";
+import { ArrowLeft } from "@phosphor-icons/react";
 import type { Profile, Reminder } from "../../shared/api-types";
 import { ApiError, deleteReminder, getMe, getProfile, listReminders, saveProfile, saveReminder } from "../answers/api";
 import { visibleTo } from "../course/registry";
@@ -94,7 +95,7 @@ export function ProfileScreen() {
     <Hud />
     <div className="scr">
       <div className="scr-head">
-        <a className="back" href={href.home()} aria-label="Home">←</a>
+        <a className="back" href={href.home()} aria-label="Home"><ArrowLeft aria-hidden /></a>
         <h1>Profile</h1>
       </div>
       {error && <p className="scr-empty" role="alert">Couldn't load profile</p>}

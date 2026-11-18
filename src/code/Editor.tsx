@@ -3,6 +3,7 @@ import * as monaco from "monaco-editor";
 import { Editor as MonacoEditor, loader } from "@monaco-editor/react";
 import EditorWorker from "monaco-editor/editor/editor.worker?worker";
 import TsWorker from "monaco-editor/language/typescript/ts.worker?worker";
+import { token } from "../ui/theme";
 
 self.MonacoEnvironment = {
   getWorker: (_id, label) => (label === "typescript" || label === "javascript" ? new TsWorker() : new EditorWorker()),
@@ -22,44 +23,44 @@ ts.typescriptDefaults.addExtraLib(
 );
 
 const css = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-let themed = false;
+const scheme = matchMedia("(prefers-color-scheme: dark)");
+// Re-read the tokens when the OS scheme flips; setTheme repaints open editors.
+scheme.addEventListener("change", () => { defineTheme(); monaco.editor.setTheme("quest"); });
 function defineTheme() {
-  if (themed) return;
-  themed = true;
   const hex = (v: string) => v.replace("#", "");
   monaco.editor.defineTheme("quest", {
-    base: "vs-dark",
+    base: scheme.matches ? "vs-dark" : "vs",
     inherit: true,
     rules: [
-      { token: "comment", foreground: hex(css("--muted")), fontStyle: "italic" },
-      { token: "keyword", foreground: hex(css("--accent")) },
-      { token: "string", foreground: hex(css("--ok")) },
-      { token: "number", foreground: hex(css("--gold")) },
-      { token: "type", foreground: hex(css("--info")) },
+      { token: "comment", foreground: hex(token("--muted")), fontStyle: "italic" },
+      { token: "keyword", foreground: hex(token("--accent")) },
+      { token: "string", foreground: hex(token("--ok")) },
+      { token: "number", foreground: hex(token("--gold")) },
+      { token: "type", foreground: hex(token("--info")) },
     ],
     colors: {
-      "editor.background": css("--bg"),
-      "editor.foreground": css("--fg"),
-      "editorLineNumber.foreground": css("--line"),
-      "editorLineNumber.activeForeground": css("--muted"),
-      "editor.lineHighlightBackground": css("--surface"),
-      "editor.selectionBackground": css("--raise"),
-      "editorCursor.foreground": css("--accent"),
-      "editorWidget.background": css("--surface"),
-      "editorWidget.border": css("--line"),
-      "editorSuggestWidget.background": css("--surface"),
-      "editorSuggestWidget.border": css("--line"),
-      "editorSuggestWidget.selectedBackground": css("--raise"),
-      "editorHoverWidget.background": css("--surface"),
-      "editorHoverWidget.border": css("--line"),
-      "scrollbarSlider.background": css("--raise") + "aa",
-      focusBorder: css("--accent"),
+      "editor.background": token("--bg"),
+      "editor.foreground": token("--fg"),
+      "editorLineNumber.foreground": token("--line"),
+      "editorLineNumber.activeForeground": token("--muted"),
+      "editor.lineHighlightBackground": token("--surface"),
+      "editor.selectionBackground": token("--raise"),
+      "editorCursor.foreground": token("--accent"),
+      "editorWidget.background": token("--surface"),
+      "editorWidget.border": token("--line"),
+      "editorSuggestWidget.background": token("--surface"),
+      "editorSuggestWidget.border": token("--line"),
+      "editorSuggestWidget.selectedBackground": token("--raise"),
+      "editorHoverWidget.background": token("--surface"),
+      "editorHoverWidget.border": token("--line"),
+      "scrollbarSlider.background": token("--raise") + "aa",
+      focusBorder: token("--accent"),
     },
   });
 }
+defineTheme();
 
 export default function Editor({ path, value, onChange, language = "typescript" }: { path: string; value: string; onChange: (v: string) => void; language?: "typescript" | "python" }) {
-  defineTheme();
   return (
     <MonacoEditor
       height="100%"

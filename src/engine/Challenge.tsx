@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { CaretDown, CaretUp } from "@phosphor-icons/react";
 import type { Challenge } from "../course/schema";
 import { Md } from "../ui/Md";
 import { Snippet } from "../code/Snippet";
@@ -134,8 +135,8 @@ function Order({ c, done, onAnswer }: { c: Of<"order">; done: boolean; onAnswer:
             <span className="n">{pos + 1}</span>
             <Md text={c.steps[step]} inline />
             <span className="mv">
-              <button type="button" aria-label="Move up" disabled={done || pos === 0} onClick={() => move(pos, pos - 1)}>↑</button>
-              <button type="button" aria-label="Move down" disabled={done || pos === items.length - 1} onClick={() => move(pos, pos + 1)}>↓</button>
+              <button type="button" aria-label="Move up" disabled={done || pos === 0} onClick={() => move(pos, pos - 1)}><CaretUp aria-hidden /></button>
+              <button type="button" aria-label="Move down" disabled={done || pos === items.length - 1} onClick={() => move(pos, pos + 1)}><CaretDown aria-hidden /></button>
             </span>
           </li>
         ))}

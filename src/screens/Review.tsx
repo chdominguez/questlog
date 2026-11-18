@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ArrowLeft } from "@phosphor-icons/react";
 import { CHALLENGES, type Course } from "../course/registry";
 import { courseDue } from "../engine/srs";
 import { href } from "../ui/route";
@@ -44,7 +45,7 @@ export function ReviewScreen({ course }: { course: Course }) {
       <Hud />
       <section className="level">
         <div className="level-head">
-          <a className="back" href={href.map(course.id)} aria-label={course.title}>←</a>
+          <a className="back" href={href.map(course.id)} aria-label={course.title}><ArrowLeft aria-hidden /></a>
           <h1>Review</h1>
         </div>
 
@@ -69,7 +70,7 @@ export function ReviewScreen({ course }: { course: Course }) {
 
         {finished && queue.length > 0 && (
           <div className="result screen-in">
-            <div className="kicker">Round complete</div>
+            <h2>Round complete</h2>
             <div className="gain">{cleared}/{queue.length}</div>
             <div className="row center">
               <a className={left ? "btn ghost" : "btn"} href={href.map(course.id)}>{course.title}</a>
