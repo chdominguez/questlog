@@ -34,6 +34,7 @@ export function Hud() {
   ];
   const tabs = "course" in r && r.name !== "level" && r.name !== "kata" ? [
     { href: href.map(r.course), label: "Map", on: r.name === "map" || r.name === "mock" },
+    { href: href.arcade(r.course), label: "Arcade", on: r.name === "arcade" || r.name === "game" },
     { href: href.review(r.course), label: "Review", on: r.name === "review", count: courseDue(p, r.course, Date.now()).length },
     { href: href.notes(r.course), label: "Notes", on: r.name === "notes" },
     { href: href.answers(r.course), label: "Answers", on: r.name === "answers" },

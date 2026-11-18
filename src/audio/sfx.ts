@@ -1,5 +1,5 @@
 // Contract: play(name) never throws; unlock() runs on every user gesture (App.tsx).
-export type SfxName = "click" | "ok" | "bad" | "streak" | "levelup" | "fail" | "tick" | "unlock" | "submit";
+export type SfxName = "click" | "ok" | "bad" | "streak" | "levelup" | "fail" | "tick" | "unlock" | "submit" | "countdown" | "go" | "match";
 
 /** zzfx params: [volume, randomness, frequency, attack, sustain, release, shape, shapeCurve, slide, deltaSlide,
  * pitchJump, pitchJumpTime, repeatTime, noise, modulation, bitCrush, delay, sustainVolume, decay, tremolo, filter] */
@@ -20,6 +20,9 @@ const SOUNDS: Record<SfxName, Note[]> = {
   streak: [[0, tone(C6, 0.06, 0.55, 5)], [0.06, tone(E6, 0.06, 0.55, 5)], [0.12, tone(G6, 0.14, 0.55, 5)]],
   levelup: [[0, tone(C5, 0.12)], [0.1, tone(E5, 0.12)], [0.2, tone(G5, 0.12)], [0.3, [0.7, 0, C6, 0.01, 0.3, 0.45, 1, 1.6, 0, 0, 0, 0, 0.08, 0, 0, 0, 0, 1, 0, 0.25]]],
   fail: [[0, tone(G5 / 2, 0.18, 0.6, 0)], [0.17, tone(E5 / 2, 0.18, 0.6, 0)], [0.34, tone(C5 / 2, 0.4, 0.6, 0)]],
+  countdown: [[0, tone(G5 / 2, 0.12, 0.6, 0)]],
+  go: [[0, tone(C6, 0.08, 0.65, 0)], [0.08, [0.65, 0, G6, 0.005, 0.12, 0.3, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0.2]]],
+  match: [[0, tone(G5, 0.06, 0.55, 5)], [0.05, tone(C6, 0.1, 0.55, 5)]],
   unlock: [[0, tone(G5, 0.08, 0.5, 0)], [0.07, [0.5, 0, C6, 0.005, 0.15, 0.3, 0, 1, 0, 0, 0, 0, 0.05, 0, 0, 0, 0, 1, 0, 0.3]]],
 };
 
