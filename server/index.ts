@@ -12,6 +12,7 @@ const env: Env = {
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || undefined,
   USER_HEADER: process.env.USER_HEADER || undefined,
   NAME_HEADER: process.env.NAME_HEADER || undefined,
+  LOGOUT_URL: process.env.LOGOUT_URL || undefined,
   VAPID_PUBLIC: process.env.VAPID_PUBLIC || undefined,
 };
 const index = () => readFileSync("dist/index.html", "utf8");
