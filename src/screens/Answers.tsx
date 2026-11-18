@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft } from "@phosphor-icons/react";
 import type { SavedAnswer } from "../../shared/api-types";
 import { courseOf, type Course } from "../course/registry";
 import { href } from "../ui/route";
@@ -37,7 +38,7 @@ export function AnswersScreen({ course }: { course: Course }) {
     <Hud />
     <div className="scr">
       <div className="scr-head">
-        <a className="back" href={href.map(course.id)} aria-label={course.title}>←</a>
+        <a className="back" href={href.map(course.id)} aria-label={course.title}><ArrowLeft aria-hidden /></a>
         <h1>Answers</h1>
         <button type="button" className="btn ghost" disabled={!all?.length} onClick={() => all && download(all, levels)}>Export .md</button>
       </div>

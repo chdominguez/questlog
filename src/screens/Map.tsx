@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Lock } from "@phosphor-icons/react";
 import type { Course } from "../course/registry";
 import { getArt } from "../art";
 import { play } from "../audio/sfx";
@@ -13,12 +14,6 @@ import "./screens.css";
 const ROW = 150; // px per node row on the path
 const XS = [50, 76, 50, 24]; // winding x positions, % of width
 const ORB_Y = 40; // orb centre from the node top (see .orb in screens.css)
-
-const Lock = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-    <rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" />
-  </svg>
-);
 
 export function MapScreen({ course }: { course: Course }) {
   const p = useProgress();
@@ -73,7 +68,7 @@ export function MapScreen({ course }: { course: Course }) {
                   <>
                     <span className="orb">
                       {art ? <span className="art" dangerouslySetInnerHTML={{ __html: art }} /> : <span className="num">{i + 1}</span>}
-                      {!open && <span className="lock"><Lock /></span>}
+                      {!open && <span className="lock"><Lock weight="bold" aria-hidden /></span>}
                     </span>
                     <span className="node-title">{l.title}</span>
                     <Stars n={lp?.stars ?? 0} />

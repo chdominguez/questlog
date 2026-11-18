@@ -1,10 +1,11 @@
 import { createHighlighterCore, type ThemedToken } from "shiki/core";
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
 import type { CodeLang } from "../course/schema";
+import { isDark } from "../ui/theme";
 
-// Fine-grained bundle: only these grammars and one theme get shipped.
+// Fine-grained bundle: only these grammars and a light and a dark theme get shipped.
 const highlighter = createHighlighterCore({
-  themes: [import("shiki/themes/tokyo-night.mjs")],
+  themes: [import("shiki/themes/github-light.mjs"), import("shiki/themes/github-dark.mjs")],
   langs: [
     import("shiki/langs/typescript.mjs"),
     import("shiki/langs/tsx.mjs"),
@@ -26,5 +27,6 @@ const LANG: Record<CodeLang, string> = {
 
 export async function tokenize(src: string, lang: CodeLang): Promise<ThemedToken[][]> {
   const h = await highlighter;
-  return h.codeToTokens(src, { lang: LANG[lang], theme: "tokyo-night" }).tokens;
+  // shortcut: picked per render, so open snippets keep their theme until re-rendered after an OS scheme switch.
+  return h.codeToTokens(src, { lang: LANG[lang], theme: isDark() ? "github-dark" : "github-light" }).tokens;
 }

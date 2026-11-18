@@ -111,4 +111,13 @@ describe("settings and hydrate", () => {
     expect(h.sound.volume).toBe(0);
     expect(h.run).toBeNull();
   });
+  test("best keeps the better value and survives hydrate", () => {
+    const s = run([
+      { type: "best", key: "c:quiz", value: 900 }, { type: "best", key: "c:quiz", value: 400 },
+      { type: "best", key: "c:match", value: 30_000, lower: true }, { type: "best", key: "c:match", value: 20_000, lower: true },
+    ]);
+    expect(s.best).toEqual({ "c:quiz": 900, "c:match": 20_000 });
+    expect(hydrate(JSON.parse(JSON.stringify(s))).best).toEqual(s.best);
+    expect(hydrate({ best: { a: 1, b: "2", c: null, d: Infinity } }).best).toEqual({ a: 1 });
+  });
 });

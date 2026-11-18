@@ -1,69 +1,68 @@
 import { useEffect, useId, useState, type CSSProperties } from "react";
 import "./mermaid.css";
 import { minWidth, svgWidth } from "./svg";
+import { isDark, token } from "../ui/theme";
 
 type MermaidApi = typeof import("mermaid").default;
 
 let ready: Promise<MermaidApi> | null = null;
 
-// Lazy: mermaid is large, so it loads on the first diagram and initializes once.
-function load(): Promise<MermaidApi> {
-  ready ??= import("mermaid").then(({ default: m }) => {
-    m.initialize({
-      startOnLoad: false,
-      securityLevel: "strict",
-      theme: "base",
-      fontFamily: '"IBM Plex Sans", system-ui, sans-serif',
-      // Mirrors the tokens in src/ui/global.css (mermaid needs literal colors, not CSS vars).
-      themeVariables: {
-        darkMode: true,
-        background: "#1f2236",
-        primaryColor: "#292d47",
-        primaryTextColor: "#eeecf7",
-        primaryBorderColor: "#ff8a5c",
-        secondaryColor: "#363b5c",
-        secondaryTextColor: "#eeecf7",
-        secondaryBorderColor: "#a3a5c2",
-        tertiaryColor: "#1f2236",
-        tertiaryTextColor: "#eeecf7",
-        tertiaryBorderColor: "#363b5c",
-        lineColor: "#a3a5c2",
-        textColor: "#eeecf7",
-        mainBkg: "#292d47",
-        nodeBorder: "#ff8a5c",
-        clusterBkg: "#1f2236",
-        clusterBorder: "#363b5c",
-        edgeLabelBackground: "#1f2236",
-        actorBkg: "#292d47",
-        actorBorder: "#ff8a5c",
-        actorTextColor: "#eeecf7",
-        actorLineColor: "#a3a5c2",
-        signalColor: "#a3a5c2",
-        signalTextColor: "#eeecf7",
-        labelBoxBkgColor: "#292d47",
-        labelBoxBorderColor: "#ff8a5c",
-        labelTextColor: "#eeecf7",
-        loopTextColor: "#eeecf7",
-        noteBkgColor: "#363b5c",
-        noteBorderColor: "#a3a5c2",
-        noteTextColor: "#eeecf7",
-        activationBkgColor: "#363b5c",
-        activationBorderColor: "#ff8a5c",
-        sequenceNumberColor: "#2a1408",
-        stateBkg: "#292d47",
-        stateLabelColor: "#eeecf7",
-        compositeBackground: "#1f2236",
-        compositeTitleBackground: "#292d47",
-        altBackground: "#292d47",
-        transitionColor: "#a3a5c2",
-        transitionLabelColor: "#eeecf7",
-        specialStateColor: "#ff8a5c",
-      },
-    });
-    return m;
-  });
-  return ready;
-}
+// Lazy: mermaid is large, so it loads on the first diagram.
+const load = () => (ready ??= import("mermaid").then(({ default: m }) => m));
+
+// Mermaid theme variable -> token in src/ui/global.css.
+const VARS = {
+  background: "--surface",
+  primaryColor: "--raise",
+  primaryTextColor: "--fg",
+  primaryBorderColor: "--accent",
+  secondaryColor: "--line",
+  secondaryTextColor: "--fg",
+  secondaryBorderColor: "--muted",
+  tertiaryColor: "--surface",
+  tertiaryTextColor: "--fg",
+  tertiaryBorderColor: "--line",
+  lineColor: "--muted",
+  textColor: "--fg",
+  mainBkg: "--raise",
+  nodeBorder: "--accent",
+  clusterBkg: "--surface",
+  clusterBorder: "--line",
+  edgeLabelBackground: "--surface",
+  actorBkg: "--raise",
+  actorBorder: "--accent",
+  actorTextColor: "--fg",
+  actorLineColor: "--muted",
+  signalColor: "--muted",
+  signalTextColor: "--fg",
+  labelBoxBkgColor: "--raise",
+  labelBoxBorderColor: "--accent",
+  labelTextColor: "--fg",
+  loopTextColor: "--fg",
+  noteBkgColor: "--line",
+  noteBorderColor: "--muted",
+  noteTextColor: "--fg",
+  activationBkgColor: "--line",
+  activationBorderColor: "--accent",
+  sequenceNumberColor: "--accent-ink",
+  stateBkg: "--raise",
+  stateLabelColor: "--fg",
+  compositeBackground: "--surface",
+  compositeTitleBackground: "--raise",
+  altBackground: "--raise",
+  transitionColor: "--muted",
+  transitionLabelColor: "--fg",
+  specialStateColor: "--accent",
+};
+
+// Re-run before each render so diagrams follow the current color scheme.
+const init = (m: MermaidApi) => m.initialize({
+  startOnLoad: false,
+  securityLevel: "strict",
+  theme: "base",
+  fontFamily: '"IBM Plex Sans", system-ui, sans-serif',
+  themeVariables: { darkMode: isDark(), ...Object.fromEntries(Object.entries(VARS).map(([k, v]) => [k, token(v)])) },
+});
 
 let seq = 0;
 
@@ -77,7 +76,7 @@ export function Mermaid({ src, caption }: { src: string; caption?: string }) {
     const id = `mmd-${reactId.replace(/[^a-zA-Z0-9]/g, "")}-${++seq}`;
     setState({});
     load()
-      .then((m) => m.render(id, src))
+      .then((m) => { init(m); return m.render(id, src); })
       .then(({ svg }) => live && setState({ svg }))
       .catch((e: unknown) => {
         document.getElementById(id)?.remove(); // mermaid can leave its scratch node behind on parse errors

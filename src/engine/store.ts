@@ -34,6 +34,7 @@ export interface Progress {
   completed: string[]; // course ids the user marked done: no due reviews
   unlockAll: boolean;
   sound: { muted: boolean; volume: number };
+  best: Record<string, number>; // arcade bests by "<course>:<game>"
   run: Run | null; // current level attempt, not persisted
   updatedAt: number; // last local change, for sync (newest wins)
 }
@@ -49,10 +50,11 @@ export type Action =
   | { type: "markReview"; id: string; now: number }
   | { type: "unlockAll"; on: boolean }
   | { type: "complete"; course: string; on: boolean }
-  | { type: "sound"; muted?: boolean; volume?: number };
+  | { type: "sound"; muted?: boolean; volume?: number }
+  | { type: "best"; key: string; value: number; lower?: boolean }; // lower: a time, smaller is better
 
 export const initial: Progress = {
-  xp: 0, levels: {}, streak: 0, cards: {}, cleared: [], completed: [], unlockAll: false, sound: { muted: false, volume: 0.7 }, run: null, updatedAt: 0,
+  xp: 0, levels: {}, streak: 0, cards: {}, cleared: [], completed: [], unlockAll: false, sound: { muted: false, volume: 0.7 }, best: {}, run: null, updatedAt: 0,
 };
 
 export const multiplier = (streak: number) => (streak >= 5 ? 2 : streak >= 3 ? 1.5 : 1);
@@ -102,6 +104,11 @@ export function reducer(s: Progress, a: Action): Progress {
       return { ...s, unlockAll: a.on };
     case "complete":
       return { ...s, completed: a.on ? withId(s.completed, a.course) : s.completed.filter((c) => c !== a.course) };
+    case "best": {
+      const prev = s.best[a.key];
+      const better = prev === undefined || (a.lower ? a.value < prev : a.value > prev);
+      return better ? { ...s, best: { ...s.best, [a.key]: a.value } } : s;
+    }
     case "sound":
       return {
         ...s,
@@ -120,6 +127,8 @@ export function hydrate(raw: unknown): Progress {
   const num = (v: unknown, d: number) => (typeof v === "number" && Number.isFinite(v) ? v : d);
   const levels: Record<string, LevelProgress> = {};
   const cards: Record<string, SrsCard> = {};
+  const best: Record<string, number> = {};
+  if (r.best && typeof r.best === "object") for (const [k, v] of Object.entries(r.best)) if (typeof v === "number" && Number.isFinite(v)) best[k] = v;
   if (r.cards && typeof r.cards === "object") for (const [id, c] of Object.entries(r.cards)) if (isCard(c)) cards[id] = c;
   if (r.levels && typeof r.levels === "object") {
     for (const [id, l] of Object.entries(r.levels)) {
@@ -135,6 +144,7 @@ export function hydrate(raw: unknown): Progress {
     completed: strings(r.completed),
     unlockAll: r.unlockAll === true,
     sound: { muted: r.sound?.muted === true, volume: clamp(num(r.sound?.volume, initial.sound.volume), 0, 1) },
+    best,
     run: null,
     updatedAt: Math.max(0, num(r.updatedAt, 0)),
   };

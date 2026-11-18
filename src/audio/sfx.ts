@@ -1,5 +1,5 @@
 // Contract: play(name) never throws; unlock() runs on every user gesture (App.tsx).
-export type SfxName = "click" | "ok" | "bad" | "streak" | "levelup" | "fail" | "tick" | "unlock" | "submit";
+export type SfxName = "click" | "ok" | "bad" | "streak" | "levelup" | "fail" | "tick" | "unlock" | "submit" | "countdown" | "go" | "match";
 
 /** zzfx params: [volume, randomness, frequency, attack, sustain, release, shape, shapeCurve, slide, deltaSlide,
  * pitchJump, pitchJumpTime, repeatTime, noise, modulation, bitCrush, delay, sustainVolume, decay, tremolo, filter] */
@@ -20,6 +20,9 @@ const SOUNDS: Record<SfxName, Note[]> = {
   streak: [[0, tone(C6, 0.06, 0.55, 5)], [0.06, tone(E6, 0.06, 0.55, 5)], [0.12, tone(G6, 0.14, 0.55, 5)]],
   levelup: [[0, tone(C5, 0.12)], [0.1, tone(E5, 0.12)], [0.2, tone(G5, 0.12)], [0.3, [0.7, 0, C6, 0.01, 0.3, 0.45, 1, 1.6, 0, 0, 0, 0, 0.08, 0, 0, 0, 0, 1, 0, 0.25]]],
   fail: [[0, tone(G5 / 2, 0.18, 0.6, 0)], [0.17, tone(E5 / 2, 0.18, 0.6, 0)], [0.34, tone(C5 / 2, 0.4, 0.6, 0)]],
+  countdown: [[0, tone(G5 / 2, 0.12, 0.6, 0)]],
+  go: [[0, tone(C6, 0.08, 0.65, 0)], [0.08, [0.65, 0, G6, 0.005, 0.12, 0.3, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0.2]]],
+  match: [[0, tone(G5, 0.06, 0.55, 5)], [0.05, tone(C6, 0.1, 0.55, 5)]],
   unlock: [[0, tone(G5, 0.08, 0.5, 0)], [0.07, [0.5, 0, C6, 0.005, 0.15, 0.3, 0, 1, 0, 0, 0, 0, 0.05, 0, 0, 0, 0, 1, 0, 0.3]]],
 };
 
@@ -95,13 +98,26 @@ export function play(name: SfxName): void {
 
 // iOS routes Web Audio through the "ambient" session, which the ringer switch mutes. "playback" ignores the switch
 // (Safari 16.4+); a looping silent <audio> element does the same on older iOS.
-const SILENT_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+// The file must hold real samples: a zero-length one restarts nonstop when looped and pins the main thread.
+function silentWav(): string {
+  const n = 8000; // 1 s of 8 kHz 8-bit mono
+  const v = new DataView(new ArrayBuffer(44 + n));
+  const str = (at: number, s: string) => [...s].forEach((c, i) => v.setUint8(at + i, c.charCodeAt(0)));
+  str(0, "RIFF"); v.setUint32(4, 36 + n, true); str(8, "WAVEfmt "); v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, n, true); v.setUint32(28, n, true);
+  v.setUint16(32, 1, true); v.setUint16(34, 8, true); str(36, "data"); v.setUint32(40, n, true);
+  for (let i = 0; i < n; i++) v.setUint8(44 + i, 128); // 8-bit silence is the midpoint
+  return URL.createObjectURL(new Blob([v.buffer], { type: "audio/wav" }));
+}
+// iPadOS reports itself as Macintosh; touch tells it apart.
+const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
 let silent: HTMLAudioElement | null = null;
+let wav: string | undefined;
 function playbackSession() {
   const nav = navigator as Navigator & { audioSession?: { type: string } };
   if (nav.audioSession) { nav.audioSession.type = "playback"; return; }
-  if (silent) return;
-  silent = new Audio(SILENT_WAV);
+  if (silent || !isIOS()) return;
+  silent = new Audio(wav ??= silentWav());
   silent.loop = true;
   silent.play().catch(() => { silent = null; });
 }
