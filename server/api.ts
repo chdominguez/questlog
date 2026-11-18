@@ -19,6 +19,7 @@ export interface Env {
   DB: Db;
   ANTHROPIC_API_KEY?: string;
   VAPID_PUBLIC?: string; // web push public key; unset = reminders off
+  LOGOUT_URL?: string; // where the Sign out link goes (proxy + IdP logout); unset = no link
   NAME_HEADER?: string; // header the proxy sets to the signed-in user's display name
   USER_HEADER?: string; // header a trusted reverse proxy sets to the signed-in user (e.g. x-auth-request-email); unset = single local user
 }
@@ -181,7 +182,7 @@ export function createApi({
     .get("/health", (c) => c.json({ ok: true, grader: grader(c.env) !== null }))
     .get("/me", (c) => {
       const name = c.env.NAME_HEADER ? c.req.header(c.env.NAME_HEADER)?.trim().slice(0, 100) : undefined;
-      return c.json({ user: user(c), ...(name && { name }) });
+      return c.json({ user: user(c), ...(name && { name }), ...(c.env.LOGOUT_URL && { logout: c.env.LOGOUT_URL }) });
     })
     .get("/profile", async (c) => {
       const row = await db(c).prepare("SELECT value FROM kv WHERE user_id = ? AND key = 'profile'").bind(user(c)).first<{ value: string }>();

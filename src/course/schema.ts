@@ -150,6 +150,7 @@ export const CourseSchema = z.object({
   title: z.string().min(1),
   lang: z.string().min(2).describe("BCP 47 language of the content, e.g. en, es-ES; used for grading, dictation and dates"),
   summary: z.string().optional().describe("One line shown on the home screen"),
+  users: z.array(z.email()).optional().describe("Emails of the signed-in users who see this course; omit for everyone"),
   levels: z.array(LevelSchema).min(1),
   katas: z.array(KataSchema).optional(),
   art: z.record(z.string(), z.string()).optional().describe("Inline SVG strings by key, used by level.art and figure blocks"),

@@ -35,7 +35,7 @@ export const deleteNote = async (id: string) => {
   if (!res.ok) throw new ApiError(res.status, `HTTP ${res.status}`);
 };
 
-export const getMe = () => call<{ user: string; name?: string }>("/me");
+export const getMe = () => call<{ user: string; name?: string; logout?: string }>("/me");
 export const getProfile = () => call<Profile>("/profile");
 export const saveProfile = (p: Profile) => call<Profile>("/profile", send("PUT", p));
 

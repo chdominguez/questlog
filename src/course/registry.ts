@@ -55,6 +55,9 @@ for (const c of loaded.courses) if (c.art) addArt(Object.fromEntries(Object.entr
 
 export const COURSES = loaded.courses;
 export const COURSE_ERRORS = loaded.errors;
+// shortcut: hides, doesn't secure; course data ships in the bundle, move it server-side if a course must stay secret
+export const visibleTo = (user: string, courses: Course[] = COURSES) =>
+  courses.filter((c) => !c.users || c.users.some((u) => u.toLowerCase() === user.toLowerCase()));
 export const courseById = (id: string) => COURSES.find((c) => c.id === id);
 export const levelByKey = (key: string) => courseById(courseOf(key))?.levels.find((l) => l.id === key);
 export const kataByKey = (key: string) => courseById(courseOf(key))?.katas[key];

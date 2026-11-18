@@ -1,4 +1,6 @@
-import { COURSES, COURSE_ERRORS } from "../course/registry";
+import { useEffect, useState } from "react";
+import { getMe } from "../answers/api";
+import { COURSE_ERRORS, visibleTo } from "../course/registry";
 import { getArt } from "../art";
 import { play } from "../audio/sfx";
 import { Hud } from "../engine/Hud";
@@ -9,13 +11,16 @@ import "./screens.css";
 
 export function HomeScreen() {
   const p = useProgress();
+  const [user, setUser] = useState(() => { try { return localStorage.getItem("ql.user") ?? ""; } catch { return ""; } }); // sync.ts keeps it current
+  useEffect(() => { getMe().then((me) => setUser(me.user), () => {}); }, []);
+  const courses = visibleTo(user);
   return (
     <>
       <Hud />
       <section className="home screen-in">
         <h1 className="sr">Courses</h1>
         <ul className="home-courses">
-          {COURSES.map((c) => {
+          {courses.map((c) => {
             const done = c.levels.filter((l) => p.levels[l.id]?.done).length;
             const stars = c.levels.reduce((n, l) => n + (p.levels[l.id]?.stars ?? 0), 0);
             const due = courseDue(p, c.id, Date.now()).length;
@@ -37,7 +42,7 @@ export function HomeScreen() {
             );
           })}
         </ul>
-        {COURSES.length === 0 && <p className="scr-empty">No courses</p>}
+        {courses.length === 0 && <p className="scr-empty">No courses</p>}
         {COURSE_ERRORS.map((e) => (
           <details key={e.file} className="course-error card" role="alert">
             <summary>Invalid course: {e.file}</summary>

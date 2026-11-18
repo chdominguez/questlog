@@ -1,7 +1,7 @@
 import { useEffect, useState, type ChangeEvent } from "react";
 import type { Profile, Reminder } from "../../shared/api-types";
 import { ApiError, deleteReminder, getMe, getProfile, listReminders, saveProfile, saveReminder } from "../answers/api";
-import { COURSES } from "../course/registry";
+import { visibleTo } from "../course/registry";
 import { enablePush, pushState, timeZone, type PushState } from "../engine/push";
 import { useProgress } from "../engine/store";
 import { Hud } from "../engine/Hud";
@@ -14,7 +14,7 @@ const FIELDS = [
   ["name", "Name", 100], ["title", "Title", 100], ["location", "Location", 100], ["link", "Link", 300],
 ] as const;
 
-function Reminders() {
+function Reminders({ user }: { user: string }) {
   const [state, setState] = useState<PushState | null>(null);
   const [mine, setMine] = useState<Record<string, Reminder>>({});
   const [failed, setFailed] = useState(false);
@@ -47,7 +47,7 @@ function Reminders() {
       {state === "denied" && <p className="wa-notice">Notifications are blocked</p>}
       {state === "off" && <button type="button" className="btn" onClick={enable}>Enable notifications</button>}
       {failed && <p className="wa-notice" role="alert">Couldn't save</p>}
-      {state === "on" && COURSES.filter((c) => !completed.includes(c.id)).map((c) => (
+      {state === "on" && visibleTo(user).filter((c) => !completed.includes(c.id)).map((c) => (
         <label key={c.id} className="profile-field profile-reminder">{c.title}
           <input type="time" className="scr-input" value={mine[c.id]?.time ?? ""} onChange={(e) => set(c.id, c.title, e.target.value)} />
           {mine[c.id] && <button type="button" className="btn ghost" onClick={() => set(c.id, c.title, "")}>Remove</button>}
@@ -59,6 +59,7 @@ function Reminders() {
 
 export function ProfileScreen() {
   const [email, setEmail] = useState("");
+  const [logout, setLogout] = useState<string>();
   const [form, setForm] = useState<Profile | null>(null);
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -67,6 +68,7 @@ export function ProfileScreen() {
   useEffect(() => {
     Promise.all([getMe(), getProfile()]).then(([me, p]) => {
       setEmail(me.user);
+      setLogout(me.logout);
       setForm({ ...p, name: p.name || me.name || "" }); // Keycloak name until the user sets their own
     }, () => setError(true));
   }, []);
@@ -108,7 +110,8 @@ export function ProfileScreen() {
           <div className="wa-actions"><button type="submit" className="btn" disabled={busy}>Save</button></div>
         </form>
       )}
-      <Reminders />
+      {email && <Reminders user={email} />}
+      {logout && <div className="wa-actions"><a className="btn ghost" href={logout}>Sign out</a></div>}
     </div>
     </>
   );
