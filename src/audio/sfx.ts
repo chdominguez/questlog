@@ -98,13 +98,26 @@ export function play(name: SfxName): void {
 
 // iOS routes Web Audio through the "ambient" session, which the ringer switch mutes. "playback" ignores the switch
 // (Safari 16.4+); a looping silent <audio> element does the same on older iOS.
-const SILENT_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+// The file must hold real samples: a zero-length one restarts nonstop when looped and pins the main thread.
+function silentWav(): string {
+  const n = 8000; // 1 s of 8 kHz 8-bit mono
+  const v = new DataView(new ArrayBuffer(44 + n));
+  const str = (at: number, s: string) => [...s].forEach((c, i) => v.setUint8(at + i, c.charCodeAt(0)));
+  str(0, "RIFF"); v.setUint32(4, 36 + n, true); str(8, "WAVEfmt "); v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, n, true); v.setUint32(28, n, true);
+  v.setUint16(32, 1, true); v.setUint16(34, 8, true); str(36, "data"); v.setUint32(40, n, true);
+  for (let i = 0; i < n; i++) v.setUint8(44 + i, 128); // 8-bit silence is the midpoint
+  return URL.createObjectURL(new Blob([v.buffer], { type: "audio/wav" }));
+}
+// iPadOS reports itself as Macintosh; touch tells it apart.
+const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
 let silent: HTMLAudioElement | null = null;
+let wav: string | undefined;
 function playbackSession() {
   const nav = navigator as Navigator & { audioSession?: { type: string } };
   if (nav.audioSession) { nav.audioSession.type = "playback"; return; }
-  if (silent) return;
-  silent = new Audio(SILENT_WAV);
+  if (silent || !isIOS()) return;
+  silent = new Audio(wav ??= silentWav());
   silent.loop = true;
   silent.play().catch(() => { silent = null; });
 }
