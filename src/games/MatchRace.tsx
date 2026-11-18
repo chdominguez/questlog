@@ -29,6 +29,9 @@ export function MatchRace({ pool, onEnd }: PlayProps) {
       setDone(next);
       if (next.length === pairs.length) {
         const ms = clock.stop();
+        // A challenge with pairs left out of this round wasn't fully practiced: partial at best.
+        const count = (xs: typeof pairs, id: string) => xs.filter((x) => x.id === id).length;
+        pairs.forEach((p) => { if (count(pool.pairs, p.id) > count(pairs, p.id)) missed.current.add(p.id); });
         report(pairs, missed.current);
         later(() => onEnd(ms), 400);
       }

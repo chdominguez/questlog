@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
-import { Keyboard, Lightning, ListNumbers, SquaresFour, Trophy } from "@phosphor-icons/react";
+import { ArrowLeft, Keyboard, Lightning, ListNumbers, SquaresFour, Trophy } from "@phosphor-icons/react";
 import type { Course } from "../course/registry";
 import { play } from "../audio/sfx";
 import { burst } from "../engine/Celebrate";
@@ -42,7 +42,7 @@ export function GameScreen({ course, game }: { course: Course; game: string }) {
       <Hud />
       <section className="game">
         <div className="game-head">
-          <a className="back" href={href.arcade(course.id)} aria-label="Arcade">←</a>
+          <a className="back" href={href.arcade(course.id)} aria-label="Arcade"><ArrowLeft aria-hidden /></a>
           <h1>{g.name}</h1>
         </div>
         {!ready && <a className="btn" href={href.arcade(course.id)}>Arcade</a>}

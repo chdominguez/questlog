@@ -38,7 +38,7 @@ export function useStopwatch() {
   return { el, add: (ms: number) => { extra.current += ms; }, stop: () => { end.current ??= performance.now(); return Math.round(elapsed()); } };
 }
 
-/** Reports each source challenge once: "ok" without mistakes on it, else "partial". */
+/** Reports each source challenge once: "partial" when in `missed`, else "ok". */
 export function report(items: { id: string; ctype: ChallengeType }[], missed: Set<string>) {
   const now = Date.now();
   new Map(items.map((x) => [x.id, x.ctype])).forEach((ctype, id) =>

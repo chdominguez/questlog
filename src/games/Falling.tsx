@@ -25,7 +25,14 @@ export function Falling({ pool, onEnd }: PlayProps) {
   const drop = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
   const later = useLater();
+  const graded = useRef(new Set<string>());
   const item = deck[n % deck.length];
+  // The deck repeats; only the first try at each challenge counts toward XP and review.
+  const grade = (result: "ok" | "wrong") => {
+    if (graded.current.has(item.id)) return;
+    graded.current.add(item.id);
+    dispatch({ type: "answer", id: item.id, ctype: item.ctype, result, now: Date.now() });
+  };
   const ms = Math.max(FASTEST_MS, FIRST_MS * SPEEDUP ** cleared);
 
   const next = () => { setN(n + 1); setVal(""); input.current?.focus(); };
@@ -37,7 +44,7 @@ export function Falling({ pool, onEnd }: PlayProps) {
       const y = Math.min(1, (performance.now() - t0) / ms);
       drop.current?.style.setProperty("--y", String(y));
       if (y < 1) { id = requestAnimationFrame(tick); return; }
-      dispatch({ type: "answer", id: item.id, ctype: item.ctype, result: "wrong", now: Date.now() });
+      grade("wrong");
       play("bad");
       setLanded(true);
       setLives(lives - 1);
@@ -49,8 +56,8 @@ export function Falling({ pool, onEnd }: PlayProps) {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (landed || !val.trim()) return;
-    if (gradeCloze([{ answers: item.answers, exact: item.exact }], [val]).result === "ok") {
-      dispatch({ type: "answer", id: item.id, ctype: item.ctype, result: "ok", now: Date.now() });
+    if (gradeCloze([{ answers: item.answers, exact: item.exact }], [val.trim()]).result === "ok") {
+      grade("ok");
       play("ok");
       setCleared(cleared + 1);
       next();
