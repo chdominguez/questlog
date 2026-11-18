@@ -21,7 +21,7 @@
   /* State only */
   --ok: oklch(52% 0.12 155);
   --bad: oklch(53% 0.19 25);
-  --gold: oklch(55.5% 0.12 70);
+  --gold: oklch(53% 0.12 70);
   --info: oklch(52% 0.14 255);
   --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px;
   --t-xs: 12px; --t-sm: 14px; --t-base: 16px; --t-lg: 20px; --t-xl: 24px; --t-2xl: 32px; --t-3xl: 44px;

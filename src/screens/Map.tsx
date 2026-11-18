@@ -36,7 +36,6 @@ export function MapScreen({ course }: { course: Course }) {
         <div className="map-head">
           <h1>{course.title}</h1>
           {course.mock && <a className="btn ghost" href={href.mock(course.id)} onClick={() => play("click")}>{course.mock.title}</a>}
-          <a className="btn ghost" href={href.arcade(course.id)} onClick={() => play("click")}>Arcade</a>
           <button type="button" className="btn ghost" aria-pressed={done}
             onClick={() => {
               dispatch({ type: "complete", course: course.id, on: !done });
