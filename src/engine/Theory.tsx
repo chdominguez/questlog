@@ -7,6 +7,8 @@ import { Flow } from "../diagram/Flow";
 import { Trace } from "../code/Trace";
 import { getArt } from "../art";
 import { play } from "../audio/sfx";
+import { Drill } from "./Drill";
+import { Practice } from "./Practice";
 import "./engine.css";
 
 export function Block({ b }: { b: TheoryBlock }) {
@@ -16,6 +18,8 @@ export function Block({ b }: { b: TheoryBlock }) {
     case "mermaid": return <Mermaid src={b.src} caption={b.caption} />;
     case "trace": return <Trace lang={b.lang} src={b.src} title={b.title} steps={b.steps} />;
     case "flow": return <Flow actors={b.actors} steps={b.steps} caption={b.caption} />;
+    case "drill": return <Drill b={b} />;
+    case "practice": return <Practice c={b.challenge} />;
     case "media": return (
       <figure className="media">
         {b.type === "image" && <img src={b.src} alt={b.alt} loading="lazy" decoding="async" />}

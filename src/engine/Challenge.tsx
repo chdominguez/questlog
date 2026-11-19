@@ -21,7 +21,7 @@ import "./engine.css";
 type Of<T extends Challenge["type"]> = Extract<Challenge, { type: T }>;
 type Answer = (correct: boolean) => void;
 
-const KICKER: Record<Challenge["type"], string> = {
+export const KICKER: Record<Challenge["type"], string> = {
   quiz: "Quiz", multi: "Select all", order: "Put in order", bug: "Find the bug", cloze: "Fill the blanks", written: "Written answer", kata: "Kata", match: "Match", sort: "Sort", flashcard: "Flashcard",
 };
 
@@ -273,6 +273,7 @@ function Bug({ c, done, onAnswer }: { c: Of<"bug">; done: boolean; onAnswer: Ans
 function Cloze({ c, done, onResult }: { c: Of<"cloze">; done: boolean; onResult: (r: Result) => void }) {
   const parts = useMemo(() => clozeParts(c.text), [c.text]);
   const [vals, setVals] = useState<string[]>(() => c.blanks.map(() => ""));
+  const [bank] = useState(() => (c.bank ? permutation(c.bank.length).map((i) => c.bank![i]) : [])); // authors list answers first
   const [active, setActive] = useState(0);
   const [graded, setGraded] = useState<boolean[] | null>(null);
   const set = (i: number, v: string) => setVals((p) => p.map((x, j) => (j === i ? v : x)));
@@ -312,7 +313,7 @@ function Cloze({ c, done, onResult }: { c: Of<"cloze">; done: boolean; onResult:
       {c.lang ? <pre className="cloze code">{pieces}</pre> : <div className="cloze">{pieces}</div>}
       {c.bank && (
         <div className="chips" role="group" aria-label="Word bank">
-          {c.bank.map((w, i) => <button key={i} type="button" className="chip" disabled={done || used(w)} onClick={() => tap(w)}>{w}</button>)}
+          {bank.map((w, i) => <button key={i} type="button" className="chip" disabled={done || used(w)} onClick={() => tap(w)}>{w}</button>)}
         </div>
       )}
       {graded && (
@@ -326,6 +327,34 @@ function Cloze({ c, done, onResult }: { c: Of<"cloze">; done: boolean; onResult:
         </div>
       )}
     </>
+  );
+}
+
+/** The input for the self-graded challenge types (everything but written, flashcard and kata). */
+export function ChallengeBody({ c, done, onResult }: { c: Challenge; done: boolean; onResult: (r: Result) => void }) {
+  const onAnswer: Answer = (ok) => onResult(ok ? "ok" : "wrong");
+  switch (c.type) {
+    case "quiz": return <Quiz c={c} done={done} onAnswer={onAnswer} />;
+    case "multi": return <Multi c={c} done={done} onAnswer={onResult} />;
+    case "order": return <Order c={c} done={done} onAnswer={onAnswer} />;
+    case "match": return <Match c={c} done={done} onResult={onResult} />;
+    case "sort": return <Sort c={c} done={done} onResult={onResult} />;
+    case "bug": return <Bug c={c} done={done} onAnswer={onAnswer} />;
+    case "cloze": return <Cloze c={c} done={done} onResult={onResult} />;
+    default: return null;
+  }
+}
+
+/** Verdict, explanation and the right answer for match/order misses. */
+export function Feedback({ c, result, xp = 0 }: { c: Challenge; result: Result; xp?: number }) {
+  const good = result === "ok";
+  return (
+    <div role="status" className={`feedback ${good ? "ok" : result === "partial" ? "mid" : "bad"}`}>
+      <strong>{good ? "Correct" : result === "partial" ? "Almost" : "Wrong"}{xp > 0 ? ` · +${xp} XP` : ""}</strong>
+      {c.explain && <Md text={c.explain} />}
+      {c.type === "match" && !good && <Md text={c.pairs.map((p) => `${p.left} → ${p.right}`).join("\n\n")} />}
+      {c.type === "order" && !good && <Md text={c.steps.map((s, i) => `${i + 1}. ${s}`).join("\n")} />}
+    </div>
   );
 }
 
@@ -350,17 +379,9 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
     setXp(gained);
     setFx({ kind: r === "ok" || r === "partial" ? "ok" : "bad", xp: gained, n: ++fxN.current });
   };
-  const onAnswer: Answer = (ok) => finish(ok ? "ok" : "wrong");
 
   let body: ReactNode;
   switch (c.type) {
-    case "quiz": body = <Quiz c={c} done={done} onAnswer={onAnswer} />; break;
-    case "multi": body = <Multi c={c} done={done} onAnswer={finish} />; break;
-    case "order": body = <Order c={c} done={done} onAnswer={onAnswer} />; break;
-    case "match": body = <Match c={c} done={done} onResult={finish} />; break;
-    case "sort": body = <Sort c={c} done={done} onResult={finish} />; break;
-    case "bug": body = <Bug c={c} done={done} onAnswer={onAnswer} />; break;
-    case "cloze": body = <Cloze c={c} done={done} onResult={finish} />; break;
     case "written":
       body = <WrittenAnswer challenge={c} levelId={levelId} onDone={(s) => finish(s >= 7 ? "ok" : s >= 4 ? "partial" : "miss")} />;
       break;
@@ -368,15 +389,10 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
     case "kata":
       body = <KataScreen course={courseById(courseOf(c.id))!} kataId={c.kataId} onSolved={() => finish("ok")} />;
       break;
+    default: body = <ChallengeBody c={c} done={done} onResult={finish} />;
   }
 
-  const orderHint = useMemo(
-    () => (c.type === "order" ? c.steps.map((s, i) => `${i + 1}. ${s}`).join("\n") : ""),
-    [c],
-  );
-  const matchHint = useMemo(() => (c.type === "match" ? c.pairs.map((p) => `${p.left} → ${p.right}`).join("\n\n") : ""), [c]);
   const showFeedback = done && c.type !== "flashcard" && (c.type === "quiz" || c.type === "multi" || c.type === "order" || c.type === "bug" || c.type === "match" || c.type === "cloze" || c.type === "sort" || !!c.explain);
-  const good = result === "ok";
 
   return (
     <article className={`qcard${fx ? ` fx-${fx.kind}` : ""}`}>
@@ -385,14 +401,7 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
       {c.type !== "written" && <Md className="qtext" text={c.prompt} />}
       {c.code && c.type !== "bug" && c.type !== "written" && <Snippet lang={c.code.lang} src={c.code.src} />}
       {body}
-      {showFeedback && (
-        <div role="status" className={`feedback ${good ? "ok" : result === "partial" ? "mid" : "bad"}`}>
-          <strong>{good ? "Correct" : result === "partial" ? "Almost" : "Wrong"}{xp > 0 ? ` · +${xp} XP` : ""}</strong>
-          {c.explain && <Md text={c.explain} />}
-          {c.type === "match" && !good && <Md text={matchHint} />}
-          {c.type === "order" && !good && <Md text={orderHint} />}
-        </div>
-      )}
+      {showFeedback && result && <Feedback c={c} result={result} xp={xp} />}
       <div className="row end">
         {c.type === "kata" && !done && (
           <button type="button" className="btn ghost" onClick={() => { report(c, "miss"); onNext(); }}>Skip</button>

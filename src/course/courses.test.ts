@@ -112,3 +112,14 @@ test("visibleTo: courses with users show only to them, case-insensitive", () => 
   expect(visibleTo("me@x.com", cs)).toEqual(cs);
   expect(visibleTo("other@x.com", cs)).toEqual([cs[1]]);
 });
+
+test("drill and practice blocks validate like challenges", () => {
+  const mk = (block: object) => { const c = course(); (c.levels as any)[0].theory[0].blocks.push(block); return validateCourse(c).join("\n"); };
+  const pairs = [{ left: "a", right: "1" }, { left: "b", right: "2" }, { left: "c", right: "3" }];
+  expect(mk({ kind: "drill", pairs })).toBe("");
+  expect(mk({ kind: "drill", pairs: [...pairs, { left: "a", right: "4" }] })).toMatch(/duplicate left/);
+  expect(mk({ kind: "practice", challenge: { id: "p", type: "quiz", prompt: "P", options: ["a", "b"], answer: 0 } })).toBe("");
+  expect(mk({ kind: "practice", challenge: { id: "p", type: "quiz", prompt: "P", options: ["a", "b"], answer: 5 } })).toMatch(/challenge\.answer: answer 5/);
+  expect(mk({ kind: "practice", challenge: { id: "q", type: "quiz", prompt: "P", options: ["a", "b"], answer: 0 } })).toMatch(/duplicate challenge id "q"/);
+  expect(mk({ kind: "practice", challenge: { id: "p", type: "flashcard", prompt: "P", back: "B" } })).toMatch(/practice challenge type/);
+});

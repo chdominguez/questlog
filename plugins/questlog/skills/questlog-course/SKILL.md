@@ -9,7 +9,7 @@ description: Creates, extends or ports a course for Questlog, the gamified learn
 
 ## Capabilities at a glance
 
-- **Theory blocks** (`kind`): `md`, `code`, `mermaid`, `figure`, `trace`, `flow`, `media` (image, GIF, video, audio).
+- **Theory blocks** (`kind`): `md`, `code`, `mermaid`, `figure`, `trace`, `flow`, `media` (image, GIF, video, audio), and the reinforcement games `drill` and `practice`.
 - **Challenge types** (`type`): `quiz`, `multi` (incl. `style: "truefalse"`), `order`, `bug`, `written`, `match`, `cloze`, `sort`, `flashcard`, `kata`.
 - **MCP tools**: `course_list`, `course_get`, `course_validate`, `course_save`, `media_upload`, `media_list`, `note_search`, `note_get`.
 
@@ -81,6 +81,8 @@ XP per type: quiz 10, multi 15, order 15, bug 15, match 15, sort 15, cloze 20, w
 - `trace`: a step-through run. Each step's `line` comes from `at(src, "unique needle")`, which throws unless exactly one line matches. `vars` lists **only values that change** at that step (earlier ones carry forward); values are display strings, so quote strings yourself: `{ status: '"stale"' }`. To reset a variable for a second run, set it to `"—"`. Add a `note` on the steps that teach.
 - `flow`: `actors` left to right in the order the request first reaches them; each step `from`/`to` must be an actor (same actor = self-call); `label` is the arrow text (keep it under ~28 chars so it fits on a phone); `data` is the payload shown under the lanes, `lang` defaults to `json` (use `http` for raw messages, `ts`, `sql`, `text`). Keep 4–9 hops.
 - `mermaid`: a diagram source (sequence, flowchart, state). Keep labels short.
+- `drill`: `{ kind: "drill", pairs: [{ left, right }, …] }` (3–12 pairs). Put it right after a table or term list; the learner matches one pair, then two, then three (one new each round), then all. Same pairs as the table, short sides.
+- `practice`: `{ kind: "practice", challenge: { id, type, prompt, … } }` with type quiz, multi, order, match, sort or cloze. Put it right after the block it reinforces: cloze over the key lines of a template, order for a process, sort for a categorization, quiz for one key fact. Not recorded, costs no lives; ids must still be unique among challenges (e.g. `<level>-p-<topic>`).
 - `figure`: shows an art key from `course.art`, with an optional caption.
 - `media`: an uploaded image, GIF, video or audio file: `{ kind: "media", type: "image" | "video" | "audio", src: "media/demo.mp4", alt, caption?, poster? }`.
   - `alt` is required: say what the media shows or says (it is what a learner who cannot play it gets). A GIF is `type: "image"`.
