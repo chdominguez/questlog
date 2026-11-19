@@ -11,6 +11,8 @@ test("parse", () => {
   expect(parse(href.game("x", "quiz"))).toEqual({ name: "game", course: "x", game: "quiz" });
   expect(parse("#/c/x/review")).toEqual({ name: "review", course: "x" });
   expect(parse("#/c/x/answers")).toEqual({ name: "answers", course: "x" });
+  expect(parse("#/c/x/materials")).toEqual({ name: "materials", course: "x" });
+  expect(parse(href.materials("x"))).toEqual({ name: "materials", course: "x" });
   expect(parse("#/c/x/notes")).toEqual({ name: "notes", course: "x" });
   expect(parse("#/c/x/notes/abc")).toEqual({ name: "notes", course: "x", id: "abc" });
   expect(parse("#/profile")).toEqual({ name: "profile" });

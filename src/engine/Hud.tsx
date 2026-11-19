@@ -37,6 +37,7 @@ export function Hud() {
     { href: href.arcade(r.course), label: "Arcade", on: r.name === "arcade" || r.name === "game" },
     { href: href.review(r.course), label: "Review", on: r.name === "review", count: courseDue(p, r.course, Date.now()).length },
     { href: href.notes(r.course), label: "Notes", on: r.name === "notes" },
+    { href: href.materials(r.course), label: "Materials", on: r.name === "materials" },
     { href: href.answers(r.course), label: "Answers", on: r.name === "answers" },
   ] : [];
   const mult = multiplier(p.streak);
