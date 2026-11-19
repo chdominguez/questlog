@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-/** Hash routes: #/ · #/c/:course · #/c/:course/level/:id · #/c/:course/kata/:id · #/c/:course/mock · #/c/:course/arcade · #/c/:course/arcade/:game · #/c/:course/review · #/c/:course/answers · #/c/:course/notes · #/c/:course/notes/:id · #/profile */
+/** Hash routes: #/ · #/c/:course · #/c/:course/level/:id · #/c/:course/kata/:id · #/c/:course/mock · #/c/:course/arcade · #/c/:course/arcade/:game · #/c/:course/review · #/c/:course/answers · #/c/:course/materials · #/c/:course/notes · #/c/:course/notes/:id · #/profile */
 export type Route =
   | { name: "home" }
   | { name: "map"; course: string }
@@ -11,6 +11,7 @@ export type Route =
   | { name: "game"; course: string; game: string }
   | { name: "review"; course: string }
   | { name: "answers"; course: string }
+  | { name: "materials"; course: string }
   | { name: "notes"; course: string; id?: string }
   | { name: "profile" };
 
@@ -18,7 +19,7 @@ export function parse(hash: string): Route {
   const [, a, b, c, d] = hash.replace(/^#/, "").split("/").map((x) => (x ? decodeURIComponent(x) : x));
   if (a === "c" && b) {
     if ((c === "level" || c === "kata") && d) return { name: c, course: b, id: d };
-    if (c === "mock" || c === "review" || c === "answers") return { name: c, course: b };
+    if (c === "mock" || c === "review" || c === "answers" || c === "materials") return { name: c, course: b };
     if (c === "arcade") return d ? { name: "game", course: b, game: d } : { name: "arcade", course: b };
     if (c === "notes") return d ? { name: "notes", course: b, id: d } : { name: "notes", course: b };
     return { name: "map", course: b };
@@ -39,6 +40,7 @@ export const href = {
   game: (course: string, game: string) => `#/c/${e(course)}/arcade/${e(game)}`,
   review: (course: string) => `#/c/${e(course)}/review`,
   answers: (course: string) => `#/c/${e(course)}/answers`,
+  materials: (course: string) => `#/c/${e(course)}/materials`,
   profile: () => "#/profile",
   notes: (course: string, id?: string) => `#/c/${e(course)}/notes${id ? `/${e(id)}` : ""}`,
 };

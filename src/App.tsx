@@ -7,6 +7,7 @@ import { MapScreen } from "./screens/Map";
 import { LevelScreen } from "./screens/Level";
 import { ReviewScreen } from "./screens/Review";
 import { AnswersScreen } from "./screens/Answers";
+import { MaterialsScreen } from "./screens/Materials";
 import { ProfileScreen } from "./screens/Profile";
 import { NoteScreen, NotesScreen } from "./screens/Notes";
 import { MockScreen } from "./screens/Mock";
@@ -38,6 +39,7 @@ export function App() {
       {r.name === "game" && course && <GameScreen key={r.game} course={course} game={r.game} />}
       {r.name === "review" && course && <ReviewScreen course={course} />}
       {r.name === "answers" && course && <AnswersScreen course={course} />}
+      {r.name === "materials" && course && <MaterialsScreen course={course} />}
       {r.name === "profile" && <ProfileScreen />}
       {r.name === "notes" && course && (r.id ? <NoteScreen course={course} id={r.id} /> : <NotesScreen course={course} />)}
     </main>
