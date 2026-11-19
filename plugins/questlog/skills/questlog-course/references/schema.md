@@ -53,6 +53,8 @@ The JSON Schema cannot express the cross-field checks listed under "Cross-checks
 | `trace` | `lang`, `src`, `title?`, `steps`: TraceStep[] ≥2 |
 | `media` | `type`: `image` \| `video` \| `audio` (a GIF is `image`), `src`: `media/<file>`, `alt` (required), `caption?`, `poster?` (video only, image ref) |
 | `flow` | `actors`: string[] ≥2, `steps`: FlowStep[] ≥2, `caption?` |
+| `drill` | `prompt?` (md), `pairs`: `{ left (md), right (md) }`[] 3–12, unique lefts and rights. Incremental match: one new pair per round with the previous two, then all. Practice only. |
+| `practice` | `challenge`: a quiz, multi, order, match, sort or cloze Challenge, checked like one (its `id` counts against challenge ids). Ungraded; never recorded. |
 
 **Media refs**: `media/<file>`, flat, file name matches `[A-Za-z0-9_][A-Za-z0-9._-]*` without `..`. Extensions: image `png jpg jpeg webp gif avif`; video `mp4 webm`; audio `mp3 ogg m4a wav`; `src` must match `type`. Upload with MCP `media_upload` (max `MEDIA_MAX_BYTES`, default 50 MB; existing name needs `overwrite: true`); list with `media_list`. Files are stored in `MEDIA_DIR`, else `media/` next to the database, and served at `/media/<course>/<file>`. The validator checks the ref, not that the file exists. Markdown `![alt](media/x.png)` is rewritten only in `md` blocks and challenge `prompt`/`explain`, not in options, steps, pair/item text or notes.
 

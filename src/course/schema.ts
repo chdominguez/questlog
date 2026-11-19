@@ -26,31 +26,6 @@ export const FlowStepSchema = z.object({
   note: md("What to notice at this hop").optional(),
 }).strict();
 
-export const TheoryBlockSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("md"), text: md("Prose") }).strict(),
-  z.object({
-    kind: z.literal("code"), lang: CodeLangSchema, src: z.string().min(1), title: z.string().optional(),
-    highlight: z.array(z.number().int().min(1)).optional().describe("1-based lines to highlight; author them with hl(src, ...needles)"),
-  }).strict(),
-  z.object({ kind: z.literal("mermaid"), src: z.string().min(1), caption: z.string().optional() }).strict(),
-  z.object({ kind: z.literal("figure"), art: z.string().describe("Key in the course art map or platform art"), caption: z.string().optional() }).strict(),
-  z.object({
-    kind: z.literal("media"), type: z.enum(["image", "video", "audio"]).describe("A GIF is an image"),
-    src: z.string().describe("Course-relative file, e.g. media/demo.mp4; upload it with media_upload"),
-    alt: z.string().min(1).describe("What the media shows or says"), caption: z.string().optional(),
-    poster: z.string().optional().describe("Video only: preview image, e.g. media/demo.jpg"),
-  }).strict(),
-  z.object({
-    kind: z.literal("trace"), lang: CodeLangSchema, src: z.string().min(1), title: z.string().optional(),
-    steps: z.array(TraceStepSchema).min(2),
-  }).strict().describe("Step-through run of code with sample values"),
-  z.object({
-    kind: z.literal("flow"), actors: z.array(z.string().min(1)).min(2), steps: z.array(FlowStepSchema).min(2), caption: z.string().optional(),
-  }).strict().describe("A request hopping between actors with its payload"),
-]);
-
-export const TheoryCardSchema = z.object({ title: z.string().min(1), blocks: z.array(TheoryBlockSchema).min(1) }).strict();
-
 const base = {
   id: id.describe("Unique within the course"),
   prompt: md("The question"),
@@ -104,6 +79,43 @@ export const ChallengeSchema = z.discriminatedUnion("type", [
   z.object({ ...base, type: z.literal("flashcard"), back: md("The back, shown on reveal; the prompt is the front") }).strict(),
   z.object({ ...base, type: z.literal("kata"), kataId: id.describe("Id of a kata in this course") }).strict(),
 ]);
+
+/** Challenge types that can run inline in theory as ungraded practice. */
+export const PRACTICE_TYPES = ["quiz", "multi", "order", "match", "sort", "cloze"] as const;
+
+export const TheoryBlockSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("md"), text: md("Prose") }).strict(),
+  z.object({
+    kind: z.literal("code"), lang: CodeLangSchema, src: z.string().min(1), title: z.string().optional(),
+    highlight: z.array(z.number().int().min(1)).optional().describe("1-based lines to highlight; author them with hl(src, ...needles)"),
+  }).strict(),
+  z.object({ kind: z.literal("mermaid"), src: z.string().min(1), caption: z.string().optional() }).strict(),
+  z.object({ kind: z.literal("figure"), art: z.string().describe("Key in the course art map or platform art"), caption: z.string().optional() }).strict(),
+  z.object({
+    kind: z.literal("media"), type: z.enum(["image", "video", "audio"]).describe("A GIF is an image"),
+    src: z.string().describe("Course-relative file, e.g. media/demo.mp4; upload it with media_upload"),
+    alt: z.string().min(1).describe("What the media shows or says"), caption: z.string().optional(),
+    poster: z.string().optional().describe("Video only: preview image, e.g. media/demo.jpg"),
+  }).strict(),
+  z.object({
+    kind: z.literal("trace"), lang: CodeLangSchema, src: z.string().min(1), title: z.string().optional(),
+    steps: z.array(TraceStepSchema).min(2),
+  }).strict().describe("Step-through run of code with sample values"),
+  z.object({
+    kind: z.literal("flow"), actors: z.array(z.string().min(1)).min(2), steps: z.array(FlowStepSchema).min(2), caption: z.string().optional(),
+  }).strict().describe("A request hopping between actors with its payload"),
+  z.object({
+    kind: z.literal("drill"), prompt: md("Shown above the drill").optional(),
+    pairs: z.array(z.object({ left: md("Left item"), right: md("Matching right item") }).strict()).min(3).max(12)
+      .describe("Unique lefts and unique rights. Introduced one at a time with repetition, then all together"),
+  }).strict().describe("Incremental matching game that reinforces a table or list right above it; practice only"),
+  z.object({
+    kind: z.literal("practice"),
+    challenge: ChallengeSchema.refine((ch) => (PRACTICE_TYPES as readonly string[]).includes(ch.type), { message: `practice challenge type must be one of ${PRACTICE_TYPES.join(", ")}` }),
+  }).strict().describe("Ungraded challenge inside a theory card to reinforce what was just read"),
+]);
+
+export const TheoryCardSchema = z.object({ title: z.string().min(1), blocks: z.array(TheoryBlockSchema).min(1) }).strict();
 
 export const LevelSchema = z.object({
   id,
@@ -172,8 +184,41 @@ export const CourseSchema = z.object({
   Object.entries(c.art ?? {}).forEach(([k, v]) => { const p = artProblem(v); if (p) issue(["art", k], p); });
   dup(c.levels.map((l) => l.id), (i) => ["levels", i, "id"], "level");
   dup((c.katas ?? []).map((k) => k.id), (i) => ["katas", i, "id"], "kata");
-  const chIds = c.levels.flatMap((l, li) => l.challenges.map((ch, ci) => ({ id: ch.id, li, ci })));
-  dup(chIds.map((x) => x.id), (i) => ["levels", chIds[i].li, "challenges", chIds[i].ci, "id"], "challenge");
+  const chIds = c.levels.flatMap((l, li) => [
+    ...l.challenges.map((ch, ci) => ({ id: ch.id, at: ["levels", li, "challenges", ci, "id"] })),
+    ...l.theory.flatMap((card, ti) => card.blocks.flatMap((b, bi) =>
+      b.kind === "practice" ? [{ id: b.challenge.id, at: ["levels", li, "theory", ti, "blocks", bi, "challenge", "id"] }] : [])),
+  ]);
+  dup(chIds.map((x) => x.id), (i) => chIds[i].at, "challenge");
+  const uniqueSides = (pairs: { left: string; right: string }[], at: (string | number)[]) => {
+    for (const side of ["left", "right"] as const) {
+      const seen = new Set<string>();
+      pairs.forEach((p, pi) => { if (seen.has(p[side])) issue([...at, "pairs", pi, side], `duplicate ${side} item`); seen.add(p[side]); });
+    }
+  };
+  const checkChallenge = (ch: Challenge, at: (string | number)[]) => {
+    if (ch.type === "quiz" && ch.answer >= ch.options.length) issue([...at, "answer"], `answer ${ch.answer} but only ${ch.options.length} options`);
+    if (ch.type === "multi") {
+      if (ch.answers.some((a) => a >= ch.options.length)) issue([...at, "answers"], `answers ${JSON.stringify(ch.answers)} but only ${ch.options.length} options`);
+      if (new Set(ch.answers).size !== ch.answers.length) issue([...at, "answers"], "answers must be unique");
+      if (ch.answers.length >= ch.options.length) issue([...at, "answers"], "answers must be fewer than options (otherwise nothing is a wrong pick)");
+      if (ch.style === "truefalse" && (ch.options.length !== 2 || ch.answers.length !== 1)) issue([...at, "style"], "truefalse needs exactly 2 options and 1 answer");
+    }
+    if (ch.type === "bug" && ch.answer >= ch.lines.length) issue([...at, "answer"], `answer ${ch.answer} but only ${ch.lines.length} lines`);
+    if (ch.type === "match") uniqueSides(ch.pairs, at);
+    if (ch.type === "cloze") {
+      const marks = [...ch.text.matchAll(/\{\{(\d+)\}\}/g)].map((m) => Number(m[1]));
+      if (marks.length !== ch.blanks.length || marks.some((m, i) => m !== i + 1)) issue([...at, "text"], `markers must be {{1}}..{{${ch.blanks.length}}} in order, once each, matching blanks`);
+      ch.blanks.forEach((b, bi) => {
+        if (ch.bank && !ch.bank.includes(b.answers[0])) issue([...at, "blanks", bi, "answers", 0], `"${b.answers[0]}" is not in bank`);
+      });
+    }
+    if (ch.type === "sort") {
+      ch.items.forEach((it, ii) => { if (it.bucket >= ch.buckets.length) issue([...at, "items", ii, "bucket"], `bucket ${it.bucket} but only ${ch.buckets.length} buckets`); });
+      ch.buckets.forEach((_, bi) => { if (!ch.items.some((it) => it.bucket === bi)) issue([...at, "buckets", bi], `bucket ${bi} has no items`); });
+    }
+    if (ch.type === "kata" && !katas.has(ch.kataId)) issue([...at, "kataId"], `no kata "${ch.kataId}" in course.katas`);
+  };
   c.levels.forEach((l, li) => {
     if (l.art && !art.has(l.art)) issue(["levels", li, "art"], `art "${l.art}" is not in course.art`);
     l.theory.forEach((card, ti) => card.blocks.forEach((b, bi) => {
@@ -194,39 +239,15 @@ export const CourseSchema = z.object({
       if (b.kind === "code") b.highlight?.forEach((h, hi) => {
         if (h > lines) issue([...at, "highlight", hi], `line ${h} is past the end of src (${lines} lines)`);
       });
+      if (b.kind === "drill") uniqueSides(b.pairs, at);
+      if (b.kind === "practice") checkChallenge(b.challenge, [...at, "challenge"]);
       if (b.kind === "flow") b.steps.forEach((s, si) => {
         for (const end of ["from", "to"] as const) {
           if (!b.actors.includes(s[end])) issue([...at, "steps", si, end], `"${s[end]}" is not one of the actors ${JSON.stringify(b.actors)}`);
         }
       });
     }));
-    l.challenges.forEach((ch, ci) => {
-      const at = ["levels", li, "challenges", ci];
-      if (ch.type === "quiz" && ch.answer >= ch.options.length) issue([...at, "answer"], `answer ${ch.answer} but only ${ch.options.length} options`);
-      if (ch.type === "multi") {
-        if (ch.answers.some((a) => a >= ch.options.length)) issue([...at, "answers"], `answers ${JSON.stringify(ch.answers)} but only ${ch.options.length} options`);
-        if (new Set(ch.answers).size !== ch.answers.length) issue([...at, "answers"], "answers must be unique");
-        if (ch.answers.length >= ch.options.length) issue([...at, "answers"], "answers must be fewer than options (otherwise nothing is a wrong pick)");
-        if (ch.style === "truefalse" && (ch.options.length !== 2 || ch.answers.length !== 1)) issue([...at, "style"], "truefalse needs exactly 2 options and 1 answer");
-      }
-      if (ch.type === "bug" && ch.answer >= ch.lines.length) issue([...at, "answer"], `answer ${ch.answer} but only ${ch.lines.length} lines`);
-      if (ch.type === "match") for (const side of ["left", "right"] as const) {
-        const seen = new Set<string>();
-        ch.pairs.forEach((p, pi) => { if (seen.has(p[side])) issue([...at, "pairs", pi, side], `duplicate ${side} item`); seen.add(p[side]); });
-      }
-      if (ch.type === "cloze") {
-        const marks = [...ch.text.matchAll(/\{\{(\d+)\}\}/g)].map((m) => Number(m[1]));
-        if (marks.length !== ch.blanks.length || marks.some((m, i) => m !== i + 1)) issue([...at, "text"], `markers must be {{1}}..{{${ch.blanks.length}}} in order, once each, matching blanks`);
-        ch.blanks.forEach((b, bi) => {
-          if (ch.bank && !ch.bank.includes(b.answers[0])) issue([...at, "blanks", bi, "answers", 0], `"${b.answers[0]}" is not in bank`);
-        });
-      }
-      if (ch.type === "sort") {
-        ch.items.forEach((it, ii) => { if (it.bucket >= ch.buckets.length) issue([...at, "items", ii, "bucket"], `bucket ${it.bucket} but only ${ch.buckets.length} buckets`); });
-        ch.buckets.forEach((_, bi) => { if (!ch.items.some((it) => it.bucket === bi)) issue([...at, "buckets", bi], `bucket ${bi} has no items`); });
-      }
-      if (ch.type === "kata" && !katas.has(ch.kataId)) issue([...at, "kataId"], `no kata "${ch.kataId}" in course.katas`);
-    });
+    l.challenges.forEach((ch, ci) => checkChallenge(ch, ["levels", li, "challenges", ci]));
   });
 });
 

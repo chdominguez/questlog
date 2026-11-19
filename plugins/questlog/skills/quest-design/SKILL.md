@@ -41,6 +41,7 @@ For a course of more than ~3 levels, show the user the objectives and level list
   - A mood or landmark for the level → a small illustration, never as the only carrier of information.
 - **Keep code short**: 5–20 lines, real, runnable or a real excerpt, and narrow enough for a phone (about 40 characters per line). Elide with a comment, never with invented APIs.
 - **Prefer contrast**: the wrong way and the right way side by side teaches the boundary of an idea.
+- **Reinforce while reading.** After a card's core artifact, add a quick ungraded game on it (retrieval practice beats rereading): an incremental **drill** after any table or list of pairs (one pair at a time, then all), a **cloze** over the key lines of a code template, an **order** for a process, a **sort** for a categorization, a one-question **quiz** for a key fact. One or two per card where there is something to recall; none on narrative cards. Don't duplicate the level's challenges word for word.
 - **End a level's theory on the thing the challenges ask about.** Nothing in a challenge may depend on knowledge the cards never gave and the learner did not bring.
 
 ## The challenge mix

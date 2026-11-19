@@ -219,3 +219,9 @@ input.blank { max-width: 100%; }
 @keyframes fc-flip { from { transform: rotateX(-60deg); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (max-width: 480px) { .fc-rate { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (prefers-reduced-motion: reduce) { .fc-back { animation: none; } .mi { transition: none; } }
+
+/* Reinforcement inside theory */
+.drill, .practice { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-3); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--s-4); min-width: 0; }
+.drill-head { display: flex; justify-content: space-between; align-items: baseline; }
+.drill .mi:disabled { cursor: default; }
+.drill-new { display: block; width: fit-content; margin-bottom: var(--s-1); color: var(--accent); border-color: var(--accent); }
