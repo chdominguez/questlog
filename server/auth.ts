@@ -101,9 +101,16 @@ export function createAuth(env: Env, sqlite: DatabaseSync, deps: Deps): BetterAu
 // createApi copies deps, so /auth/* finds its instance through the session function sessionFrom made.
 const instances = new WeakMap<Deps["session"], BetterAuth>();
 
-/** Public: /auth/* (Better Auth, incl. Apple's form POST callback). */
+/** Sign-in methods this server has configured, so the sign-in screens hide the rest. */
+export interface AuthMethods { google: boolean; apple: boolean; magicLink: boolean }
+
+/** Public: /auth/* (Better Auth, incl. Apple's form POST callback), plus GET /auth/methods. */
 export function authRoutes(deps: Deps): Hono<App> {
-  return new Hono<App>().on(["GET", "POST"], "/auth/*", (c) => {
+  return new Hono<App>().get("/auth/methods", (c) => c.json({
+    google: !!(c.env.GOOGLE_CLIENT_ID && c.env.GOOGLE_CLIENT_SECRET),
+    apple: !!(c.env.APPLE_TEAM_ID && c.env.APPLE_KEY_ID && c.env.APPLE_PRIVATE_KEY && (c.env.APPLE_CLIENT_ID || c.env.APPLE_BUNDLE_ID)),
+    magicLink: !!c.env.RESEND_API_KEY,
+  } satisfies AuthMethods)).on(["GET", "POST"], "/auth/*", (c) => {
     const auth = instances.get(deps.session);
     return auth ? auth.handler(c.req.raw) : err(c, 501, "not_configured");
   });

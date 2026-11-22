@@ -76,6 +76,12 @@ test("sign-in is limited to 5 per minute per IP", async () => {
   expect(tries[5]).toBe(429);
 });
 
+test("auth methods reflect the configured providers and mail", async () => {
+  expect(await (await setup().req("/auth/methods")).json()).toEqual({ google: false, apple: false, magicLink: false });
+  const { req } = setup({ GOOGLE_CLIENT_ID: "g", GOOGLE_CLIENT_SECRET: "s", RESEND_API_KEY: "re" });
+  expect(await (await req("/auth/methods")).json()).toEqual({ google: true, apple: false, magicLink: true });
+});
+
 test("SIGNUP=closed blocks email sign-up", async () => {
   const { req } = setup({ SIGNUP: "closed" });
   const res = await req("/auth/sign-up/email", post({ email: "a@x.com", password: "password123", name: "A" }, { "x-forwarded-for": ip() }));
