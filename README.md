@@ -23,6 +23,7 @@ npm run server     # API on :8787 (SQLite in data/)
 npm run dev        # app on :5173, proxies /api
 npm test           # unit tests + every course validated, katas run
 npm run validate   # just the courses, with readable errors
+npm run e2e        # Playwright: the whole product flow against server/e2e.ts (fake AI, Stripe, mail)
 ```
 
 The server needs `APP_URL` and `BETTER_AUTH_SECRET` (`openssl rand -hex 32`); `npm start` reads them from `.env` (start from `.env.example`). Grading and the course builder need `ANTHROPIC_API_KEY`; without it you rate your own answers. Every variable: [questie.app/self-host/config](https://questie.app/self-host/config/).

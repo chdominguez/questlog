@@ -5,6 +5,7 @@
     "dev": "vite",
     "build": "tsc --noEmit -p . && vite build && npm run build:server",
     "test": "vitest run",
+    "e2e": "playwright test",
     "typecheck": "tsc --noEmit -p .",
     "validate": "tsx scripts/validate.ts",
     "mcp": "tsx mcp/server.ts",
