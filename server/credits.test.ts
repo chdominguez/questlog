@@ -115,6 +115,19 @@ test("plan credits refunded after the plan ended expire at once", () => {
   check();
 });
 
+test("plan credits refunded after a renewal don't roll into the new period", () => {
+  planGrant("in_1");
+  pack("cs_1", 10);
+  const s = sp("a", "course_files") as { spendId: string }; // 150 from period A
+  planGrant("in_2"); // renewal: A's 850 left expire, B grants 1000
+  expect(refund(db, s.spendId, "build failed")).toBe(true);
+  expect(balance(db, "u")).toMatchObject({ plan: 1000, topup: 10 });
+  const t = sp("b", "course_files") as { spendId: string }; // from period B: refund keeps it
+  expect(refund(db, t.spendId)).toBe(true);
+  expect(balance(db, "u")).toMatchObject({ plan: 1000, topup: 10 });
+  check();
+});
+
 test("free course: once, topic only, restored by refund", () => {
   expect(sp("x", "course_files", true)).toMatchObject({ ok: false, code: "insufficient_credits" });
   const f = sp("a", "course_topic", true) as { spendId: string; free: boolean };
