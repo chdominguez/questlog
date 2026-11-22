@@ -31,8 +31,8 @@ export function registerJob(kind: "build" | "narration", h: JobHandler): void { 
 /** Periodic cleanup run by the worker (hourly and at start). */
 export function registerSweep(s: Sweep): void { sweeps.push(s); }
 
-export function enqueue(db: Db, j: { user: string; kind: "build" | "narration"; title?: string; input: unknown; spendId: string | null }): string {
-  const id = crypto.randomUUID();
+export function enqueue(db: Db, j: { id?: string; user: string; kind: "build" | "narration"; title?: string; input: unknown; spendId: string | null }): string {
+  const id = j.id ?? crypto.randomUUID(); // a caller passes the id when its ledger ref must name the job
   db.tx((q) => q.run(
     "INSERT INTO jobs (id, user_id, kind, status, title, input, spend_id, created_at) VALUES (?, ?, ?, 'queued', ?, ?, ?, ?)",
     id, j.user, j.kind, j.title ?? null, JSON.stringify(j.input), j.spendId, now(),

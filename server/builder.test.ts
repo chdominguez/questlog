@@ -10,19 +10,19 @@ import { as, fakeSandbox, json, kata, level, session } from "./fixtures.test-uti
 import { enqueue, registerJob, startJobs } from "./jobs";
 
 // A fake ledger in place of WP4's: balance, idempotent spends, refunds written through db.tx (which must join the failure tx).
-const ledger = vi.hoisted(() => ({ balance: 1000, spends: new Map<string, { id: string; cost: number }>(), refunded: new Set<string>() }));
+const ledger = vi.hoisted(() => ({ balance: 1000, spends: new Map<string, { id: string; cost: number; ref: string }>(), refunded: new Set<string>() }));
 vi.mock("./credits", async (orig) => ({
   ...(await orig<typeof import("./credits")>()),
   metered: () => true,
   balance: () => ({ plan: 0, topup: ledger.balance, total: ledger.balance, planExpiresAt: null, freeCourses: 0 }),
-  spend: (_db: unknown, _env: unknown, a: { user: string; action: keyof typeof COSTS; key: string }) => {
+  spend: (_db: unknown, _env: unknown, a: { user: string; action: keyof typeof COSTS; key: string; ref: string }) => {
     const prev = ledger.spends.get(`${a.user}:${a.key}`);
     if (prev) return { ok: true, spendId: prev.id, free: false, replay: true, balance: ledger.balance };
     const cost = COSTS[a.action];
     if (ledger.balance < cost) return { ok: false, code: "insufficient_credits", cost, balance: ledger.balance };
     ledger.balance -= cost;
     const id = `spend-${ledger.spends.size + 1}`;
-    ledger.spends.set(`${a.user}:${a.key}`, { id, cost });
+    ledger.spends.set(`${a.user}:${a.key}`, { id, cost, ref: a.ref });
     return { ok: true, spendId: id, free: false, replay: false, balance: ledger.balance };
   },
   refund: (db: { tx(fn: (q: { run(sql: string, ...a: unknown[]): number }) => unknown): unknown }, id: string) => {
@@ -107,6 +107,7 @@ test("topic build: happy path, events in order, course saved private, balance he
   expect(res.status).toBe(202);
   expect(res.headers.get("x-credits-balance")).toBe(String(1000 - COSTS.course_topic));
   const { jobId } = await res.json() as { jobId: string };
+  expect([...ledger.spends.values()][0].ref).toBe(jobId); // Credits labels the spend with the job's title
   const p = await settle(jobId);
   expect(p.job).toMatchObject({ status: "done", title: "Sums", mode: "topic", error: null });
   const stages = p.events.flatMap((e) => (e.type === "stage" ? [e.data.stage] : []));
@@ -273,7 +274,7 @@ test("jobs: boot recovery requeues once, then fails with refund; unknown errors 
   registerJob("narration", async () => { if (++n === 1) throw new Error("boom"); return { tracks: 1 }; });
   const a = enqueue(env.DB, { user: "u", kind: "narration", input: {}, spendId: null });
   const b = enqueue(env.DB, { user: "u", kind: "narration", input: {}, spendId: "spend-x" });
-  ledger.spends.set("u:x", { id: "spend-x", cost: 10 });
+  ledger.spends.set("u:x", { id: "spend-x", cost: 10, ref: b });
   env.DB.tx((q) => {
     q.run("UPDATE jobs SET status = 'running', attempts = 1 WHERE id = ?", a);
     q.run("UPDATE jobs SET status = 'running', attempts = 2 WHERE id = ?", b);

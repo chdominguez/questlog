@@ -151,12 +151,13 @@ export function builderRoutes(deps: Deps): Hono<App> {
         if (suggestions) return err(c, 422, "topic_too_broad", { suggestions });
       }
 
-      const s = spend(db, c.env, { user, action: ACTION[req.mode], key, ref: title(req), allowFree: req.mode === "topic" });
+      const jobId = crypto.randomUUID(); // the ledger ref, so Credits shows the job's course title
+      const s = spend(db, c.env, { user, action: ACTION[req.mode], key, ref: jobId, allowFree: req.mode === "topic" });
       if (!s.ok) {
         if (s.code === "insufficient_credits") return err(c, 402, "insufficient_credits", { action: "topup", cost: s.cost, balance: s.balance });
         return err(c, 409, s.code);
       }
-      const jobId = enqueue(db, { user, kind: "build", title: title(req), input: { ...input, key, free: s.free }, spendId: s.spendId });
+      enqueue(db, { id: jobId, user, kind: "build", title: title(req), input: { ...input, key, free: s.free }, spendId: s.spendId });
       if (req.mode === "files" && req.uploads) db.tx((q) => { for (const id of req.uploads!) q.run("UPDATE uploads SET job_id = ? WHERE id = ? AND user_id = ?", jobId, id, user); });
       setBalance(c);
       return c.json({ jobId }, 202);
