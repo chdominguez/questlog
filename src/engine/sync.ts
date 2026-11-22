@@ -1,4 +1,4 @@
-import { adopt, snapshot, STORAGE_KEY, subscribe } from "./store";
+import { adopt, OLD_STORAGE_KEY, snapshot, STORAGE_KEY, subscribe } from "./store";
 
 const USER_KEY = "ql.user";
 
@@ -8,7 +8,7 @@ function switchUser(user: string): boolean {
     const prev = localStorage.getItem(USER_KEY);
     localStorage.setItem(USER_KEY, user);
     if (prev === null || prev === user) return false; // first run keeps pre-multi-user local progress
-    for (const k of Object.keys(localStorage)) if (k === STORAGE_KEY || k.startsWith("ql.kata.")) localStorage.removeItem(k);
+    for (const k of Object.keys(localStorage)) if (k === STORAGE_KEY || k === OLD_STORAGE_KEY || k.startsWith("ql.kata.")) localStorage.removeItem(k);
     return true;
   } catch { return false; }
 }

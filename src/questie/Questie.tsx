@@ -82,7 +82,17 @@ export function Guide() {
   );
 }
 
-const KEY = (course: string) => `questlog:questie:${course}`;
+const KEY = (course: string) => `questie:map:${course}`;
+const OLD_KEY = (course: string) => `questlog:questie:${course}`;
+
+/** The stop Questie stood at last time on this map (`at` when unknown); records `at` for next time. */
+export function lastStop(course: string, at: number): number {
+  try {
+    const from = Number(localStorage.getItem(KEY(course)) ?? localStorage.getItem(OLD_KEY(course)) ?? at);
+    localStorage.setItem(KEY(course), String(at));
+    return from;
+  } catch { return at; } // storage blocked
+}
 const W = 52, H = 58; // rendered size of .map-questie
 const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -100,8 +110,7 @@ export function MapQuestie({ course, pts, at, row }: { course: string; pts: { x:
     const px = (i: number) => (pts[i].x / 100) * wrap.clientWidth;
     // Beside the orb (radius 36), on whichever side has room.
     const rest = (i: number) => `translate(${pts[i].x < 50 ? px(i) + 44 : px(i) - 44 - W}px, ${pts[i].y - 34}px)`;
-    let from = at;
-    try { from = Number(localStorage.getItem(KEY(course)) ?? at); localStorage.setItem(KEY(course), String(at)); } catch { /* storage blocked */ }
+    const from = lastStop(course, at);
     node.style.transform = rest(at);
     const onResize = () => { if (!node.classList.contains("walking")) node.style.transform = rest(at); };
     addEventListener("resize", onResize);
