@@ -1,4 +1,4 @@
-# Questlog
+# Questie
 
 A personal learning platform where every course is a quest. Theory cards you can step through, challenges that cost lives, katas that run in the browser, written answers graded by Claude, and spaced repetition that brings back what you missed.
 
@@ -32,7 +32,7 @@ Grading needs `ANTHROPIC_API_KEY` in `.env` (see `.env.example`). Without it you
 A course is `courses/<id>/course.ts` (or `course.json`):
 
 ```ts
-import { defineCourse } from "questlog/authoring";
+import { defineCourse } from "questie/authoring";
 
 export default defineCourse({
   id: "http-basics",
@@ -49,16 +49,17 @@ Three ways to write one:
 1. **With Claude Code and the skills.** Install the plugin, then ask for a course on any topic, from your notes, or from a repo:
    ```
    /plugin marketplace add chdominguez/questlog
-   /plugin install questlog@questlog
+   /plugin install questie@questie
    ```
+   Coming from the old `questlog` plugin: run `/plugin uninstall questlog@questlog` and `/plugin marketplace remove questlog`, then the two commands above.
    - `quest-design`: how to turn a topic into a learning quest (objectives, levels, challenge mix, item-writing rules, gamification that helps).
-   - `questlog-course`: how to write, validate and ship a course in this repo.
+   - `questie-course`: how to write, validate and ship a course in this repo.
 2. **With the MCP server** (Claude Code picks up `.mcp.json`; Claude Desktop config in [`mcp/README.md`](mcp/README.md)): `course_list`, `course_get`, `course_validate`, `course_save`, `media_upload`, `media_list`, `note_search`, `note_get`.
 3. **By hand.** See `courses/http-basics/`.
 
 ## Private courses
 
-Personal courses live in a separate private repo checked out at `courses-private/` (gitignored), or anywhere else with `QUESTLOG_COURSES=/path`. They load, validate and deploy exactly like public ones.
+Personal courses live in a separate private repo checked out at `courses-private/` (gitignored), or anywhere else with `QUESTIE_COURSES=/path` (`QUESTLOG_COURSES` is still read). They load, validate and deploy exactly like public ones.
 
 ## Deploy
 
@@ -74,4 +75,8 @@ Every push to `main` redeploys through `.github/workflows/deploy.yml` on a self-
 
 ## License
 
-MIT
+- The app: [AGPL-3.0-only](LICENSE).
+- The course format (`src/course/schema.ts`, `src/course/authoring.ts`, `shared/media.ts`, `plugins/questie/`): [MIT](LICENSES/MIT.txt).
+- Library courses in `courses/`: [CC BY 4.0](LICENSES/CC-BY-4.0.txt).
+
+Details in [`NOTICE`](NOTICE), [`REUSE.toml`](REUSE.toml) and [questie.app/license](https://questie.app/license/). Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md).
