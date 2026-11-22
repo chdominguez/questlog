@@ -1,11 +1,10 @@
-# Self-hosted: `docker compose up -d --build`, then open http://127.0.0.1:8790.
-# Put ANTHROPIC_API_KEY in .env for grading, and VAPID_PUBLIC/VAPID_PRIVATE/VAPID_SUBJECT (npx web-push generate-vapid-keys; subject mailto:you@host) for reminders. Login is the reverse proxy's job (see README).
-name: questlog
+# Self-hosted: put APP_URL and BETTER_AUTH_SECRET in .env, then `docker compose up -d --build`. Env reference: questie.app/self-host/config/
+name: questie
 services:
   app:
-    build: .
-    container_name: questlog
+    build: { context: ., args: { COMMIT: "${COMMIT:-dev}" } }
+    container_name: questie
     restart: unless-stopped
     ports: ["127.0.0.1:8790:8787"]
-    environment: { ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}", USER_HEADER: x-auth-request-email, VAPID_PUBLIC: "${VAPID_PUBLIC:-}", VAPID_PRIVATE: "${VAPID_PRIVATE:-}", VAPID_SUBJECT: "${VAPID_SUBJECT:-}", NAME_HEADER: x-auth-request-preferred-username, LOGOUT_URL: "${LOGOUT_URL:-}" } # header Caddy copies from oauth2-proxy
+    env_file: [{ path: "${ENV_FILE:-.env}", required: false }]
     volumes: ["${DATA_DIR:-./data}:/data"]

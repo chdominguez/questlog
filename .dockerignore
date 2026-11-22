@@ -5,3 +5,6 @@ data
 courses-private/.git
 .env
 dist-server
+site
+ios
+android
