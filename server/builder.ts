@@ -12,7 +12,7 @@ import type { Db, Tx } from "./db";
 import { err } from "./errors";
 import { balance, metered, spend } from "./credits";
 import { courseProblems, newCourseId, saveUserCourse } from "./courses";
-import { JobError, enqueue, jobEvents, pool, registerJob, registerSweep, toJob, type JobHandler, type JobRow } from "./jobs";
+import { JOB_COLUMNS, JobError, enqueue, jobEvents, pool, registerJob, registerSweep, toJob, type JobHandler, type JobRow } from "./jobs";
 
 /** Model ids for the builder. */
 export const MODELS = { build: "claude-sonnet-5-5", precheck: "claude-haiku-5-5" } as const;
@@ -129,7 +129,7 @@ export function builderRoutes(deps: Deps): Hono<App> {
       const db = c.env.DB, user = c.get("user");
       // A retried request (same key) gets the job it already started; one build at a time per user.
       const busy = (q: Tx) => {
-        const prev = q.get<{ id: string }>("SELECT id FROM jobs WHERE user_id = ? AND kind = 'build' AND json_extract(input, '$.key') = ?", user, key);
+        const prev = q.get<{ id: string }>("SELECT id FROM jobs WHERE user_id = ? AND idem_key = ? AND kind = 'build'", user, key);
         if (prev) return { jobId: prev.id };
         const active = q.get<{ id: string }>("SELECT id FROM jobs WHERE user_id = ? AND kind = 'build' AND status IN ('queued', 'running')", user);
         return active ? { active: active.id } : null;
@@ -169,7 +169,7 @@ export function builderRoutes(deps: Deps): Hono<App> {
         const joined: Db = { prepare: db.prepare, tx: (fn) => fn(q) };
         const s = spend(joined, c.env, { user, action: ACTION[req.mode], key, ref: jobId, allowFree: req.mode === "topic" });
         if (!s.ok) return s;
-        enqueue(joined, { id: jobId, user, kind: "build", title: title(req), input: { ...input, key, free: s.free }, spendId: s.spendId });
+        enqueue(joined, { id: jobId, user, kind: "build", title: title(req), input: { ...input, key, free: s.free }, spendId: s.spendId, key, mode: req.mode });
         if (req.mode === "files" && req.uploads) for (const id of req.uploads) q.run("UPDATE uploads SET job_id = ? WHERE id = ? AND user_id = ?", jobId, id, user);
         return { jobId };
       });
@@ -180,13 +180,13 @@ export function builderRoutes(deps: Deps): Hono<App> {
     .get("/jobs", async (c) => {
       const kind = c.req.query("kind"), active = c.req.query("active") === "1";
       const { results } = await c.env.DB.prepare(
-        `SELECT * FROM jobs WHERE user_id = ? AND (?2 = '' OR kind = ?2) AND (?3 = 0 OR status IN ('queued', 'running'))
+        `SELECT ${JOB_COLUMNS} FROM jobs WHERE user_id = ?1 AND (?2 = '' OR kind = ?2) AND (?3 = 0 OR status IN ('queued', 'running'))
          ORDER BY created_at DESC, rowid DESC LIMIT 20`,
       ).bind(c.get("user"), kind ?? "", active ? 1 : 0).all<JobRow>();
       return c.json(results.map(toJob) satisfies Job[]);
     })
     .get("/jobs/:id", async (c) => {
-      const r = await c.env.DB.prepare("SELECT * FROM jobs WHERE id = ? AND user_id = ?").bind(c.req.param("id"), c.get("user")).first<JobRow>();
+      const r = await c.env.DB.prepare(`SELECT ${JOB_COLUMNS} FROM jobs WHERE id = ? AND user_id = ?`).bind(c.req.param("id"), c.get("user")).first<JobRow>();
       if (!r) return err(c, 404, "not_found");
       const after = Number(c.req.query("after") ?? 0);
       setBalance(c);

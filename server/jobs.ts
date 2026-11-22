@@ -16,9 +16,11 @@ export type JobHandler = (
 type Sweep = (ctx: { db: Db; env: Env; deps: Deps }) => Promise<void>;
 
 export interface JobRow {
-  id: string; user_id: string; kind: Job["kind"]; status: Job["status"]; title: string | null; input: string;
+  id: string; user_id: string; kind: Job["kind"]; status: Job["status"]; title: string | null; input: string; mode: Job["mode"] | null;
   result: string | null; error: string | null; spend_id: string | null; attempts: number; created_at: string; finished_at: string | null;
 }
+/** What toJob reads; job lists select these, never the (large) input. */
+export const JOB_COLUMNS = "id, kind, status, title, mode, result, error, created_at, finished_at";
 
 const handlers = new Map<string, JobHandler>();
 const sweeps: Sweep[] = [];
@@ -31,11 +33,11 @@ export function registerJob(kind: "build" | "narration", h: JobHandler): void { 
 /** Periodic cleanup run by the worker (hourly and at start). */
 export function registerSweep(s: Sweep): void { sweeps.push(s); }
 
-export function enqueue(db: Db, j: { id?: string; user: string; kind: "build" | "narration"; title?: string; input: unknown; spendId: string | null }): string {
+export function enqueue(db: Db, j: { id?: string; user: string; kind: "build" | "narration"; title?: string; input: unknown; spendId: string | null; key?: string; mode?: Job["mode"] }): string {
   const id = j.id ?? crypto.randomUUID(); // a caller passes the id when its ledger ref must name the job
   db.tx((q) => q.run(
-    "INSERT INTO jobs (id, user_id, kind, status, title, input, spend_id, created_at) VALUES (?, ?, ?, 'queued', ?, ?, ?, ?)",
-    id, j.user, j.kind, j.title ?? null, JSON.stringify(j.input), j.spendId, now(),
+    "INSERT INTO jobs (id, user_id, kind, status, title, input, spend_id, created_at, idem_key, mode) VALUES (?, ?, ?, 'queued', ?, ?, ?, ?, ?, ?)",
+    id, j.user, j.kind, j.title ?? null, JSON.stringify(j.input), j.spendId, now(), j.key ?? null, j.mode ?? null,
   ));
   queueMicrotask(() => kick?.());
   return id;
@@ -68,9 +70,9 @@ function finish(db: Db, id: string, result: object) {
   });
 }
 
-export const toJob = (r: JobRow): Job => ({
+export const toJob = (r: Pick<JobRow, "id" | "kind" | "status" | "title" | "mode" | "result" | "error" | "created_at" | "finished_at">): Job => ({
   id: r.id, kind: r.kind, status: r.status, title: r.title,
-  ...(r.kind === "build" && { mode: (JSON.parse(r.input) as { mode?: Job["mode"] }).mode }),
+  ...(r.kind === "build" && { mode: r.mode ?? undefined }),
   result: r.result ? JSON.parse(r.result) : null, error: r.error ? JSON.parse(r.error) : null,
   createdAt: r.created_at, finishedAt: r.finished_at,
 });

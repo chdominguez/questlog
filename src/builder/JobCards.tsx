@@ -15,18 +15,20 @@ export function JobCards() {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let stopped = false;
     let running = 0;
+    let known: Record<string, JobView> = {}; // fold only new events: each poll asks for those after the last seq
     const tick = async () => {
       try {
         const seen = seenJobs();
         const js = (await listJobs()).filter((j) => j.status === "queued" || j.status === "running"
           || (j.status === "failed" && !seen.includes(j.id) && Date.now() - Date.parse(j.finishedAt ?? j.createdAt) < DAY));
         const active = js.filter((j) => j.status !== "failed");
-        const polls = await Promise.all(active.map((j) => getJob(j.id).catch(() => null)));
+        const polls = await Promise.all(active.map((j) => getJob(j.id, known[j.id]?.seq ?? 0).catch(() => null)));
         if (stopped) return;
         if (active.length < running) void loadCourses(); // a build finished: pick up its course
         running = active.length;
         setJobs(js);
-        setViews(Object.fromEntries(polls.flatMap((p) => (p ? [[p.job.id, reduce(initialView, p)]] : []))));
+        known = Object.fromEntries(polls.flatMap((p) => (p ? [[p.job.id, reduce(known[p.job.id] ?? initialView, p)]] : [])));
+        setViews(known);
         if (active.length && !document.hidden) timer = setTimeout(tick, 3000);
       } catch { /* offline: no cards */ }
     };
