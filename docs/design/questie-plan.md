@@ -64,3 +64,13 @@ Oboe, Gauth AI Course, NerdSip, Morso build courses from prompts with MCQ + stre
 - User courses live in the DB (runtime registry), not in the build-time bundle.
 - Deploy-specific identifiers (current SQLite filename, compose project, CI runner label) keep working: rename with a fallback/migration, never break the live deploy.
 - Contributions: CLA (CLA Assistant) for app code so the owner keeps relicensing options; DCO sign-off for library courses (CC-BY-4.0).
+
+## Coordinator answers to PRD open questions (wave 0b)
+1. Stripe: backend architect picks Better Auth Stripe plugin vs own webhook handler; the credits ledger is ours either way (append-only, UNIQUE(source, source_id)).
+2. Narration: a user pays 10 credits the first time they unlock narration for a lesson; audio is generated once and cached globally; replays are free.
+3. Free users can buy top-up packs.
+4. In-app (iOS/Android) prices: same credit amounts, nearest store price tier to the web price.
+5. Users keyed by Better Auth user id. Existing email-keyed data is migrated: on first sign-in with a matching verified email, attach old rows to the new user id.
+6. MIT course-format package: DCO sign-off (same as courses). App code: CLA.
+7. No in-app course editor in v1. Owners can download their course file and edit with the MCP server / Claude Code plugin, then re-upload (validated).
+8. Admins: ADMIN_EMAILS env var (comma-separated). Admins see the review queue.
