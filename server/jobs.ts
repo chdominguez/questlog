@@ -65,8 +65,7 @@ export function failJob(db: Db, id: string, code: string, message: string) {
 
 function finish(db: Db, id: string, result: object) {
   db.tx((q) => {
-    q.run("UPDATE jobs SET status = 'done', result = ?, finished_at = ? WHERE id = ? AND status = 'running'", JSON.stringify(result), now(), id);
-    addEvent(q, id, "done", result);
+    if (q.run("UPDATE jobs SET status = 'done', result = ?, finished_at = ? WHERE id = ? AND status = 'running'", JSON.stringify(result), now(), id)) addEvent(q, id, "done", result);
   });
 }
 

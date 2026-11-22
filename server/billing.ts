@@ -31,9 +31,12 @@ function upsertSub(q: Tx, s: SubState) {
 
 const STATUS: Record<string, string> = { active: "active", trialing: "active", past_due: "past_due", unpaid: "past_due", canceled: "canceled" };
 
+/** The id when that user exists: a deleted account must not get rows back from a late webhook. */
+const known = (q: Tx, user: string | null | undefined) => (user && q.get('SELECT 1 FROM "user" WHERE id = ?', user) ? user : null);
+
 /** The user behind a Stripe customer: billing_customers first, else the user_id we put in metadata. */
 const userOf = (q: Tx, customer: string | { id: string } | null, meta?: Record<string, string> | null) =>
-  q.get<{ user_id: string }>("SELECT user_id FROM billing_customers WHERE stripe_customer_id = ?", idOf(customer))?.user_id ?? meta?.user_id ?? null;
+  known(q, q.get<{ user_id: string }>("SELECT user_id FROM billing_customers WHERE stripe_customer_id = ?", idOf(customer))?.user_id ?? meta?.user_id);
 
 function stripeSub(q: Tx, sub: Stripe.Subscription, user: string) {
   upsertSub(q, {
@@ -84,7 +87,7 @@ async function stripeEvent(stripe: Stripe, ev: Stripe.Event): Promise<((q: Tx) =
     case "checkout.session.completed":
     case "checkout.session.async_payment_succeeded": {
       const f = await fulfillment(stripe, ev.data.object);
-      return (q) => { if (f.user) f.apply(q); };
+      return (q) => { if (known(q, f.user)) f.apply(q); };
     }
     case "invoice.paid": {
       const inv = ev.data.object;

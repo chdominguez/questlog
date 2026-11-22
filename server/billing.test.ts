@@ -131,6 +131,16 @@ test("subscription events in any order store Stripe's current state", async () =
   expect((await (await req("/credits")).json()).subscription).toMatchObject({ status: "active", cancelAtPeriodEnd: true });
 });
 
+test("stripe events for a deleted user write nothing", async () => {
+  const req = api();
+  stripe.subs.sub_1 = sub("sub_1", "canceled", "gone");
+  await req("/webhooks/stripe", event("customer.subscription.deleted", sub("sub_1", "canceled", "gone")));
+  stripe.sessions.cs_9 = packSession("cs_9", "gone");
+  await req("/webhooks/stripe", event("checkout.session.completed", packSession("cs_9", "gone")));
+  expect(db.tx((q) => q.all("SELECT 1 FROM subscriptions"))).toEqual([]);
+  expect(kinds()).toEqual([]);
+});
+
 test("charge.refunded takes back the refunded share of a pack, rounded down; plan charges are ignored", async () => {
   const req = api();
   stripe.sessions.cs_p = packSession("cs_p");

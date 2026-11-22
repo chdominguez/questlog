@@ -284,6 +284,7 @@ const runBuild: JobHandler = async (job, { db, env, deps, emit }) => {
 
   try {
     const course = await build();
+    if (!db.tx((q) => q.get("SELECT 1 FROM jobs WHERE id = ?", job.id))) throw new JobError("not_found", "Job removed"); // account deleted meanwhile
     emit("stage", { stage: "save" });
     const courseId = await saveUserCourse(db, { owner: job.user, course, mode: req.mode, sourceJobId: job.id });
     return { courseId };
