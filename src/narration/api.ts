@@ -1,10 +1,13 @@
-import type { NarrationState } from "../../shared/api-types";
+import type { JobPoll, NarrationState } from "../../shared/api-types";
 import { apiFetch, call } from "../api";
 import { apiUrl, isNative } from "../platform";
 
 const e = encodeURIComponent;
 
 export const getNarration = (course: string, level: string) => call<NarrationState>(`/narration/${e(course)}/${e(level)}`);
+
+/** The job's status only (no events). */
+export const jobStatus = (id: string) => call<JobPoll>(`/jobs/${e(id)}?after=${Number.MAX_SAFE_INTEGER}`).then((p) => p.job.status);
 
 /** Unlocks the lesson (charged once) and starts any missing audio. */
 export const unlockNarration = (course: string, level: string, key: string) => call<NarrationState>("/narration", {

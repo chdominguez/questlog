@@ -12,7 +12,7 @@ import type { Db } from "./db";
 import type { Env } from "./env";
 import { err } from "./errors";
 import { courseFor } from "./grading";
-import { enqueue, JobError, registerJob } from "./jobs";
+import { enqueue, JobError, pool, registerJob } from "./jobs";
 import { serveFile } from "./media";
 
 type Level = Course["levels"][number];
@@ -83,7 +83,7 @@ registerJob("narration", async (job, { db, env, deps }) => {
   const level = course && levelOf(course, a.levelId);
   if (!level) throw new JobError("not_found", "Lesson not found");
   const ts = tracksOf(level, a.voice, env.ELEVENLABS_MODEL);
-  for (const t of ts) await ensureAudio(db, env, deps.fetch, a.voice, t);
+  await pool(ts, 3, (t) => ensureAudio(db, env, deps.fetch, a.voice, t)); // the player starts once the shown card is ready
   return { tracks: ts.length };
 });
 

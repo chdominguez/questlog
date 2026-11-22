@@ -11,7 +11,7 @@ import { str, type App, type Deps } from "./api";
 import { err } from "./errors";
 import { balance, metered, spend } from "./credits";
 import { courseProblems, newCourseId, saveUserCourse } from "./courses";
-import { JobError, enqueue, jobEvents, registerJob, registerSweep, toJob, type JobHandler, type JobRow } from "./jobs";
+import { JobError, enqueue, jobEvents, pool, registerJob, registerSweep, toJob, type JobHandler, type JobRow } from "./jobs";
 
 /** Model ids for the builder. */
 export const MODELS = { build: "claude-sonnet-5-5", precheck: "claude-haiku-5-5" } as const;
@@ -241,13 +241,6 @@ export function parseWritten(text: string): Written | null {
 }
 
 const textOf = (m: BetaMessage) => m.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
-
-async function pool<T, R>(items: T[], n: number, f: (x: T, i: number) => Promise<R>): Promise<R[]> {
-  const out: R[] = new Array(items.length);
-  let next = 0;
-  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { while (next < items.length) { const i = next++; out[i] = await f(items[i], i); } }));
-  return out;
-}
 
 const runBuild: JobHandler = async (job, { db, env, deps, emit }) => {
   const req = job.input as BuildInput;

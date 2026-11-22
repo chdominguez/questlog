@@ -8,7 +8,7 @@ import { courseById, levelByKey } from "../course/registry";
 import { typingTarget } from "../engine/Theory";
 import { mmss } from "../answers/text";
 import { isDemo, isNative } from "../platform";
-import { audioSrc, getNarration, unlockNarration } from "./api";
+import { audioSrc, getNarration, jobStatus, unlockNarration } from "./api";
 import { useTheoryCard } from "./card";
 import "./narration.css";
 
@@ -18,7 +18,7 @@ const RATES = [1, 1.25, 1.5, 0.75];
 const nextRate = (r: number) => RATES[(RATES.indexOf(r) + 1) % RATES.length];
 const allReady = (s: NarrationState) => s.tracks.every((t) => t.ready);
 const POLL_MS = 2000;
-const POLL_MAX = 150; // 5 min
+const CHECK_EVERY = 150; // polls (5 min) between job checks; a failed job removes the unlock, so polling sees it sooner
 
 /** Lesson audio above the theory cards: one segment per card, kept in step with the card shown. */
 export function Narration({ course, level }: { course: string; level: string }) {
@@ -43,14 +43,31 @@ function Player({ course, level }: { course: string; level: string }) {
   const audio = useRef<HTMLAudioElement>(null);
   const keepPlaying = useRef(false); // play on through card changes
   const seekTo = useRef<number | null>(null); // position in the next card's segment after a scrub across cards
+  const jobId = useRef<string | undefined>(undefined);
+  const blobs = useRef(new Map<string, Promise<string>>()); // native: one download per segment for the lesson's lifetime
 
-  const settle = (s: NarrationState) => { setSt(s); setPhase(!s.unlocked ? "locked" : allReady(s) ? "ready" : "preparing"); };
+  const settle = (s: NarrationState) => { setSt(s); setPhase(s.unlocked ? "ready" : "locked"); };
+  const src = (hash: string) => {
+    if (!isNative) return audioSrc(hash);
+    let p = blobs.current.get(hash);
+    if (!p) {
+      p = audioSrc(hash);
+      p.catch(() => blobs.current.delete(hash));
+      blobs.current.set(hash, p);
+    }
+    return p;
+  };
+  useEffect(() => () => {
+    for (const p of blobs.current.values()) p.then((u) => URL.revokeObjectURL(u), () => {});
+    blobs.current.clear();
+  }, [course, level]);
 
   async function listen() {
     setPhase("preparing");
     try {
       const s = await unlockNarration(course, level, newKey());
       keepPlaying.current = true;
+      jobId.current = s.jobId;
       settle(s);
     } catch (e) {
       setRefunded(false);
@@ -68,26 +85,33 @@ function Player({ course, level }: { course: string; level: string }) {
     return () => { live = false; };
   }, [course, level]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Cards play as soon as their own segment is ready; the rest keep coming in.
+  const waiting = phase === "ready" && !!st && !allReady(st);
   useEffect(() => {
-    if (phase !== "preparing" || !st) return;
+    if (!waiting) return;
     let n = 0;
     const t = setInterval(async () => {
       n++;
       const s = await getNarration(course, level).catch(() => null);
       if (s && !s.unlocked) { setRefunded(!!me?.credits); setPhase("failed"); } // the job failed: refunded, unlock removed
-      else if (s && allReady(s)) settle(s);
-      else if (n >= POLL_MAX) { setRefunded(false); setPhase("failed"); }
+      else if (s) {
+        setSt(s);
+        if (!allReady(s) && n % CHECK_EVERY === 0) {
+          const status = jobId.current ? await jobStatus(jobId.current).catch(() => null) : "failed";
+          if (status === "done" || status === "failed") { setRefunded(false); setPhase("failed"); }
+        }
+      }
     }, POLL_MS);
     return () => clearInterval(t);
-  }, [phase, st, course, level]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [waiting, course, level]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const track = phase === "ready" ? st?.tracks[card] : undefined;
+  const playable = track?.ready ? track.hash : undefined;
   useEffect(() => {
     const a = audio.current;
-    if (!track || !a) return;
-    let url: string | null = null, live = true;
-    audioSrc(track.hash).then((u) => {
-      url = u;
+    if (!playable || !a) return;
+    let live = true;
+    src(playable).then((u) => {
       if (!live) return;
       a.src = u;
       a.defaultPlaybackRate = a.playbackRate = rate;
@@ -98,21 +122,21 @@ function Player({ course, level }: { course: string; level: string }) {
     return () => {
       live = false;
       a.pause();
-      if (url && isNative) URL.revokeObjectURL(url);
     };
-  }, [track?.hash]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [playable]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = () => {
     const a = audio.current;
-    if (!a) return;
+    if (!a || !playable) return;
     if (a.paused) { keepPlaying.current = true; a.play().catch(() => setPhase("playError")); } else { keepPlaying.current = false; a.pause(); }
   };
   const go = (n: number) => { if (n >= 0 && n < cards) setCard(n); };
 
   // Segment lengths from metadata; on native (blob URLs) they fill in as cards play.
+  const readyKey = st?.tracks.filter((t) => t.ready).map((t) => t.hash).join() ?? "";
   useEffect(() => {
     if (phase !== "ready" || !st || isNative) return;
-    const probes = st.tracks.map((t) => {
+    const probes = st.tracks.filter((t) => t.ready).map((t) => {
       const a = new Audio();
       a.preload = "metadata";
       a.onloadedmetadata = () => setDurs((d) => ({ ...d, [t.card]: a.duration }));
@@ -120,7 +144,7 @@ function Player({ course, level }: { course: string; level: string }) {
       return a;
     });
     return () => probes.forEach((a) => { a.onloadedmetadata = null; a.removeAttribute("src"); });
-  }, [phase, st]);
+  }, [phase, readyKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const lens = st?.tracks.map((t) => durs[t.card]) ?? [];
   const whole = lens.length > 0 && lens.every((d) => Number.isFinite(d) && d > 0);
   const offset = whole ? lens.slice(0, card).reduce((a, b) => a + b, 0) : 0;
@@ -166,7 +190,7 @@ function Player({ course, level }: { course: string; level: string }) {
   return (
     <div className="narr">
       {phase === "locked" && <CostButton action="narration" label="Listen" className="btn ghost" onPress={listen} />}
-      {phase === "preparing" && <button type="button" className="btn ghost" disabled aria-busy="true">Preparing audio</button>}
+      {(phase === "preparing" || (phase === "ready" && !playable)) && <button type="button" className="btn ghost" disabled aria-busy="true">Preparing audio</button>}
       {phase === "failed" && (
         <>
           <p className="wa-error" role="alert">Audio failed{refunded && me?.credits ? ` · ${me.credits.costs.narration} credits refunded` : ""}</p>
@@ -179,7 +203,7 @@ function Player({ course, level }: { course: string; level: string }) {
           <button type="button" className="btn ghost" onClick={() => { keepPlaying.current = true; setPhase("ready"); }}>Retry</button>
         </>
       )}
-      {phase === "ready" && (
+      {phase === "ready" && playable && (
         <div className="narr-bar">
           <button type="button" className="iconbtn" aria-label={playing ? "Pause" : "Play"} onClick={toggle}>
             {playing ? <Pause weight="fill" aria-hidden /> : <Play weight="fill" aria-hidden />}
@@ -203,7 +227,7 @@ function Player({ course, level }: { course: string; level: string }) {
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onTimeUpdate={(e) => setPos(e.currentTarget.currentTime)}
-        onDurationChange={(e) => { const d = e.currentTarget.duration; setDur(d); if (track) setDurs((x) => ({ ...x, [track.card]: d })); }}
+        onDurationChange={(e) => { const d = e.currentTarget.duration; setDur(d); if (playable && track) setDurs((x) => ({ ...x, [track.card]: d })); }}
         onEnded={() => { if (card + 1 < cards) go(card + 1); else keepPlaying.current = false; }}
       />
     </div>

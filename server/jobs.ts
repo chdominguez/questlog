@@ -80,6 +80,14 @@ export const jobEvents = (db: Db, id: string, after = 0): Promise<JobEvent[]> =>
     .all<{ seq: number; at: string; type: JobEvent["type"]; data: string }>()
     .then(({ results }) => results.map((e) => ({ seq: e.seq, at: e.at, type: e.type, data: JSON.parse(e.data) }) as JobEvent));
 
+/** Runs f over items with at most n calls at once; results keep the item order. */
+export async function pool<T, R>(items: T[], n: number, f: (x: T, i: number) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => { while (next < items.length) { const i = next++; out[i] = await f(items[i], i); } }));
+  return out;
+}
+
 /** Starts the worker; returns stop. Jobs left running by a dead process are retried once, then failed with a refund. */
 export function startJobs(env: Env, deps: Deps): () => void {
   const db = env.DB;
