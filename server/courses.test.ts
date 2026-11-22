@@ -10,8 +10,7 @@ import { as, course, fakeSandbox, json, kata, level, session } from "./fixtures.
 let env: Env;
 beforeEach(() => {
   const db = memoryDb();
-  db.sqlite.exec(`CREATE TABLE IF NOT EXISTS "user" (id TEXT PRIMARY KEY, name TEXT NOT NULL)`); // Better Auth's table (0004, auth)
-  db.sqlite.exec(`INSERT INTO "user" (id, name) VALUES ('u', 'Ada'), ('v', 'Bob')`);
+  db.sqlite.exec(`INSERT INTO "user" (id, name, email, emailVerified, createdAt, updatedAt) VALUES ('u', 'Ada', 'u@x.com', 1, 0, 0), ('v', 'Bob', 'v@x.com', 1, 0, 0)`);
   env = testEnv(db);
 });
 const app = () => createApi({ session, sandbox: fakeSandbox });

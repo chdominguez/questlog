@@ -140,7 +140,7 @@ test("job failure refunds and removes the unlock", async () => {
   ttsStatus = 500;
   const res = (await (await unlock()).json()) as NarrationState;
   expect(res.jobId).toBeTruthy();
-  expect(bank.balance).toBe(90);
+  expect(bank.spends.get("s1")?.cost).toBe(10); // the real job worker may already have refunded
   await until(() => bank.balance === 100);
   await until(async () => !(await getState()).unlocked);
   expect(bank.balance).toBe(100);

@@ -15,8 +15,7 @@ let env: Env;
 let stripe: ReturnType<typeof fakeStripe>;
 beforeEach(() => {
   db = memoryDb();
-  db.tx((q) => q.run('CREATE TABLE IF NOT EXISTS "user" (id TEXT PRIMARY KEY, email TEXT NOT NULL)'));
-  db.tx((q) => q.run(`INSERT INTO "user" VALUES ('u', 'u@x.com'), ('v', 'v@x.com')`));
+  db.tx((q) => q.run(`INSERT INTO "user" (id, name, email, emailVerified, createdAt, updatedAt) VALUES ('u', 'U', 'u@x.com', 1, 0, 0), ('v', 'V', 'v@x.com', 1, 0, 0)`));
   env = testEnv(db, { STRIPE_SECRET_KEY: "sk_test_x", STRIPE_WEBHOOK_SECRET: SECRET, REVENUECAT_WEBHOOK_AUTH: "Bearer rc", ADMIN_EMAILS: ["admin@x.com"] });
   stripe = fakeStripe();
 });

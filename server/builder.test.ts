@@ -80,7 +80,6 @@ let ai = fakeAI();
 beforeEach(() => {
   ledger.balance = 1000; ledger.spends.clear(); ledger.refunded.clear();
   const db = memoryDb();
-  db.sqlite.exec(`CREATE TABLE IF NOT EXISTS "user" (id TEXT PRIMARY KEY, name TEXT NOT NULL)`);
   env = testEnv(db, { ANTHROPIC_API_KEY: "k" });
   ai = fakeAI();
   vi.spyOn(Date, "now").mockReturnValue(t0 + ++hour * 2 * 3600_000); // a fresh rate-limit window per test

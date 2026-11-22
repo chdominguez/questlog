@@ -8,7 +8,7 @@ import { memoryDb } from "./db";
 import { testEnv } from "./env";
 
 const { cancelForUser } = vi.hoisted(() => ({ cancelForUser: vi.fn(async () => {}) }));
-vi.mock("./billing", () => ({ cancelForUser }));
+vi.mock("./billing", async (real) => ({ ...(await real<typeof import("./billing")>()), cancelForUser }));
 
 let env: Env;
 let mails: { to: string[]; subject: string; text: string }[];

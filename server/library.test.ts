@@ -22,9 +22,6 @@ let clock = 0;
 beforeEach(() => {
   db = memoryDb();
   env = testEnv(db, { ADMIN_EMAILS: ["boss@x.com"] });
-  // Better Auth's user table comes with migration 0004 (auth); the columns used here exist in both.
-  db.sqlite.exec(`CREATE TABLE IF NOT EXISTS "user" (id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL, emailVerified INTEGER NOT NULL,
-    createdAt DATE NOT NULL, updatedAt DATE NOT NULL)`);
   for (const [id, name] of [["ann", "Ann L."], ["bob", "Bob"], ["boss", "Boss"]]) {
     db.sqlite.prepare(`INSERT INTO "user" (id, name, email, emailVerified, createdAt, updatedAt) VALUES (?, ?, ?, 1, 0, 0)`).run(id, name, `${id}@x.com`);
   }
