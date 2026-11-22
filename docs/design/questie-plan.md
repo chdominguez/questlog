@@ -54,3 +54,13 @@ Oboe, Gauth AI Course, NerdSip, Morso build courses from prompts with MCQ + stre
 
 ## Verification
 `npm test`, `npm run typecheck`, `npm run validate` green; site builds; Capacitor sync works; E2E: sign up -> free AI course -> subscribe (Stripe test mode) -> credits granted -> build course from PDF -> grade answer -> publish to review queue -> admin approves -> appears in library.
+
+## Coordinator decisions after research (wave 0)
+- Credits: plan credits reset each billing month (no rollover); top-up credits never expire; spend plan credits first.
+- Grading is split: "Grade" (score, key points hit/missed, feedback) = 2 credits; "Stronger answer + corrections" is a separate on-demand action after a grade = 3 credits.
+- Show the credit cost on every AI button; confirm before spends of 100+ credits; refund automatically when an AI job fails.
+- Web-research courses always carry citations (source links per theory card).
+- AI-built courses are validated server-side in a sandbox (no in-process `new Function` / python3 on user-influenced content): run kata checks in a worker thread / child process with time + memory limits, or skip runtime kata checks and validate statically, then run katas client-side.
+- User courses live in the DB (runtime registry), not in the build-time bundle.
+- Deploy-specific identifiers (current SQLite filename, compose project, CI runner label) keep working: rename with a fallback/migration, never break the live deploy.
+- Contributions: CLA (CLA Assistant) for app code so the owner keeps relicensing options; DCO sign-off for library courses (CC-BY-4.0).
