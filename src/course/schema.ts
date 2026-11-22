@@ -122,6 +122,8 @@ export const TheoryCardSchema = z.object({
   title: z.string().min(1),
   blocks: z.array(TheoryBlockSchema).min(1),
   tip: md("One-line takeaway Questie, the mascot, says when the card opens").optional(),
+  sources: z.array(z.object({ url: z.url({ protocol: /^https?$/ }), title: z.string().min(1) }).strict())
+    .describe("Citations shown under the card").optional(),
 }).strict();
 
 export const LevelSchema = z.object({
