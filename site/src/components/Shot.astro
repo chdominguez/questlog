@@ -1,0 +1,28 @@
+---
+// An app screenshot taped to the page, in the reader's color scheme.
+import type { ImageMetadata } from "astro";
+import { Image } from "astro:assets";
+
+interface Props { light: ImageMetadata; dark: ImageMetadata; alt: string; caption?: string; sizes?: string; tilt?: number }
+const { light, dark, alt, caption, sizes = "(min-width: 50rem) 40vw, 90vw", tilt = 0 } = Astro.props;
+const widths = [400, 800, 1200].filter((w) => w <= light.width);
+---
+
+<figure class="shot" style={`--tilt: ${tilt}deg`}>
+  <Image src={light} alt={alt} widths={widths} sizes={sizes} class="dark:sl-hidden" />
+  <Image src={dark} alt={alt} widths={widths} sizes={sizes} class="light:sl-hidden" />
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>
+
+<style>
+  .shot {
+    position: relative; margin: 0; padding: .5rem .5rem .75rem; background: var(--q-surface); border: 1px solid var(--q-line);
+    border-radius: 8px; box-shadow: var(--q-shadow); rotate: var(--tilt); transition: rotate .3s cubic-bezier(.2, .8, .2, 1), translate .3s cubic-bezier(.2, .8, .2, 1);
+  }
+  .shot::before {
+    content: ""; position: absolute; top: -.7rem; left: 50%; width: 5.5rem; height: 1.4rem; translate: -50% 0; rotate: -4deg; background: var(--q-tape);
+  }
+  .shot:hover { rotate: 0deg; translate: 0 -4px; }
+  .shot :global(img) { vertical-align: top; width: 100%; height: auto; border-radius: 4px; }
+  figcaption { font-family: var(--q-display); font-size: 1.6rem; line-height: 1.1; text-align: center; margin-top: .6rem; color: var(--sl-color-white); }
+</style>
