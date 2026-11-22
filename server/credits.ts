@@ -96,7 +96,7 @@ export function spend(db: Db, env: Env, a: { user: string; action: Action; key: 
     const prev = q.get<LedgerRowDb>("SELECT * FROM credit_ledger WHERE source IN ('spend', 'free') AND source_id = ?", sourceId);
     if (prev) {
       const refunded = !!q.get("SELECT 1 FROM credit_ledger WHERE source = 'refund' AND source_id = ?", prev.id);
-      if (prev.action !== a.action || refunded) return { ok: false, code: "idempotency_conflict", cost, balance: total() };
+      if (prev.action !== a.action || prev.ref !== a.ref || refunded) return { ok: false, code: "idempotency_conflict", cost, balance: total() };
       return { ok: true, spendId: prev.id, free: prev.kind === "free_course", replay: true, balance: total() };
     }
     const b = read(q, a.user, new Date());
@@ -155,13 +155,15 @@ export async function charge(c: Context<App>, action: Action, ref: string, run: 
       ? err(c, 402, "insufficient_credits", { action, cost: s.cost, balance: s.balance })
       : err(c, 409, s.code);
   }
+  // The paid call already ran for this key: never run the model again for free.
+  if (s.replay) return err(c, 409, "idempotency_conflict");
   const k = `${user}:${key}`;
   if (on) inflight.add(k);
   try {
     return await run(s.spendId);
   } catch (e) {
     console.error("ai call failed:", e);
-    const refunded = !!s.spendId && !s.replay && refund(db, s.spendId, "ai_failed");
+    const refunded = !!s.spendId && refund(db, s.spendId, "ai_failed");
     if (on) c.header("x-credits-balance", String(balance(db, user).total));
     return err(c, 502, "ai_failed", { refunded });
   } finally {

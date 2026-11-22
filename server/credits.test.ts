@@ -49,13 +49,14 @@ test("spend: 402 data when short, plan credits spent first, one row with both de
   check();
 });
 
-test("spend idempotency: replay charges once; another action or a refunded key conflicts", () => {
+test("spend idempotency: replay charges once; another action, ref or a refunded key conflicts", () => {
   pack("cs_1", 10);
   const first = sp("k");
   expect(first).toMatchObject({ ok: true, replay: false, balance: 8 });
   expect(sp("k")).toMatchObject({ ok: true, replay: true, balance: 8, spendId: first.ok && first.spendId });
   expect(rows("spend")).toHaveLength(1);
   expect(sp("k", "improve")).toMatchObject({ ok: false, code: "idempotency_conflict" });
+  expect(spend(db, env, { user: "u", action: "grade", key: "k", ref: "other" })).toMatchObject({ ok: false, code: "idempotency_conflict" });
   refund(db, (first as { spendId: string }).spendId);
   expect(sp("k")).toMatchObject({ ok: false, code: "idempotency_conflict", balance: 10 });
   check();
@@ -147,11 +148,11 @@ test("charge: 402 before the call, balance header, refund + 502 on throw", async
   check();
 });
 
-test("charge: a duplicate while the first call runs gets 409 in_progress; afterwards a replay is free", async () => {
+test("charge: a duplicate while the first call runs gets 409 in_progress; afterwards a replay gets 409 and never runs", async () => {
   pack("cs_1", 10);
-  let release!: () => void;
+  let release!: () => void, runs = 0;
   const gate = new Promise<void>((r) => { release = r; });
-  const a = app(async () => { await gate; return Response.json({ ok: 1 }); });
+  const a = app(async () => { runs++; await gate; return Response.json({ ok: 1 }); });
   const first = call(a, "k");
   await new Promise((r) => setTimeout(r, 0));
   const dup = await call(a, "k");
@@ -159,7 +160,10 @@ test("charge: a duplicate while the first call runs gets 409 in_progress; afterw
   expect((await dup.json()).code).toBe("in_progress");
   release();
   expect((await first).status).toBe(200);
-  expect((await call(a, "k")).status).toBe(200);
+  const again = await call(a, "k");
+  expect(again.status).toBe(409);
+  expect((await again.json()).code).toBe("idempotency_conflict");
+  expect(runs).toBe(1);
   expect(balance(db, "u").total).toBe(8);
   check();
 });

@@ -154,10 +154,11 @@ export function narrationRoutes(deps: Deps): Hono<App> {
         if (metered(c.env) && !key) return err(c, 400, "invalid_request", {}, "Idempotency-Key required");
         const s = spend(db, c.env, { user, action: "narration", key: key ?? randomUUID(), ref: l.level.id });
         if (!s.ok) return err(c, s.code === "insufficient_credits" ? 402 : 409, s.code, { action: "narration", cost: s.cost, balance: s.balance });
+        if (s.replay) return err(c, 409, "idempotency_conflict"); // that key already paid for an unlock
         if (metered(c.env)) c.header("x-credits-balance", String(s.balance));
         const { meta } = await db.prepare("INSERT OR IGNORE INTO narration_unlocks (user_id, course_id, level_id, voice, spend_id, created_at) VALUES (?, ?, ?, ?, ?, ?)")
           .bind(user, l.course.id, l.level.id, l.voice, s.spendId, deps.now().toISOString()).run();
-        if (meta.changes) { spendId = s.spendId; fresh = true; } else if (s.spendId && !s.replay) refund(db, s.spendId, "already unlocked");
+        if (meta.changes) { spendId = s.spendId; fresh = true; } else if (s.spendId) refund(db, s.spendId, "already unlocked");
         l.unlocked = true;
       }
       const missing = l.tracks.some((t) => !existsSync(audioPath(c.env, t.hash)));
