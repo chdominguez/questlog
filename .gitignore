@@ -22,3 +22,4 @@ ios/App/App/GoogleService-Info.plist
 *.keystore
 dist-e2e
 docs/design/review-ux/
+.vitest/
