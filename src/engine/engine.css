@@ -54,6 +54,11 @@
   .hud-rank-body { min-width: 96px; }
   .hud-sound input[type="range"] { width: 64px; }
 }
+@media (max-width: 520px) {
+  /* Two rows: brand, chip, rank badge, streak, mute; then nav. */
+  .hud-rank-body, .hud-sound input[type="range"] { display: none; }
+  .hud-rank { order: 0; margin-left: 0; }
+}
 
 /* Theory */
 .theory { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); }
