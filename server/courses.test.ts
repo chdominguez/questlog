@@ -87,4 +87,5 @@ test("builder rules: 3+ challenge types, no media, known sources, katas used", (
   expect(builderProblems({ ...c, katas: [kata("k")] }, new Set()).join()).toMatch(/no kata challenge uses it/);
   const media = { ...c, levels: [{ ...c.levels[0], theory: [{ title: "T", blocks: [{ kind: "media" as const, type: "image" as const, src: "a.png", alt: "A" }] }] }] };
   expect(builderProblems(media as never, new Set()).join()).toMatch(/media blocks/);
+  expect(builderProblems({ ...c, art: { a: '<svg viewBox="0 0 1 1"></svg>' } }, new Set()).join()).toMatch(/inline art is not allowed/);
 });

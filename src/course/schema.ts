@@ -163,6 +163,7 @@ export function artProblem(svg: string): string | null {
   if (/\s(width|height)=/.test(root)) return "root must not set width/height";
   if (new TextEncoder().encode(svg).length >= 4096) return "must be under 4 KB";
   if (/href|url\(|<image|<script|#[0-9a-f]{3,6}\b/i.test(svg)) return "no hrefs, url(), images, scripts or hex colors; use var(--accent) etc.";
+  if (/[\s/"']on[a-z]+\s*=|<(foreignObject|img|iframe|embed|object|animate|set)\b/i.test(svg)) return "no event handlers, foreignObject, img, embeds or animation";
   return null;
 }
 

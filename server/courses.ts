@@ -74,6 +74,7 @@ export async function saveUserCourse(db: Db, a: { owner: string; course: CourseI
  */
 export function builderProblems(c: CourseInput, sources: Set<string> | null, cite = false): string[] {
   const out: string[] = [];
+  if (Object.keys(c.art ?? {}).length) out.push("art: inline art is not allowed"); // rendered inline for every viewer
   const types = new Set(c.levels.flatMap((l) => l.challenges.map((ch) => ch.type)));
   if (types.size < 3) out.push(`levels[0]: the course uses ${types.size} challenge type(s) (${[...types].join(", ")}); use at least 3 across the course, not only quiz and multi`);
   c.levels.forEach((l, li) => l.theory.forEach((card, ti) => {

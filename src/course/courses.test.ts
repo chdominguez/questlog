@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { CHALLENGES, COURSE_ERRORS, COURSES, courseById, coursesLoaded, markCoursesLoaded, registerCourses, subscribeCourses, unregisterCourse, visibleTo } from "./registry";
 import { validateCourse } from "./validate";
-import { CourseSchema } from "./schema";
+import { artProblem, CourseSchema } from "./schema";
 
 const mods = import.meta.glob<{ default: unknown }>(["/courses/*/course.ts", "/courses/*/course.json", "@private/*/course.ts", "@private/*/course.json"], { eager: true });
 
@@ -159,4 +159,12 @@ test("coursesLoaded flips once", () => {
   markCoursesLoaded();
   markCoursesLoaded();
   expect(coursesLoaded()).toBe(true);
+});
+
+test("artProblem rejects script vectors", () => {
+  for (const svg of [
+    '<svg viewBox="0 0 10 10"><foreignObject width="10" height="10"><img src="x" onerror="alert(1)"/></foreignObject></svg>',
+    '<svg viewBox="0 0 1 1"><animate onbegin="alert(1)" attributeName="x" dur="1s"/></svg>',
+    '<svg viewBox="0 0 1 1"><g/onclick="alert(1)"></g></svg>',
+  ]) expect(artProblem(svg), svg).toMatch(/event handlers/);
 });

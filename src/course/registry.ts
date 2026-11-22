@@ -3,6 +3,7 @@
  * env QUESTIE_COURSES, or QUESTLOG_COURSES). Ids are qualified as "<course>:<id>" so progress, answers and art never collide.
  */
 import { useSyncExternalStore } from "react";
+import DOMPurify from "dompurify";
 import { addArt } from "../art";
 import { mdMedia, mediaUrl } from "../../shared/media";
 import { API_BASE } from "../platform";
@@ -54,8 +55,10 @@ export function load(mods: Record<string, { default: unknown }>): { courses: Cou
 const mods = import.meta.glob<{ default: unknown }>(["/courses/*/course.ts", "/courses/*/course.json", "@private/*/course.ts", "@private/*/course.json"], { eager: true });
 const loaded = load(mods);
 for (const e of loaded.errors) console.error(`Course ${e.file} skipped:\n${e.error}`);
-const qualifyArt = (c: Course) => { if (c.art) addArt(Object.fromEntries(Object.entries(c.art).map(([k, v]) => [q(c.id, k), v]))); };
-loaded.courses.forEach(qualifyArt);
+const qualifyArt = (c: Course, clean = (svg: string) => svg) => { if (c.art) addArt(Object.fromEntries(Object.entries(c.art).map(([k, v]) => [q(c.id, k), clean(v)]))); };
+/** Runtime course art is rendered inline, so it goes through DOMPurify (dropped where DOMPurify cannot run). */
+const cleanSvg = (svg: string) => (DOMPurify.isSupported ? DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true } }) : "");
+loaded.courses.forEach((c) => qualifyArt(c));
 
 /** Bundled courses plus runtime ones from the server (registerCourses); mutated in place so sync callers keep working. */
 export const COURSES = loaded.courses;
@@ -88,7 +91,7 @@ export function registerCourses(raw: unknown[]) {
     const c = resolve(r.data, API_BASE);
     const i = COURSES.findIndex((x) => x.id === c.id);
     if (i >= 0) { dropChallenges(COURSES[i]); COURSES.splice(i, 1, c); } else COURSES.push(c);
-    qualifyArt(c);
+    qualifyArt(c, cleanSvg);
     for (const [id, ch] of challengesOf(c)) CHALLENGES[id] = ch;
   }
   changed();
