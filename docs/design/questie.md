@@ -99,12 +99,13 @@ Auth column: P public, U signed in, O owner, A admin (`emailVerified && lower(em
 |---|---|---|---|---|
 | GET `/health` | P | | `Health` | core |
 | GET, POST `/auth/*` | P | Better Auth | Better Auth (email/password, magic link, social, callback incl. Apple form POST, `delete-user`, api keys) | auth |
+| GET `/auth/methods` | P | | `{ google, apple, magicLink }`: configured sign-in methods, so the auth screens hide the rest | auth |
 | GET `/me` | U | | `Me` | auth |
 | existing `/profile`, `/push/key`, `/push/subscription`, `/reminders*`, `/answers`, `/export`, `/progress`, `/notes*` | U | unchanged | unchanged | core |
 | POST `/push/device` | U | `DeviceInput` | 204 | mobile |
 | DELETE `/push/device` | U | `{ token }` | 204 | mobile |
 
-Account deletion is Better Auth `POST /api/auth/delete-user` with `user.deleteUser.beforeDelete` calling `purgeUser` (section 3.6).
+Account deletion is Better Auth `POST /api/auth/delete-user` with `user.deleteUser.beforeDelete` calling `purgeUser` (section 3.6). Better Auth requires a fresh session for it; an older one gets `Sign in again first`. A password reset ends on `#/signin` with `Password saved`. The auth screens link Terms and Privacy to `SITE_URL/terms` and `SITE_URL/privacy`.
 
 **Credits and billing**
 

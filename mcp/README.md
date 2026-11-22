@@ -25,7 +25,8 @@ Resources: `questie://schema/course` (JSON Schema of a course) and `questie://gu
 | `MEDIA_DIR` | Where media is stored and served from (default `media/` next to the database, `DB_PATH`) |
 | `MEDIA_MAX_BYTES` | Largest media upload in bytes (default 52428800, 50 MB) |
 | `QUESTIE_URL` | Base URL of the deployed app, for the note tools. `QUESTLOG_URL` is still read |
-| `QUESTLOG_HEADERS` | JSON of headers to send, e.g. the user header a login proxy trusts (`{"x-auth-request-email":"me@x.com"}`) |
+| `QUESTIE_TOKEN` | MCP token from Profile > Create MCP token, sent as `x-api-key` for the note tools. `QUESTLOG_TOKEN` is still read |
+| `QUESTLOG_HEADERS` | Extra headers as JSON, for old login-proxy installs. Removed in the next release |
 
 ## Claude Code
 
@@ -44,7 +45,7 @@ Add this to `claude_desktop_config.json` (Settings > Developer > Edit Config), w
       "cwd": "/absolute/path/to/questie",
       "env": {
         "QUESTIE_URL": "https://questie.example.com",
-        "QUESTLOG_HEADERS": "{\"x-auth-request-email\":\"me@example.com\"}"
+        "QUESTIE_TOKEN": "<MCP token from Profile>"
       }
     }
   }
