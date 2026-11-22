@@ -132,6 +132,20 @@ test("an edited user-course lesson needs a new unlock", async () => {
   expect((await getState()).unlocked).toBe(true);
 });
 
+test("an unlock from before versions covers the current lesson, then only that version", async () => {
+  await unlock();
+  env.DB.tx((q) => q.run("UPDATE narration_unlocks SET version = NULL"));
+  const edited = structuredClone(course);
+  edited.levels[0].theory[0].blocks = [{ kind: "md", text: "New text." }];
+  deps.courses = [edited];
+  expect((await getState()).unlocked).toBe(true);
+  const again = structuredClone(edited);
+  again.levels[0].theory[0].blocks = [{ kind: "md", text: "Newer text." }];
+  deps.courses = [again];
+  expect((await getState()).unlocked).toBe(false);
+  expect(bank.balance).toBe(90);
+});
+
 test("a lesson above the character cap is not narrated", async () => {
   const long = structuredClone(course);
   long.levels[0].theory[0].blocks = [{ kind: "md", text: "word ".repeat(3000) }];

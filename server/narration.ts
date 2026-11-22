@@ -111,8 +111,13 @@ export function narrationRoutes(deps: Deps): Hono<App> {
     });
     const u = await c.env.DB.prepare("SELECT version FROM narration_unlocks WHERE user_id = ? AND course_id = ? AND level_id = ? AND voice = ?")
       .bind(c.get("user"), course.id, level.id, v).first<{ version: string | null }>();
+    // Unlocks from before migration 0011 have no version: they cover the current one, stored on this read.
+    if (u && u.version === null) {
+      await c.env.DB.prepare("UPDATE narration_unlocks SET version = ? WHERE user_id = ? AND course_id = ? AND level_id = ? AND voice = ? AND version IS NULL")
+        .bind(version, c.get("user"), course.id, level.id, v).run();
+    }
     // A user course can be edited at will, so its unlock covers one version; bundled lessons stay unlocked.
-    const unlocked = !!u && (COURSES.some((x) => x.id === course.id) || u.version === version);
+    const unlocked = !!u && (COURSES.some((x) => x.id === course.id) || u.version === version || u.version === null);
     return { course, level, voice: v, tracks, unlocked, version };
   }
 
