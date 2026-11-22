@@ -7,6 +7,7 @@ import type { Db } from "./db";
 import { balance, charge, metered, refund } from "./credits";
 import { err } from "./errors";
 import { parseGrade, parseImprovement, type GradeInput } from "./grader";
+import { registerSweep } from "./jobs";
 
 const MOCK_GRACE_MS = 10 * 60_000;
 const MOCK_SECONDS = 30 * 60; // courses without a mock block (src/screens/Mock.tsx uses the same)
@@ -35,6 +36,9 @@ export function mockQuestions(course: Course): number {
   const boss = course.levels.find((l) => l.boss);
   return (boss && w(boss)) || Math.min(8, course.levels.reduce((n, l) => n + w(l), 0));
 }
+
+// Expired mock exams are never read again (a grade past expires_at is 410).
+registerSweep(async ({ db }) => { db.tx((q) => q.run("DELETE FROM mock_sessions WHERE expires_at < ?", new Date(Date.now() - 86_400_000).toISOString())); });
 
 type MockRow = { user_id: string; course_id: string; spend_id: string | null; grades_left: number; expires_at: string };
 
