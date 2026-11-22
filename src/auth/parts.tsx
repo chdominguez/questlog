@@ -93,7 +93,7 @@ export function SocialButtons({ next, onError }: { next?: string; onError(msg: s
         const r = await attempt(() => authClient.signIn.social({ provider, idToken: { token: t.token, nonce: t.nonce } }));
         if (r.error !== false) return failed();
         await loadMe();
-        go(next ?? "#/");
+        go(next ?? "#/welcome"); // Welcome sends accounts with progress or courses on to Home
       } else {
         try { sessionStorage.setItem(PROVIDER_KEY, provider); } catch { /* storage off */ }
         const r = await attempt(() => authClient.signIn.social({ provider, callbackURL: `/${next ?? "#/"}`, newUserCallbackURL: "/#/welcome", errorCallbackURL: "/#/signin" }));
