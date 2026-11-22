@@ -2,6 +2,7 @@ import { sendNotification, setVapidDetails } from "web-push";
 import type { Deps } from "./api";
 import type { Db } from "./db";
 import type { Env } from "./env";
+import { fcmSender, type FcmSend } from "./fcm";
 
 export const WINDOW_MIN = 5;
 
@@ -30,8 +31,10 @@ export const webPushSend = (publicKey: string, privateKey: string, subject: stri
   return (s, payload) => sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload).then(() => {});
 };
 
-/** Sends every reminder that is due. A dead subscription (404/410) is dropped. */
-export async function runReminders(db: Db, send: Send, now = new Date()) {
+export interface Senders { web?: Send; fcm?: FcmSend }
+
+/** Sends every reminder that is due to the user's web subscriptions and native devices. Dead subscriptions and tokens are dropped. */
+export async function runReminders(db: Db, { web, fcm }: Senders, now = new Date()) {
   const { results } = await db.prepare("SELECT user_id, course_id, title, time, tz, last_sent FROM reminders").all<{
     user_id: string; course_id: string; title: string; time: string; tz: string; last_sent: string;
   }>();
@@ -39,23 +42,38 @@ export async function runReminders(db: Db, send: Send, now = new Date()) {
     const date = dueDate(now, r.tz, r.time, r.last_sent);
     if (!date) continue;
     await db.prepare("UPDATE reminders SET last_sent = ? WHERE user_id = ? AND course_id = ?").bind(date, r.user_id, r.course_id).run();
-    const { results: subs } = await db.prepare("SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ?").bind(r.user_id).all<Sub>();
-    const payload = JSON.stringify({ title: r.title, body: "Time to study", url: `/#/c/${encodeURIComponent(r.course_id)}`, tag: r.course_id });
-    for (const s of subs) {
-      try { await send(s, payload); } catch (e) {
-        const status = (e as { statusCode?: number }).statusCode;
-        if (status === 404 || status === 410) await db.prepare("DELETE FROM push_subscriptions WHERE endpoint = ?").bind(s.endpoint).run();
-        else console.error("push failed:", e);
+    const msg = { title: r.title, body: "Time to study", url: `/#/c/${encodeURIComponent(r.course_id)}` };
+    if (web) {
+      const { results: subs } = await db.prepare("SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ?").bind(r.user_id).all<Sub>();
+      const payload = JSON.stringify({ ...msg, tag: r.course_id });
+      for (const s of subs) {
+        try { await web(s, payload); } catch (e) {
+          const status = (e as { statusCode?: number }).statusCode;
+          if (status === 404 || status === 410) await db.prepare("DELETE FROM push_subscriptions WHERE endpoint = ?").bind(s.endpoint).run();
+          else console.error("push failed:", e);
+        }
+      }
+    }
+    if (fcm) {
+      const { results: devices } = await db.prepare("SELECT token FROM device_tokens WHERE user_id = ?").bind(r.user_id).all<{ token: string }>();
+      for (const { token } of devices) {
+        try {
+          if (await fcm(token, msg) === "gone") await db.prepare("DELETE FROM device_tokens WHERE token = ?").bind(token).run();
+        } catch (e) { console.error("native push failed:", e); }
       }
     }
   }
 }
 
-/** Runs reminders every minute when Web Push is configured; returns stop. */
-export function startReminders(env: Env, _deps: Deps): () => void {
-  const { VAPID_PUBLIC, VAPID_PRIVATE, VAPID_SUBJECT } = env;
-  if (!(VAPID_PUBLIC && VAPID_PRIVATE && VAPID_SUBJECT)) return () => {};
-  const send = webPushSend(VAPID_PUBLIC, VAPID_PRIVATE, VAPID_SUBJECT);
-  const t = setInterval(() => runReminders(env.DB, send).catch((e) => console.error("reminders failed:", e)), 60_000);
+/** Runs reminders every minute when Web Push or FCM is configured; returns stop. */
+export function startReminders(env: Env, deps: Deps): () => void {
+  const { VAPID_PUBLIC, VAPID_PRIVATE, VAPID_SUBJECT, FCM_SERVICE_ACCOUNT } = env;
+  const senders: Senders = {};
+  if (VAPID_PUBLIC && VAPID_PRIVATE && VAPID_SUBJECT) senders.web = webPushSend(VAPID_PUBLIC, VAPID_PRIVATE, VAPID_SUBJECT);
+  if (FCM_SERVICE_ACCOUNT) {
+    try { senders.fcm = fcmSender(FCM_SERVICE_ACCOUNT, deps.fetch); } catch (e) { console.error("FCM_SERVICE_ACCOUNT invalid, native push off:", e); }
+  }
+  if (!senders.web && !senders.fcm) return () => {};
+  const t = setInterval(() => runReminders(env.DB, senders, deps.now()).catch((e) => console.error("reminders failed:", e)), 60_000);
   return () => clearInterval(t);
 }
