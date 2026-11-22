@@ -198,6 +198,23 @@ test("insufficient credits opens the top-up sheet", async () => {
   await sheet.getByRole("button", { name: "Close" }).click();
 });
 
+test("a missing screen chunk reloads once, then offers a retry", async ({ browser }) => {
+  const ctx = await browser.newContext({ storageState: await page.context().storageState(), serviceWorkers: "block" }); // signed in, nothing cached
+  const p = await ctx.newPage();
+  const chunk = /\/assets\/CreditsScreen-[^/]+\.js$/;
+  await p.route(chunk, (r) => r.abort());
+  await p.goto("/#/");
+  let loads = 0;
+  p.on("load", () => loads++);
+  await p.goto("/#/profile/credits");
+  await expect(p.getByRole("button", { name: "Retry" })).toBeVisible();
+  expect(loads).toBe(1);
+  await p.unroute(chunk);
+  await p.getByRole("button", { name: "Retry" }).click();
+  await expect(p.getByRole("heading", { name: "Credits" })).toBeVisible();
+  await ctx.close();
+});
+
 test("delete account", async () => {
   await page.goto("/#/profile");
   await page.getByRole("button", { name: "Delete account" }).click();

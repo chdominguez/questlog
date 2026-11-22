@@ -20,6 +20,7 @@ import { Gate } from "./auth/Gate";
 import { useSession } from "./auth/session";
 import { TopUpSheet } from "./billing/TopUpSheet";
 import { fetchCourse } from "./builder/api";
+import { ErrorBoundary } from "./ui/ErrorBoundary";
 
 // Screens most sessions never open load on demand, keeping them out of the main chunk.
 const PlansScreen = lazy(() => import("./billing/PlansScreen").then((m) => ({ default: m.PlansScreen })));
@@ -57,6 +58,7 @@ export function App() {
   return (
     <Gate>
     <main className="wrap">
+      <ErrorBoundary>
       <Suspense fallback={null}>
       {r.name === "home" && <HomeScreen />}
       {r.name === "map" && course && <MapScreen course={course} />}
@@ -79,6 +81,7 @@ export function App() {
       {r.name === "library" && <LibraryScreen />}
       {r.name === "adminReview" && (admin ? <QueueScreen /> : <NotFound />)}
       </Suspense>
+      </ErrorBoundary>
       <TopUpSheet />
     </main>
     </Gate>
