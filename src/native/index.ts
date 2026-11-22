@@ -1,6 +1,7 @@
 import { App } from "@capacitor/app";
 import { SecureStorage } from "@aparajita/capacitor-secure-storage";
 import { FirebaseMessaging } from "@capacitor-firebase/messaging";
+import { StatusBar, Style } from "@capacitor/status-bar";
 import { registerTokenStore } from "../auth/token";
 import { linkTarget, pushHash } from "./links";
 import { registerDevice } from "./push";
@@ -25,6 +26,20 @@ function back() {
   else history.back();
 }
 
+/** Dark text on paper, light text on graphite. */
+function statusBar() {
+  const dark = matchMedia("(prefers-color-scheme: dark)");
+  const apply = () => { StatusBar.setStyle({ style: dark.matches ? Style.Dark : Style.Light }).catch(() => {}); };
+  apply();
+  dark.addEventListener("change", apply);
+}
+
+/** Opens this app's page in the OS settings (notifications blocked). */
+export async function openSettings() {
+  const { NativeSettings, AndroidSettings, IOSSettings } = await import("capacitor-native-settings");
+  await NativeSettings.open({ optionAndroid: AndroidSettings.ApplicationDetails, optionIOS: IOSSettings.App });
+}
+
 /** Registers the secure token store, back button, appUrlOpen and push listeners. Runs before loadToken. */
 export async function init(): Promise<void> {
   registerTokenStore({
@@ -32,6 +47,7 @@ export async function init(): Promise<void> {
     save: (t) => SecureStorage.setItem(TOKEN, t),
     clear: () => SecureStorage.removeItem(TOKEN),
   });
+  statusBar();
   void App.addListener("backButton", back);
   void App.addListener("appUrlOpen", ({ url }) => { openLink(url).catch((e) => console.error("app link failed:", e)); });
   void FirebaseMessaging.addListener("notificationActionPerformed", ({ notification }) => {

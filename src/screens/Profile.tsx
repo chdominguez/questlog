@@ -1,4 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from "react";
+import { isNative } from "../platform";
 import { ArrowLeft } from "@phosphor-icons/react";
 import type { Profile, Reminder } from "../../shared/api-types";
 import { ApiError, deleteReminder, getMe, getProfile, listReminders, saveProfile, saveReminder } from "../answers/api";
@@ -49,6 +50,9 @@ function Reminders({ user }: { user: string }) {
       <h2>Reminders</h2>
       {state === "install" && <p className="wa-notice">Share → Add to Home Screen</p>}
       {state === "denied" && <p className="wa-notice">Notifications are blocked</p>}
+      {state === "denied" && isNative && (
+        <button type="button" className="btn quiet" onClick={() => { void import("../native/index").then((n) => n.openSettings()).catch(() => {}); }}>Open settings</button>
+      )}
       {state === "off" && <button type="button" className="btn" onClick={enable}>Enable notifications</button>}
       {failed && <p className="wa-notice" role="alert">Couldn't save</p>}
       {state === "on" && visibleTo(user).filter((c) => !completed.includes(c.id)).map((c) => (

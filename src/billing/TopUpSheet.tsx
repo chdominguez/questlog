@@ -71,7 +71,7 @@ function Sheet({ credits, cost, balance }: { credits: Credits; cost?: number; ba
 
   async function restore() {
     setBusy("restore"); setAlert(""); setStatus("");
-    try { await (await purchases()).restore(); await loadMe(); setStatus("Purchases restored"); }
+    try { const found = await (await purchases()).restore(); await loadMe(); setStatus(found ? "Purchases restored" : "Nothing to restore"); }
     catch { setAlert("Purchase failed"); } finally { setBusy(null); }
   }
 
