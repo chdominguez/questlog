@@ -13,7 +13,7 @@ Courses are plain files in git, validated by one schema, so you (or Claude) can 
 - **Spaced repetition.** Every challenge you meet becomes an [FSRS](https://github.com/open-spaced-repetition/ts-fsrs) card. Misses come back right away, hits come back days later. One review queue across all courses.
 - **XP, ranks, combo multipliers, sounds, confetti.**
 - **Notes** in Markdown, tagged and linked to courses, that Claude can turn into a course.
-- **Sync** across devices through the self-hosted server (Node + SQLite), behind your login proxy. Each user (the proxy header) has separate progress, answers and notes.
+- **Sync** across devices through the self-hosted server (Node + SQLite), with built-in sign-in (email, Google, Apple). Each account has its own progress, answers and notes.
 
 ## Run it
 
@@ -25,7 +25,7 @@ npm test           # unit tests + every course validated, katas run
 npm run validate   # just the courses, with readable errors
 ```
 
-The server needs `APP_URL` and `BETTER_AUTH_SECRET` (`openssl rand -hex 32`). Grading and the course builder need `ANTHROPIC_API_KEY`; without it you rate your own answers. Every variable: [questie.app/self-host/config](https://questie.app/self-host/config/).
+The server needs `APP_URL` and `BETTER_AUTH_SECRET` (`openssl rand -hex 32`); `npm start` reads them from `.env` (start from `.env.example`). Grading and the course builder need `ANTHROPIC_API_KEY`; without it you rate your own answers. Every variable: [questie.app/self-host/config](https://questie.app/self-host/config/).
 
 ## Add a course
 

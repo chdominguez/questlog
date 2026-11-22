@@ -9,7 +9,7 @@
     "validate": "tsx scripts/validate.ts",
     "mcp": "tsx mcp/server.ts",
     "server": "npm run build:server && npm start",
-    "start": "node dist-server/index.js",
+    "start": "node --env-file-if-exists=.env dist-server/index.js",
     "build:server": "vite build --ssr server/index.ts --outDir dist-server && KATA=1 vite build --ssr server/kata-child.ts --outDir dist-server/kata",
     "build:mobile": "vite build --mode mobile",
     "cap:sync": "npm run build:mobile && cap sync",
