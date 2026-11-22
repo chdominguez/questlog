@@ -17,7 +17,7 @@ import { serveFile } from "./media";
 
 type Level = Course["levels"][number];
 type Track = { card: number; hash: string; text: string };
-type JobInput = { courseId: string; levelId: string; voice: string; spendId: string | null; fresh: boolean };
+type JobInput = { courseId: string; levelId: string; voice: string; spendId: string | null };
 
 const HASH = /^[a-f0-9]{64}$/;
 const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
@@ -76,23 +76,15 @@ export function ensureAudio(db: Db, env: Env, f: typeof fetch, voice: string, t:
   return p;
 }
 
-// Makes the missing audio of one lesson. On failure the jobs module refunds the spend; the unlock it paid for goes too.
+// Makes the missing audio of one lesson. On failure failJob refunds the spend and removes the unlock it paid for.
 registerJob("narration", async (job, { db, env, deps }) => {
   const a = job.input as JobInput;
-  try {
-    const course = await courseFor(deps, db, job.user, a.courseId);
-    const level = course && levelOf(course, a.levelId);
-    if (!level) throw new JobError("not_found", "Lesson not found");
-    const ts = tracksOf(level, a.voice, env.ELEVENLABS_MODEL);
-    for (const t of ts) await ensureAudio(db, env, deps.fetch, a.voice, t);
-    return { tracks: ts.length };
-  } catch (e) {
-    if (a.fresh) {
-      await db.prepare("DELETE FROM narration_unlocks WHERE user_id = ? AND course_id = ? AND level_id = ? AND voice = ? AND spend_id IS ?")
-        .bind(job.user, a.courseId, a.levelId, a.voice, a.spendId).run();
-    }
-    throw e;
-  }
+  const course = await courseFor(deps, db, job.user, a.courseId);
+  const level = course && levelOf(course, a.levelId);
+  if (!level) throw new JobError("not_found", "Lesson not found");
+  const ts = tracksOf(level, a.voice, env.ELEVENLABS_MODEL);
+  for (const t of ts) await ensureAudio(db, env, deps.fetch, a.voice, t);
+  return { tracks: ts.length };
 });
 
 /** GET /narration/audio/:hash, GET /narration/:course/:level, POST /narration. */
@@ -148,7 +140,7 @@ export function narrationRoutes(deps: Deps): Hono<App> {
       const l = await lesson(c, b.courseId, b.levelId, b.voice);
       if (l instanceof Response) return l;
       const db = c.env.DB, user = c.get("user");
-      let spendId: string | null = null, fresh = false;
+      let spendId: string | null = null;
       if (!l.unlocked) {
         const key = c.req.header("Idempotency-Key");
         if (metered(c.env) && !key) return err(c, 400, "invalid_request", {}, "Idempotency-Key required");
@@ -158,11 +150,11 @@ export function narrationRoutes(deps: Deps): Hono<App> {
         if (metered(c.env)) c.header("x-credits-balance", String(s.balance));
         const { meta } = await db.prepare("INSERT OR IGNORE INTO narration_unlocks (user_id, course_id, level_id, voice, spend_id, created_at) VALUES (?, ?, ?, ?, ?, ?)")
           .bind(user, l.course.id, l.level.id, l.voice, s.spendId, deps.now().toISOString()).run();
-        if (meta.changes) { spendId = s.spendId; fresh = true; } else if (s.spendId) refund(db, s.spendId, "already unlocked");
+        if (meta.changes) spendId = s.spendId; else if (s.spendId) refund(db, s.spendId, "already unlocked");
         l.unlocked = true;
       }
       const missing = l.tracks.some((t) => !existsSync(audioPath(c.env, t.hash)));
-      const input: JobInput = { courseId: l.course.id, levelId: l.level.id, voice: l.voice, spendId, fresh };
+      const input: JobInput = { courseId: l.course.id, levelId: l.level.id, voice: l.voice, spendId };
       const jobId = missing ? enqueue(db, { user, kind: "narration", title: l.level.title, input, spendId }) : undefined;
       return c.json(state(c.env, l, jobId));
     });

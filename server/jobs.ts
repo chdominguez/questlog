@@ -53,6 +53,7 @@ export function failJob(db: Db, id: string, code: string, message: string) {
     if (!row || row.status === "done" || row.status === "failed") return;
     const joined: Db = { prepare: db.prepare, tx: (fn) => fn(q) }; // refund joins this transaction
     const refunded = row.spend_id ? refund(joined, row.spend_id, `${row.kind} failed`) : false;
+    if (refunded && row.kind === "narration") q.run("DELETE FROM narration_unlocks WHERE spend_id = ?", row.spend_id); // the paid unlock goes with its credits
     const free = !!(JSON.parse(row.input) as { free?: boolean }).free;
     q.run("UPDATE jobs SET status = 'failed', error = ?, finished_at = ? WHERE id = ?",
       JSON.stringify({ code, message, refunded, ...(free && refunded && { free: true }) }), now(), id);

@@ -147,6 +147,15 @@ test("job failure refunds and removes the unlock", async () => {
   expect((await getState()).unlocked).toBe(false);
 });
 
+test("a job interrupted twice is refunded and removes the unlock", async () => {
+  stop();
+  const { jobId } = (await (await unlock()).json()) as NarrationState;
+  env.DB.tx((q) => q.run("UPDATE jobs SET status = 'running', attempts = 2 WHERE id = ?", jobId));
+  stop = startJobs(env, deps);
+  expect(bank.balance).toBe(100);
+  expect((await getState()).unlocked).toBe(false);
+});
+
 test("402 without credits: no unlock, no audio", async () => {
   bank.balance = 5;
   const res = await unlock();
