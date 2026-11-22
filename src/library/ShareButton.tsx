@@ -28,6 +28,7 @@ function ShareDialog({ meta, onClose }: { meta: UserCourseMeta; onClose: () => v
   const [confirm, setConfirm] = useState<keyof typeof CONFIRM | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
   const [error, setError] = useState(false);
   const [notice, setNotice] = useState("");
   const [problems, setProblems] = useState<string[] | null>(null);
@@ -40,13 +41,16 @@ function ShareDialog({ meta, onClose }: { meta: UserCourseMeta; onClose: () => v
     try { await f(); } catch { setError(true); } finally { setBusy(false); }
   };
 
+  const link = `${APP_URL}/c/${meta.id}`;
   const copy = () => run(async () => {
     if (meta.status === "private") await share(meta.id);
-    await navigator.clipboard.writeText(`${APP_URL}/c/${meta.id}`).then(() => {
+    // No clipboard (insecure context, some webviews) throws before the promise: show the link to copy by hand.
+    await Promise.resolve().then(() => navigator.clipboard.writeText(link)).then(() => {
       setCopied(true);
+      setCopyFailed(false);
       clearTimeout(timer.current);
       timer.current = setTimeout(() => setCopied(false), 2000);
-    }, () => {});
+    }, () => setCopyFailed(true));
   });
 
   const download = () => run(async () => {
@@ -94,6 +98,12 @@ function ShareDialog({ meta, onClose }: { meta: UserCourseMeta; onClose: () => v
         {meta.status === "rejected" && meta.reviewNote && <p className="lib-meta">{meta.reviewNote}</p>}
         <button type="button" className="btn" disabled={busy} onClick={copy}>{copied ? "Copied" : "Copy link"}</button>
         <span className="sr" role="status">{copied ? "Copied" : ""}</span>
+        {copyFailed && (
+          <>
+            <p className="wa-error" role="alert">Copy failed</p>
+            <input className="scr-input" readOnly value={link} aria-label="Course link" autoFocus onFocus={(e) => e.currentTarget.select()} />
+          </>
+        )}
         {SHARE_ACTIONS[meta.status].map((a) => (
           <button key={a} type="button" className={a === "makePrivate" ? "btn ghost" : "btn"} disabled={busy}
             onClick={() => { setError(false); setConfirm(a === "makePrivate" ? "private" : "submit"); }}>
