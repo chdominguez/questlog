@@ -154,6 +154,13 @@ test("402 without credits, one build at a time, idempotent retry returns the sam
   expect(second.status).toBe(429);
   expect(await second.json()).toMatchObject({ code: "job_limit", jobId });
   expect((await build(topic, undefined, "v")).status).toBe(202); // per user
+  // Concurrent requests both pass the first check during the pre-check; only one build starts.
+  const k = crypto.randomUUID();
+  const both = await Promise.all([build(topic, k, "w"), build(topic, k, "w"), build(topic, undefined, "w")]);
+  expect(both.map((r) => r.status).sort()).toEqual([202, 202, 429]);
+  const ids = await Promise.all(both.map((r) => r.json()));
+  expect(new Set(ids.map((x) => x.jobId)).size).toBe(1);
+  expect((await (await req("/jobs?kind=build", as("w"))).json())).toHaveLength(1);
   const list = await (await req("/jobs?kind=build&active=1", as("u"))).json();
   expect(list.map((j: { id: string }) => j.id)).toEqual([jobId]);
   expect((await req(`/jobs/${jobId}`, as("v"))).status).toBe(404);

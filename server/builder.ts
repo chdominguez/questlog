@@ -8,6 +8,7 @@ import { CourseSchema, type CourseInput, type Kata, type Level } from "../src/co
 import courseSkill from "../plugins/questie/skills/questie-course/SKILL.md?raw";
 import designSkill from "../plugins/questie/skills/quest-design/SKILL.md?raw";
 import { str, type App, type Deps } from "./api";
+import type { Db, Tx } from "./db";
 import { err } from "./errors";
 import { balance, metered, spend } from "./credits";
 import { courseProblems, newCourseId, saveUserCourse } from "./courses";
@@ -126,11 +127,20 @@ export function builderRoutes(deps: Deps): Hono<App> {
       const req = parseBuild(await c.req.json().catch(() => undefined));
       if (typeof req === "string") return err(c, 400, "invalid_request", {}, req);
       const db = c.env.DB, user = c.get("user");
-      // A retried request (same key) gets the job it already started.
-      const prev = db.tx((q) => q.get<{ id: string }>("SELECT id FROM jobs WHERE user_id = ? AND kind = 'build' AND json_extract(input, '$.key') = ?", user, key));
-      if (prev) { setBalance(c); return c.json({ jobId: prev.id }, 202); }
-      const active = db.tx((q) => q.get<{ id: string }>("SELECT id FROM jobs WHERE user_id = ? AND kind = 'build' AND status IN ('queued', 'running')", user));
-      if (active) return err(c, 429, "job_limit", { jobId: active.id });
+      // A retried request (same key) gets the job it already started; one build at a time per user.
+      const busy = (q: Tx) => {
+        const prev = q.get<{ id: string }>("SELECT id FROM jobs WHERE user_id = ? AND kind = 'build' AND json_extract(input, '$.key') = ?", user, key);
+        if (prev) return { jobId: prev.id };
+        const active = q.get<{ id: string }>("SELECT id FROM jobs WHERE user_id = ? AND kind = 'build' AND status IN ('queued', 'running')", user);
+        return active ? { active: active.id } : null;
+      };
+      const answer = (b: { jobId: string } | { active: string }) => {
+        if ("active" in b) return err(c, 429, "job_limit", { jobId: b.active });
+        setBalance(c);
+        return c.json({ jobId: b.jobId }, 202);
+      };
+      const before = db.tx(busy);
+      if (before) return answer(before);
 
       // Inputs that live in the DB are read now, so the job never sees later edits.
       const input: BuildInput = { ...req };
@@ -152,15 +162,20 @@ export function builderRoutes(deps: Deps): Hono<App> {
       }
 
       const jobId = crypto.randomUUID(); // the ledger ref, so Credits shows the job's course title
-      const s = spend(db, c.env, { user, action: ACTION[req.mode], key, ref: jobId, allowFree: req.mode === "topic" });
-      if (!s.ok) {
-        if (s.code === "insufficient_credits") return err(c, 402, "insufficient_credits", { action: "topup", cost: s.cost, balance: s.balance });
-        return err(c, 409, s.code);
-      }
-      enqueue(db, { id: jobId, user, kind: "build", title: title(req), input: { ...input, key, free: s.free }, spendId: s.spendId });
-      if (req.mode === "files" && req.uploads) db.tx((q) => { for (const id of req.uploads!) q.run("UPDATE uploads SET job_id = ? WHERE id = ? AND user_id = ?", jobId, id, user); });
-      setBalance(c);
-      return c.json({ jobId }, 202);
+      // Checked again with the spend and the enqueue in one transaction: the pre-check awaited, so a duplicate may have got in.
+      const out = db.tx((q) => {
+        const b = busy(q);
+        if (b) return b;
+        const joined: Db = { prepare: db.prepare, tx: (fn) => fn(q) };
+        const s = spend(joined, c.env, { user, action: ACTION[req.mode], key, ref: jobId, allowFree: req.mode === "topic" });
+        if (!s.ok) return s;
+        enqueue(joined, { id: jobId, user, kind: "build", title: title(req), input: { ...input, key, free: s.free }, spendId: s.spendId });
+        if (req.mode === "files" && req.uploads) for (const id of req.uploads) q.run("UPDATE uploads SET job_id = ? WHERE id = ? AND user_id = ?", jobId, id, user);
+        return { jobId };
+      });
+      if (!("ok" in out)) return answer(out);
+      if (out.code === "insufficient_credits") return err(c, 402, "insufficient_credits", { action: "topup", cost: out.cost, balance: out.balance });
+      return err(c, 409, out.code);
     })
     .get("/jobs", async (c) => {
       const kind = c.req.query("kind"), active = c.req.query("active") === "1";
