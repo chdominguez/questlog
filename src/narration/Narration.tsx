@@ -38,9 +38,11 @@ function Player({ course, level }: { course: string; level: string }) {
   const [playing, setPlaying] = useState(false);
   const [pos, setPos] = useState(0);
   const [dur, setDur] = useState(0);
+  const [durs, setDurs] = useState<Record<number, number>>({}); // per card, for lesson-wide time
   const [rate, setRate] = useState(1);
   const audio = useRef<HTMLAudioElement>(null);
   const keepPlaying = useRef(false); // play on through card changes
+  const seekTo = useRef<number | null>(null); // position in the next card's segment after a scrub across cards
 
   const settle = (s: NarrationState) => { setSt(s); setPhase(!s.unlocked ? "locked" : allReady(s) ? "ready" : "preparing"); };
 
@@ -90,6 +92,7 @@ function Player({ course, level }: { course: string; level: string }) {
       a.src = u;
       a.defaultPlaybackRate = a.playbackRate = rate;
       setPos(0);
+      if (seekTo.current !== null) { a.currentTime = seekTo.current; seekTo.current = null; }
       if (keepPlaying.current) a.play().catch(() => live && setPhase("playError"));
     }, () => live && setPhase("playError"));
     return () => {
@@ -105,6 +108,32 @@ function Player({ course, level }: { course: string; level: string }) {
     if (a.paused) { keepPlaying.current = true; a.play().catch(() => setPhase("playError")); } else { keepPlaying.current = false; a.pause(); }
   };
   const go = (n: number) => { if (n >= 0 && n < cards) setCard(n); };
+
+  // Segment lengths from metadata; on native (blob URLs) they fill in as cards play.
+  useEffect(() => {
+    if (phase !== "ready" || !st || isNative) return;
+    const probes = st.tracks.map((t) => {
+      const a = new Audio();
+      a.preload = "metadata";
+      a.onloadedmetadata = () => setDurs((d) => ({ ...d, [t.card]: a.duration }));
+      void audioSrc(t.hash).then((u) => { a.src = u; }, () => {});
+      return a;
+    });
+    return () => probes.forEach((a) => { a.onloadedmetadata = null; a.removeAttribute("src"); });
+  }, [phase, st]);
+  const lens = st?.tracks.map((t) => durs[t.card]) ?? [];
+  const whole = lens.length > 0 && lens.every((d) => Number.isFinite(d) && d > 0);
+  const offset = whole ? lens.slice(0, card).reduce((a, b) => a + b, 0) : 0;
+  const total = whole ? lens.reduce((a, b) => a + b, 0) : dur;
+  const scrub = (v: number) => {
+    const a = audio.current;
+    if (!a) return;
+    if (!whole) { a.currentTime = v; return; }
+    let c = 0, start = 0;
+    while (c < lens.length - 1 && v >= start + lens[c]) start += lens[c++];
+    if (c === card) a.currentTime = v - start;
+    else { seekTo.current = v - start; go(c); }
+  };
 
   useEffect(() => {
     if (phase !== "ready") return;
@@ -156,11 +185,11 @@ function Player({ course, level }: { course: string; level: string }) {
             {playing ? <Pause weight="fill" aria-hidden /> : <Play weight="fill" aria-hidden />}
           </button>
           <input
-            type="range" className="narr-pos" min={0} max={dur || 0} step="any" value={Math.min(pos, dur || 0)}
-            aria-label="Position" aria-valuetext={`${time(pos)} of ${time(dur)}`}
-            onChange={(e) => { if (audio.current) audio.current.currentTime = Number(e.target.value); }}
+            type="range" className="narr-pos" min={0} max={total || 0} step="any" value={Math.min(offset + pos, total || 0)}
+            aria-label="Position" aria-valuetext={`${time(offset + pos)} of ${time(total)}`}
+            onChange={(e) => scrub(Number(e.target.value))}
           />
-          <span className="narr-time">{time(pos)} / {time(dur)}</span>
+          <span className="narr-time">{time(offset + pos)} / {time(total)}</span>
           <button type="button" className="btn ghost narr-rate" aria-label={`Speed ${rate}x`} onClick={() => {
             const r = nextRate(rate);
             setRate(r);
@@ -174,7 +203,7 @@ function Player({ course, level }: { course: string; level: string }) {
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onTimeUpdate={(e) => setPos(e.currentTarget.currentTime)}
-        onDurationChange={(e) => setDur(e.currentTarget.duration)}
+        onDurationChange={(e) => { const d = e.currentTarget.duration; setDur(d); if (track) setDurs((x) => ({ ...x, [track.card]: d })); }}
         onEnded={() => { if (card + 1 < cards) go(card + 1); else keepPlaying.current = false; }}
       />
     </div>
