@@ -7,7 +7,7 @@
 .dialog-line { margin: 0; color: var(--muted); font-variant-numeric: tabular-nums; }
 .dialog-close { position: absolute; top: var(--s-3); right: var(--s-3); }
 @media (max-width: 520px) {
-  .overlay-sheet { place-items: end stretch; padding: 0; }
+  .overlay.overlay-sheet { place-items: end stretch; padding: 0; }
   .dialog.sheet { width: 100%; border-radius: var(--r-lg) var(--r-lg) 0 0; padding-bottom: calc(var(--s-5) + env(safe-area-inset-bottom, 0px)); }
 }
 .topup-opts { display: grid; gap: var(--s-2); }
