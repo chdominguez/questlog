@@ -6,6 +6,7 @@ export const PACKS = {
   pack_l: { credits: 1500, priceCents: 1499, lookupKey: "questie_pack_1500_1499", rcProducts: ["questie.credits.1500"] },
 } as const;
 export const COSTS = { course_topic: 100, course_files: 150, course_web: 200, grade: 2, improve: 3, mock: 20, narration: 10 } as const;
+export const NARRATION_MAX_CHARS = 12_000; // per lesson; bundled lessons are about 2.5k
 export const FREE_COURSES = 1; // topic mode only
 export const CONFIRM_AT = 100; // client confirms spends >= this
 export const LOW_BALANCE = 100; // one warning per period

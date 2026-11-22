@@ -119,6 +119,30 @@ test("charges once per user + lesson + voice; cached audio skips the job", async
   expect(tts.length).toBe(4);
 });
 
+test("an edited user-course lesson needs a new unlock", async () => {
+  await unlock();
+  expect(bank.balance).toBe(90);
+  expect((await getState()).unlocked).toBe(true);
+  const edited = structuredClone(course);
+  edited.levels[0].theory[0].blocks = [{ kind: "md", text: "New text." }];
+  deps.courses = [edited];
+  expect((await getState()).unlocked).toBe(false);
+  expect((await (await unlock()).json()).unlocked).toBe(true);
+  expect(bank.balance).toBe(80);
+  expect((await getState()).unlocked).toBe(true);
+});
+
+test("a lesson above the character cap is not narrated", async () => {
+  const long = structuredClone(course);
+  long.levels[0].theory[0].blocks = [{ kind: "md", text: "word ".repeat(3000) }];
+  deps.courses = [long];
+  expect((await req("/narration/t/t%3Al1")).status).toBe(400);
+  const res = await unlock();
+  expect(res.status).toBe(400);
+  expect((await res.json()).code).toBe("too_large");
+  expect(bank.balance).toBe(100);
+});
+
 test("audio route requires an unlock and serves ranges with long cache", async () => {
   await unlock();
   const { tracks } = await getState();
