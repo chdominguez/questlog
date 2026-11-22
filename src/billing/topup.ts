@@ -10,4 +10,5 @@ const subscribe = (f: () => void) => { listeners.add(f); return () => listeners.
 
 export function openTopUp(a: { cost?: number; balance?: number } = {}) { if (!state.open) set({ open: true, ...a }); }
 export function closeTopUp() { if (state.open) set({ open: false }); }
-export const useTopUp = () => useSyncExternalStore(subscribe, () => state);
+export const getTopUp = () => state;
+export const useTopUp = () => useSyncExternalStore(subscribe, getTopUp);
