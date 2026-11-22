@@ -9,7 +9,7 @@ import type { Me } from "../shared/api-types";
 import { BUILD } from "../shared/pricing";
 import type { App, Deps, SessionUser } from "./api";
 import type { Env } from "./env";
-import { aliasesOf, claimLegacy, purgeUser } from "./account";
+import { aliasesOf, claimLegacy, deleteUserFiles, purgeUser } from "./account";
 import { isAdmin } from "./admin";
 import { cancelForUser } from "./billing";
 import { credits, metered } from "./credits";
@@ -78,6 +78,7 @@ export function authOptions(env: Env, sqlite: DatabaseSync, deps: Deps): BetterA
         enabled: true,
         beforeDelete: async (user) => {
           await cancelForUser(env.DB, env, deps, user.id);
+          await deleteUserFiles(env.DB, deps.anthropic(env), user.id);
           purgeUser(env.DB, user.id);
         },
       },

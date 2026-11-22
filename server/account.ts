@@ -1,3 +1,4 @@
+import Anthropic from "@anthropic-ai/sdk";
 import type { Db } from "./db";
 import type { SessionUser } from "./api";
 
@@ -26,6 +27,20 @@ export function purgeUser(db: Db, user: string): void {
     q.run("DELETE FROM legacy_claims WHERE user_id = ?", user);
     q.run("DELETE FROM apikey WHERE referenceId = ?", user); // Better Auth does not cascade these
   });
+}
+
+/** Deletes one upload from the Files API and its row. False when the delete failed (the row stays). */
+export async function dropFile(client: Anthropic, db: Db, u: { id: string; file_id: string }): Promise<boolean> {
+  try { await client.files.delete(u.file_id); } catch (e) { if (!(e instanceof Anthropic.NotFoundError)) { console.error("file delete failed:", e); return false; } }
+  db.tx((q) => q.run("DELETE FROM uploads WHERE id = ?", u.id));
+  return true;
+}
+
+/** Account deletion: the user's uploads leave the Files API now; one that fails loses its owner and waits for the 24 h sweep. */
+export async function deleteUserFiles(db: Db, client: Anthropic | null, user: string): Promise<void> {
+  for (const u of db.tx((q) => q.all<{ id: string; file_id: string }>("SELECT id, file_id FROM uploads WHERE user_id = ?", user))) {
+    if (!client || !(await dropFile(client, db, u))) db.tx((q) => q.run("UPDATE uploads SET user_id = '' WHERE id = ?", u.id));
+  }
 }
 
 const done = new Set<string>();

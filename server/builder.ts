@@ -9,6 +9,7 @@ import courseSkill from "../plugins/questie/skills/questie-course/SKILL.md?raw";
 import designSkill from "../plugins/questie/skills/quest-design/SKILL.md?raw";
 import { str, type App, type Deps } from "./api";
 import type { Db, Tx } from "./db";
+import { dropFile } from "./account";
 import { err } from "./errors";
 import { balance, metered, spend } from "./credits";
 import { courseProblems, newCourseId, saveUserCourse } from "./courses";
@@ -439,9 +440,6 @@ registerSweep(async ({ db, env, deps }) => {
   const client = deps.anthropic(env);
   if (!client) return;
   const old = db.tx((q) => q.all<{ id: string; file_id: string }>("SELECT id, file_id FROM uploads WHERE created_at < ?", new Date(Date.now() - UPLOAD_TTL_MS).toISOString()));
-  for (const u of old) {
-    try { await client.files.delete(u.file_id); } catch (e) { if (!(e instanceof Anthropic.NotFoundError)) { console.error("file delete failed:", e); continue; } }
-    db.tx((q) => q.run("DELETE FROM uploads WHERE id = ?", u.id));
-  }
+  for (const u of old) await dropFile(client, db, u);
 });
 

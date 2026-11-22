@@ -1,5 +1,6 @@
-import { expect, test } from "vitest";
-import { purgeUser } from "./account";
+import Anthropic from "@anthropic-ai/sdk";
+import { expect, test, vi } from "vitest";
+import { deleteUserFiles, purgeUser } from "./account";
 import { memoryDb } from "./db";
 
 const now = "2026-11-22T00:00:00.000Z";
@@ -47,4 +48,23 @@ test("purgeUser empties every per-user table for that user, rows under claimed i
     expect(q.all("SELECT course_id FROM course_opens WHERE user_id = 'other'")).toEqual([{ course_id: "x" }]);
     expect(q.get("SELECT 1 AS x FROM kv WHERE key = 'claimed_local'")).toEqual({ x: 1 });
   });
+});
+
+test("deleteUserFiles removes the user's uploads from the Files API; a failed delete leaves the row ownerless for the sweep", async () => {
+  const db = memoryDb();
+  db.tx((q) => {
+    for (const [id, user, file] of [["a", "u", "f_ok"], ["b", "u", "f_gone"], ["c", "u", "f_err"], ["d", "v", "f_v"]]) {
+      q.run("INSERT INTO uploads (id, user_id, file_id, name, bytes, created_at) VALUES (?, ?, ?, 'n', 1, ?)", id, user, file, now);
+    }
+  });
+  const deleted: string[] = [];
+  const client = { files: { delete: async (id: string) => {
+    if (id === "f_gone") throw new Anthropic.NotFoundError(404, undefined, "gone", new Headers());
+    if (id === "f_err") throw new Error("down");
+    deleted.push(id);
+  } } } as unknown as Anthropic;
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  await deleteUserFiles(db, client, "u");
+  expect(deleted).toEqual(["f_ok"]);
+  expect(db.tx((q) => q.all("SELECT id, user_id FROM uploads ORDER BY id"))).toEqual([{ id: "c", user_id: "" }, { id: "d", user_id: "v" }]);
 });
