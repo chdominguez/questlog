@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft } from "@phosphor-icons/react";
 import type { LedgerRow } from "../../shared/api-types";
-import { useSession } from "../auth/session";
+import { loadMe, useSession } from "../auth/session";
 import { Hud } from "../engine/Hud";
 import { NotFound } from "../screens/NotFound";
 import { href } from "../ui/route";
@@ -27,7 +27,7 @@ export function CreditsScreen() {
       setState("idle");
     } catch { setState("error"); }
   };
-  useEffect(() => { if (c) load(); }, []);
+  useEffect(() => { if (c) { load(); void loadMe(); } }, []); // loadMe: fresh plan / top-up split
   if (!c) return <NotFound />;
 
   const months: [string, Line[]][] = [];

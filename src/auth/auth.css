@@ -7,7 +7,7 @@
 .auth-or { display: flex; align-items: center; gap: var(--s-3); color: var(--muted); font-size: var(--t-sm); }
 .auth-or::before, .auth-or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
 .auth-pass { display: flex; justify-content: space-between; align-items: center; }
-.auth-show { min-height: 0; padding: 0 var(--s-2); font-size: var(--t-sm); }
+.auth-pass .auth-show { width: auto; min-height: 44px; margin: -11px 0 -11px auto; padding: 0 var(--s-2); font-size: var(--t-sm); } /* 44 px target, label row stays one line tall */
 .auth-hint { margin: 0; color: var(--muted); font-size: var(--t-sm); }
 .auth-err { margin: 0; color: var(--bad); font-size: var(--t-sm); }
 .auth-links { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--s-3); }

@@ -11,6 +11,7 @@ import { href } from "../ui/route";
 import { Stars } from "./Level";
 import { MapQuestie } from "../questie/Questie";
 import { ShareButton } from "../library/ShareButton";
+import { useSession } from "../auth/session";
 import "./screens.css";
 
 const ROW = 184; // px per node row: orb + 3-line title + stars, so rows never overlap
@@ -30,6 +31,8 @@ export function MapScreen({ course }: { course: Course }) {
     return `M${a.x} ${a.y} C${a.x} ${a.y + ROW / 2} ${b.x} ${b.y - ROW / 2} ${b.x} ${b.y}`;
   };
   const katas = Object.values(course.katas);
+  const ai = useSession().me?.features.ai ?? false;
+  const mock = course.mock || (ai && levels.some((l) => l.challenges.some((c) => c.type === "written")));
 
   return (
     <>
@@ -38,7 +41,7 @@ export function MapScreen({ course }: { course: Course }) {
         <div className="map-head">
           <h1>{course.title}</h1>
           <ShareButton courseId={course.id} />
-          {course.mock && <a className="btn ghost" href={href.mock(course.id)} onClick={() => play("click")}>{course.mock.title}</a>}
+          {mock && <a className="btn ghost" href={href.mock(course.id)} onClick={() => play("click")}>{course.mock?.title ?? "Exam"}</a>}
           <button type="button" className="btn ghost" aria-pressed={done}
             onClick={() => {
               dispatch({ type: "complete", course: course.id, on: !done });

@@ -44,7 +44,7 @@ export function LibraryScreen() {
         <input className="scr-input" type="search" aria-label="Search courses" placeholder="Search" value={query} onChange={(e) => setQuery(e.target.value)} />
         <div className="lib-tabs">
           {FILTERS.map(([f, label]) => (
-            <button key={f} type="button" className="btn ghost" aria-pressed={filter === f} onClick={() => setFilter(f)}>{label}</button>
+            <button key={f} type="button" className={filter === f ? "btn" : "btn ghost"} aria-pressed={filter === f} onClick={() => setFilter(f)}>{label}</button>
           ))}
         </div>
         <p className="sr" role="status">{query ? `${shown.length} ${shown.length === 1 ? "course" : "courses"}` : ""}</p>

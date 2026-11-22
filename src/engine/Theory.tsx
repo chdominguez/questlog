@@ -74,8 +74,10 @@ export function Theory({ cards, onDone, level }: { cards: TheoryCard[]; onDone: 
   return (
     <section className="theory" aria-label="Theory">
       <article key={i} className="card theory-card screen-in">
-        <h2>{card.title}</h2>
-        {level && <ReportButton courseId={courseOf(level)} itemId={`${level}#${i}`} />}
+        <div className="card-head">
+          <h2>{card.title}</h2>
+          {level && <ReportButton courseId={courseOf(level)} itemId={`${level}#${i}`} />}
+        </div>
         {card.blocks.map((b, k) => <Block key={k} b={b} />)}
         <Sources sources={card.sources} />
       </article>

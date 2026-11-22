@@ -5,7 +5,7 @@ import { AuthFrame, useCooldown } from "./parts";
 import { signupDraft } from "./SignUpScreen";
 import { attempt, authMessage } from "./messages";
 
-export function VerifyScreen() {
+export function VerifyScreen({ next }: { next?: string }) {
   const [{ email }] = useState(signupDraft);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
@@ -13,7 +13,7 @@ export function VerifyScreen() {
 
   async function resend() {
     setStatus(""); setError("");
-    const r = await attempt(() => authClient.sendVerificationEmail({ email, callbackURL: "/#/welcome" }));
+    const r = await attempt(() => authClient.sendVerificationEmail({ email, callbackURL: `/${next ?? href.welcome()}` }));
     if (r.error !== false) return setError(authMessage(r.error, "Couldn't send email"));
     wait.start();
     setStatus("Email sent");
@@ -30,7 +30,7 @@ export function VerifyScreen() {
             {wait.left > 0 ? `Resend in ${wait.label}` : "Resend email"}
           </button>
         )}
-        <a className="btn quiet" href={href.signup()}>Change email</a>
+        <a className="btn quiet" href={href.signup(next)}>Change email</a>
       </div>
     </AuthFrame>
   );

@@ -10,7 +10,7 @@ import { Questie } from "../questie/Questie";
 import { go, href } from "../ui/route";
 import { getJob, loadCourses, loadDraft, markJobSeen, saveDraft } from "./api";
 import { ACTION, useStartBuild } from "./BuildScreen";
-import { initialView, reduce, steps, STEP_LABEL, type JobView, type StepState } from "./machine";
+import { failReason, initialView, reduce, steps, STEP_LABEL, type JobView, type StepState } from "./machine";
 import "../answers/answers.css";
 import "../screens/screens.css";
 import "./builder.css";
@@ -101,6 +101,7 @@ export function JobScreen({ id }: { id: string }) {
   const current = ss.find((s) => s.state === "current");
   const cost = job?.mode && me?.credits ? me.credits.costs[ACTION[job.mode]] : null;
   const err = job?.error;
+  const reason = failReason(err?.code);
   const refund = !err?.refunded ? null : err.free ? "Free course restored" : cost !== null ? `${cost} credits refunded` : null;
   const edit = () => { if (draft) saveDraft(null, draft); go(href.build()); };
 
@@ -128,6 +129,7 @@ export function JobScreen({ id }: { id: string }) {
         {job?.status === "failed" && (
           <>
             <h2 ref={result} tabIndex={-1}>Build failed</h2>
+            {reason && <p className="job-stats">{reason}</p>}
             {refund && <p><span className="pill pill-ok">{refund}</span></p>}
             <div className="job-actions">
               {draft && <CostButton action={ACTION[draft.req.mode]} label="Try again" free={!!err?.free} busy={busy} onPress={() => start(draft.req, draft.files)} />}

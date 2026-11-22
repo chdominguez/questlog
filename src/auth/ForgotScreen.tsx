@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { href } from "../ui/route";
 import { authClient } from "./client";
 import { AuthFrame, Field } from "./parts";
 import { attempt, authMessage, validEmail } from "./messages";
@@ -31,6 +32,7 @@ export function ForgotScreen() {
         {sent && <p className="wa-notice" role="status">Link sent</p>}
         <button type="submit" className="btn" disabled={busy}>Send link</button>
       </form>
+      <p className="auth-links">Have an account? <a href={href.signin()}>Sign in</a></p>
     </AuthFrame>
   );
 }

@@ -32,6 +32,10 @@
   --bad: #d6336c;
   --gold: #a87100;
   --info: #5f3dc4;
+  /* State as small text: AA on --bg, --surface and --sticky */
+  --ok-ink: #237032;
+  --bad-ink: #b02a5b;
+  --gold-ink: #8a5d00;
   /* Notebook */
   --mark: rgb(132 232 96 / .5);     /* highlighter */
   --rule: rgb(28 111 214 / .11);    /* ruled lines */
@@ -74,6 +78,9 @@
     --bad: #ff8aac;
     --gold: #ffc94a;
     --info: #b9a8ff;
+    --ok-ink: #7fdc8e;
+    --bad-ink: #ff8aac;
+    --gold-ink: #ffc94a;
     --mark: rgb(140 235 100 / .26);
     --rule: rgb(127 181 255 / .07);
     --margin: rgb(255 138 172 / .25);

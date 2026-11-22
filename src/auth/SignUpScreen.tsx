@@ -13,7 +13,7 @@ export const signupDraft = (): { name: string; email: string } => {
 
 type Errors = Partial<Record<"name" | "email" | "password", string>>;
 
-export function SignUpScreen() {
+export function SignUpScreen({ next }: { next?: string }) {
   const [draft] = useState(signupDraft);
   const [name, setName] = useState(draft.name);
   const [email, setEmail] = useState(draft.email);
@@ -34,7 +34,7 @@ export function SignUpScreen() {
     if (first) return refs[first].current?.focus();
     setBusy(true);
     try { sessionStorage.setItem(DRAFT, JSON.stringify({ name: name.trim(), email: email.trim() })); } catch { /* storage off */ }
-    const r = await attempt(() => authClient.signUp.email({ name: name.trim(), email: email.trim(), password, callbackURL: "/#/welcome" }));
+    const r = await attempt(() => authClient.signUp.email({ name: name.trim(), email: email.trim(), password, callbackURL: `/${next ?? href.welcome()}` }));
     if (r.error !== false) {
       setBusy(false);
       const msg = authMessage(r.error, "Couldn't create account");
@@ -43,9 +43,9 @@ export function SignUpScreen() {
       return setError(msg);
     }
     // No token means the server wants the email verified first.
-    if (!(r.data as { token?: string | null } | null)?.token) return go(href.verify());
+    if (!(r.data as { token?: string | null } | null)?.token) return go(href.verify(next));
     await loadMe();
-    go(href.welcome());
+    go(next ?? href.welcome());
   }
 
   const set = (k: keyof Errors, f: (v: string) => void) => (ev: React.ChangeEvent<HTMLInputElement>) => { f(ev.target.value); setErrors((x) => ({ ...x, [k]: undefined })); };
@@ -57,10 +57,10 @@ export function SignUpScreen() {
         <Field label="Email" type="email" autoComplete="email" inputMode="email" inputRef={refs.email} value={email} error={errors.email} onChange={set("email", setEmail)} />
         <PasswordField label="Password" autoComplete="new-password" hint="8+ characters" inputRef={refs.password} value={password} error={errors.password} onChange={set("password", setPassword)} />
         {error && <p className="auth-err" role="alert">{error}</p>}
-        {error === "Email already registered" && <a className="btn quiet" href={href.signin()}>Sign in</a>}
+        {error === "Email already registered" && <a className="btn quiet" href={href.signin(next)}>Sign in</a>}
         <button type="submit" className="btn" disabled={busy}>{busy ? "Creating…" : "Create account"}</button>
       </form>
-      <p className="auth-links">Have an account? <a href={href.signin()}>Sign in</a></p>
+      <p className="auth-links">Have an account? <a href={href.signin(next)}>Sign in</a></p>
       <Legal />
     </AuthFrame>
   );

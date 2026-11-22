@@ -79,7 +79,7 @@ export function MockScreen({ course }: { course: Course }) {
       {phase === "intro" && (
         !ai ? <p className="scr-empty">No grader</p> : questions.length ? (
           <div className="mock-bar">
-            <span>{questions.length} questions · {mmss(seconds)}</span>
+            <span>{questions.length} {questions.length === 1 ? "question" : "questions"} · {mmss(seconds)}</span>
             {isDemo
               ? <button type="button" className="btn" onClick={start}>Start</button>
               : <CostButton action="mock" label="Start" busy={starting} busyLabel="Starting…" onPress={start} />}

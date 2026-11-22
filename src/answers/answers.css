@@ -46,8 +46,8 @@
 .gv-bad h4 { color: var(--bad); }
 .gv-improved p { margin: 0; white-space: pre-wrap; }
 .gv-fixes ul { margin: 0; padding-left: 1.2em; display: grid; gap: var(--s-1); }
-.gv-quote { color: var(--bad); }
-.gv-fix { color: var(--ok); }
+.gv-quote { color: var(--bad-ink); }
+.gv-fix { color: var(--ok-ink); }
 .ring { flex: none; }
 .ring-track { fill: none; stroke: var(--raise); stroke-width: 3.2; }
 .ring-bar { fill: none; stroke-width: 3.2; stroke-linecap: round; transition: stroke-dasharray .6s ease-out; }

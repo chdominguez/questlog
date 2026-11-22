@@ -25,8 +25,8 @@ export function Gate({ children }: { children: ReactNode }) {
   if (isDemo) return <>{children}</>;
   switch (r.name) {
     case "signin": return <main className="wrap"><SignInScreen next={r.next} /></main>;
-    case "signup": return <main className="wrap"><SignUpScreen /></main>;
-    case "verify": return <main className="wrap"><VerifyScreen /></main>;
+    case "signup": return <main className="wrap"><SignUpScreen next={r.next} /></main>;
+    case "verify": return <main className="wrap"><VerifyScreen next={r.next} /></main>;
     case "forgot": return <main className="wrap"><ForgotScreen /></main>;
     case "reset": return <main className="wrap"><ResetScreen token={r.token} /></main>;
   }

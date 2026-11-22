@@ -23,6 +23,7 @@ export function SignInScreen({ next }: { next?: string }) {
   const [status, setStatus] = useState("");
   const [emailError, setEmailError] = useState("");
   const pass = useRef<HTMLInputElement>(null);
+  const mail = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const e = takeUrlError();
@@ -33,7 +34,9 @@ export function SignInScreen({ next }: { next?: string }) {
 
   async function submit() {
     if (busy) return;
-    setBusy(true); setError(""); setStatus(""); setEmailError("");
+    setError(""); setStatus(""); setEmailError("");
+    if (!validEmail(email)) { setEmailError("Enter a valid email"); mail.current?.focus(); return; }
+    setBusy(true);
     const r = await attempt(() => authClient.signIn.email({ email: email.trim(), password }));
     if (r.error !== false) {
       setBusy(false);
@@ -65,7 +68,7 @@ export function SignInScreen({ next }: { next?: string }) {
     <AuthFrame title="Sign in">
       <SocialButtons next={next} onError={setError} />
       <form className="auth-form" noValidate onSubmit={(e) => { e.preventDefault(); void submit(); }}>
-        <Field label="Email" type="email" autoComplete="email" inputMode="email" value={email} error={emailError}
+        <Field label="Email" type="email" autoComplete="email" inputMode="email" inputRef={mail} value={email} error={emailError}
           onChange={(e) => { setEmail(e.target.value); setEmailError(""); }} />
         <PasswordField label="Password" autoComplete="current-password" enterKeyHint="go" inputRef={pass} value={password}
           onChange={(e) => setPassword(e.target.value)} />
@@ -77,7 +80,7 @@ export function SignInScreen({ next }: { next?: string }) {
       </form>
       <div className="auth-links">
         <a href={href.forgot()}>Forgot password?</a>
-        <a href={href.signup()}>Create account</a>
+        <a href={href.signup(next)}>Create account</a>
       </div>
       <Legal />
     </AuthFrame>

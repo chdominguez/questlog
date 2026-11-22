@@ -19,7 +19,6 @@ import { q } from "./course/registry";
 import { Gate } from "./auth/Gate";
 import { useSession } from "./auth/session";
 import { TopUpSheet } from "./billing/TopUpSheet";
-import { LowBalance } from "./billing/LowBalance";
 import { PlansScreen } from "./billing/PlansScreen";
 import { BillingDoneScreen } from "./billing/BillingDoneScreen";
 import { CreditsScreen } from "./billing/CreditsScreen";
@@ -76,7 +75,6 @@ export function App() {
       {r.name === "job" && <JobScreen id={r.id} />}
       {r.name === "library" && <LibraryScreen />}
       {r.name === "adminReview" && (admin ? <QueueScreen /> : <NotFound />)}
-      <LowBalance />
       <TopUpSheet />
     </main>
     </Gate>

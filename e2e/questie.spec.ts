@@ -186,6 +186,9 @@ test("delete account", async () => {
   await d.getByRole("button", { name: "Delete account" }).click();
   await expect(page).toHaveURL(/#\/signin/);
   await snap(page, "deleted");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click(); // empty form: email error under Email
+  await expect(page.getByLabel("Email")).toBeFocused();
+  await expect(page.getByLabel("Email")).toHaveAttribute("aria-invalid", "true");
   expect(await page.evaluate(async () => (await fetch("/api/me")).status)).toBe(401);
 });
 

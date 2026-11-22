@@ -56,6 +56,13 @@ export const STEP_LABEL: Record<Stage, string> = {
   read: "Reading files", research: "Researching", outline: "Outline", write: "Writing levels", validate: "Checking", fix: "Checking", save: "Saving",
 };
 
+// Why a build failed or didn't start, as one line; null when the user can't act on it.
+const FAIL_REASON: Record<string, string> = {
+  source_unreachable: "Couldn't fetch this URL", too_few_sources: "Not enough sources", build_rejected: "Topic not supported",
+  not_configured: "Builder offline", rate_limited: "Too many builds, try later",
+};
+export const failReason = (code?: string) => (code && Object.hasOwn(FAIL_REASON, code) ? FAIL_REASON[code] : null);
+
 // ---- build form ----
 
 export type Mode = BuildRequest["mode"];

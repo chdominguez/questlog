@@ -7,7 +7,7 @@ import { CostButton } from "../billing/CostButton";
 import { Hud } from "../engine/Hud";
 import { go, href } from "../ui/route";
 import { listJobs, loadDraft, saveDraft, startBuild, uploadSource } from "./api";
-import { checkForm, emptyForm, fileProblem, toRequest, type FileRow, type Form, type FormError, type Mode } from "./machine";
+import { checkForm, emptyForm, failReason, fileProblem, toRequest, type FileRow, type Form, type FormError, type Mode } from "./machine";
 import "../answers/answers.css";
 import "../screens/screens.css";
 import "../screens/profile.css";
@@ -37,7 +37,7 @@ export function useStartBuild() {
       const code = e instanceof ApiError ? e.body.code : undefined;
       if (code === "topic_too_broad") setError({ message: "Topic too broad", suggestions: (e as ApiError).body.suggestions as string[] ?? [] });
       else if (code === "job_limit" && typeof (e as ApiError).body.jobId === "string") go(href.job((e as ApiError).body.jobId as string));
-      else if (code !== "insufficient_credits") setError({ message: "Couldn't start build" });
+      else if (code !== "insufficient_credits") setError({ message: failReason(code) ?? "Couldn't start build" });
       setBusy(false);
     }
   }
