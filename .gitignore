@@ -23,3 +23,4 @@ ios/App/App/GoogleService-Info.plist
 dist-e2e
 docs/design/review-ux/
 .vitest/
+docs/design/qa/
