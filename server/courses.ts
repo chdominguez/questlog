@@ -16,6 +16,9 @@ export interface CourseRow {
 
 /** Course rows with the author's name; append WHERE/ORDER. */
 export const COURSE_SELECT = `SELECT c.*, u.name AS author FROM user_courses c LEFT JOIN "user" u ON u.id = c.owner_id`;
+/** The same without the course JSON, for lists. Author is the Better Auth user name (table "user", migration 0004). */
+export const COURSE_META = `SELECT c.id, c.owner_id, c.title, c.lang, c.summary, c.status, c.mode, c.levels, c.sources, c.version, c.review_note,
+  c.updated_at, c.published_at, u.name AS author FROM user_courses c LEFT JOIN "user" u ON u.id = c.owner_id`;
 
 export const toMeta = (r: CourseRow, user: string): UserCourseMeta => ({
   id: r.id, title: r.title, lang: r.lang, summary: r.summary, status: r.status, mine: r.owner_id === user, author: r.author ?? "",
@@ -26,7 +29,7 @@ export const toMeta = (r: CourseRow, user: string): UserCourseMeta => ({
 export const canRead = (r: Pick<CourseRow, "owner_id" | "status">, user: string) => r.owner_id === user || r.status !== "private";
 
 const cache = new Map<string, Course>(); // parsed course by id@version
-function parsed(r: CourseRow): Course {
+function parsed(r: Pick<CourseRow, "id" | "version" | "json">): Course {
   const key = `${r.id}@${r.version}`;
   let c = cache.get(key);
   if (!c) {
@@ -40,8 +43,12 @@ function parsed(r: CourseRow): Course {
 export async function findCourse(db: Db, id: string, user: string): Promise<Course | null> {
   const s = COURSES.find((c) => c.id === id);
   if (s) return s;
-  const r = await db.prepare(`${COURSE_SELECT} WHERE c.id = ?`).bind(id).first<CourseRow>();
-  return r && canRead(r, user) ? parsed(r) : null;
+  const m = await db.prepare("SELECT owner_id, status, version FROM user_courses WHERE id = ?").bind(id).first<Pick<CourseRow, "owner_id" | "status" | "version">>();
+  if (!m || !canRead(m, user)) return null;
+  const hit = cache.get(`${id}@${m.version}`); // the JSON is read only on a miss
+  if (hit) return hit;
+  const r = await db.prepare("SELECT id, version, json FROM user_courses WHERE id = ?").bind(id).first<Pick<CourseRow, "id" | "version" | "json">>();
+  return r && parsed(r);
 }
 
 /** `u<10 base36>-<slug>`: matches COURSE_DIR, and static ids never take this shape. */
@@ -112,7 +119,7 @@ export function coursesRoutes(deps: Deps): Hono<App> {
     .get("/courses", async (c) => {
       const user = c.get("user");
       const { results } = await c.env.DB.prepare(
-        `${COURSE_SELECT} WHERE c.owner_id = ?1 OR (c.status != 'private' AND c.id IN (SELECT course_id FROM course_opens WHERE user_id = ?1))
+        `${COURSE_META} WHERE c.owner_id = ?1 OR (c.status != 'private' AND c.id IN (SELECT course_id FROM course_opens WHERE user_id = ?1))
          ORDER BY c.updated_at DESC`,
       ).bind(user).all<CourseRow>();
       return c.json(results.map((r) => toMeta(r, user)));

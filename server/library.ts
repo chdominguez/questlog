@@ -2,7 +2,7 @@ import { Hono, type Context } from "hono";
 import type { CourseStatus, Flag, FlagReason, ReviewQueue, UserCourseMeta } from "../shared/api-types";
 import { str, type App, type Deps } from "./api";
 import { requireAdmin } from "./admin";
-import { findCourse } from "./courses";
+import { COURSE_META, findCourse } from "./courses";
 import type { Db } from "./db";
 import { err } from "./errors";
 
@@ -12,9 +12,7 @@ interface Row {
 }
 interface FlagRow { id: string; course_id: string; item_id: string | null; reason: FlagReason; text: string | null; created_at: string }
 
-// Author is the Better Auth user name (table "user", migration 0004).
-const META = `SELECT c.id, c.owner_id, c.title, c.lang, c.summary, c.status, c.mode, c.levels, c.sources, c.version, c.review_note,
-  c.updated_at, c.published_at, u.name AS author FROM user_courses c LEFT JOIN "user" u ON u.id = c.owner_id`;
+const META = COURSE_META;
 
 const toMeta = (r: Row, user: string): UserCourseMeta => ({
   id: r.id, title: r.title, lang: r.lang, summary: r.summary, status: r.status, mine: r.owner_id === user, author: r.author ?? "",
