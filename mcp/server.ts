@@ -15,12 +15,15 @@ const guide = resolve(import.meta.dirname, "../plugins/questie/skills/questie-co
 
 async function api(path: string) {
   const base = process.env.QUESTIE_URL ?? process.env.QUESTLOG_URL;
-  if (!base) return text("Notes live in the deployed Questie app. Set QUESTIE_URL (the app's base URL) and, if a login proxy sits in front, QUESTLOG_HEADERS (JSON of the header it trusts, e.g. {\"x-auth-request-email\":\"me@x.com\"}) in this MCP server's env, then restart it.", true);
+  if (!base) return text("Notes live in the deployed Questie app. Set QUESTIE_URL (the app's base URL) and QUESTIE_TOKEN (an MCP token from Profile) in this MCP server's env, then restart it.", true);
+  // QUESTLOG_HEADERS is kept one release for login-proxy installs.
   const headers: Record<string, string> = JSON.parse(process.env.QUESTLOG_HEADERS || "{}");
+  const token = process.env.QUESTIE_TOKEN ?? process.env.QUESTLOG_TOKEN;
+  if (token) headers["x-api-key"] = token;
   try {
     // A login proxy answers a missing or bad credential with a redirect to its login page, so don't follow it.
     const res = await fetch(new URL(path, base), { headers, redirect: "manual" });
-    if (!res.ok) return text(`GET ${path} failed with ${res.status}.${res.status < 400 || res.status === 401 || res.status === 403 ? " Check QUESTLOG_HEADERS." : ""}`, true);
+    if (!res.ok) return text(`GET ${path} failed with ${res.status}.${res.status < 400 || res.status === 401 || res.status === 403 ? " Check QUESTIE_TOKEN." : ""}`, true);
     return { ok: true as const, data: await res.json() };
   } catch (e) {
     return text(`GET ${new URL(path, base)} failed: ${e instanceof Error ? e.message : e}. Check QUESTIE_URL.`, true);

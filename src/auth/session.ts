@@ -2,8 +2,8 @@ import { useSyncExternalStore } from "react";
 import type { Me } from "../../shared/api-types";
 import { ApiError, call } from "../api";
 import { startSync } from "../engine/sync";
-
-// Minimal session store until WP3 (auth).
+import { isNative } from "../platform";
+import { setToken } from "./token";
 
 export type SessionStatus = "loading" | "signedOut" | "signedIn" | "offline";
 export interface Session { status: SessionStatus; me?: Me }
@@ -20,15 +20,16 @@ const subscribe = (f: () => void) => { listeners.add(f); return () => listeners.
 export const useSession = () => useSyncExternalStore(subscribe, () => state);
 export const getMe = () => state.me;
 
-/** GET /me: 200 signs in and starts sync, 401 signs out, a network error keeps the cached account offline. */
+/** GET /me: 200 signs in and starts sync, 401 signs out, a network or server error keeps the cached account offline. */
 export async function loadMe(): Promise<Session> {
   try {
     const me = await call<Me>("/me");
     cache(me);
     set({ status: "signedIn", me });
     startSync(me);
+    if (isNative) void import("../native/purchases").then((p) => p.configure(me.user)).catch(() => {});
   } catch (e) {
-    if (e instanceof ApiError) { cache(undefined); set({ status: "signedOut" }); }
+    if (e instanceof ApiError && e.status === 401) { cache(undefined); set({ status: "signedOut" }); }
     else set(state.me ? { status: "offline", me: state.me } : { status: "signedOut" });
   }
   return state;
@@ -45,4 +46,12 @@ export function markSignedOut() {
   if (state.status === "signedOut") return;
   cache(undefined);
   set({ status: "signedOut" });
+}
+
+/** Better Auth sign-out, then forget the token and cached account. Local progress stays; the next sign-in's user switch decides. */
+export async function signOut() {
+  await import("./client").then(({ authClient }) => authClient.signOut()).catch(() => {});
+  await setToken(null);
+  if (isNative) await import("../native/purchases").then((p) => p.logOut()).catch(() => {});
+  markSignedOut();
 }
