@@ -53,19 +53,21 @@ export function libraryRoutes(deps: Deps): Hono<App> {
     return res ?? c.json(await metaOf(c.env.DB, id, user));
   };
 
-  /** Admin decision on a pending course. */
+  /** Admin decision on a pending course, for the version the admin reviewed. */
   const review = (to: "public" | "rejected") => async (c: Context<App>) => {
     let note: string | null = null;
+    const b = await c.req.json().catch(() => undefined);
+    if (!Number.isSafeInteger(b?.version)) return err(c, 400, "invalid_request", {}, "version required");
     if (to === "rejected") {
-      const b = await c.req.json().catch(() => undefined);
       if (!str(b?.note, 500, 1)) return err(c, 400, "invalid_request", {}, "note must be 1-500 characters");
       note = b.note.trim();
     }
     const id = c.req.param("id")!;
     return c.env.DB.tx((q) => {
-      const row = q.get<{ status: CourseStatus }>("SELECT status FROM user_courses WHERE id = ?", id);
+      const row = q.get<{ status: CourseStatus; version: number }>("SELECT status, version FROM user_courses WHERE id = ?", id);
       if (!row) return err(c, 404, "not_found");
       if (row.status !== "pending") return illegal(c, row.status);
+      if (row.version !== b.version) return err(c, 409, "invalid_request", {}, "Course changed since review");
       const t = now();
       q.run("UPDATE user_courses SET status = ?, review_note = ?, reviewed_by = ?, reviewed_at = ?, published_at = ? WHERE id = ?",
         to, note, c.get("user"), t, to === "public" ? t : null, id);

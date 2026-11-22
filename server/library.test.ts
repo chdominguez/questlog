@@ -66,7 +66,7 @@ test("illegal transitions are 409; other users get 403, or 404 on a private cour
 
 test("rejected courses can be submitted again; publish clears the note", async () => {
   add("ua", "ann", "pending");
-  expect((await req("boss", "/admin/courses/ua/reject", "POST", { note: "Wrong facts" })).status).toBe(204);
+  expect((await req("boss", "/admin/courses/ua/reject", "POST", { version: 1, note: "Wrong facts" })).status).toBe(204);
   expect((await (await req("ann", "/courses/ua/share", "POST")).json())).toMatchObject({ code: "invalid_request" });
   const res = await req("ann", "/courses/ua/publish", "POST");
   expect(await res.json()).toMatchObject({ status: "pending", reviewNote: null });
@@ -75,7 +75,7 @@ test("rejected courses can be submitted again; publish clears the note", async (
 test("admin routes are 403 for non-admins", async () => {
   add("ua", "ann", "pending");
   for (const [path, method] of [["/admin/review", "GET"], ["/admin/courses/ua/approve", "POST"], ["/admin/courses/ua/reject", "POST"], ["/admin/flags/x/resolve", "POST"]]) {
-    expect((await req("ann", path, method, method === "POST" ? { note: "n" } : undefined)).status).toBe(403);
+    expect((await req("ann", path, method, method === "POST" ? { version: 1, note: "n" } : undefined)).status).toBe(403);
   }
   env = { ...env, ADMIN_EMAILS: ["ann@x.com"] };
   const unverified = createApi({ courses: [course], session: async () => ({ ...account("ann"), emailVerified: false }) });
@@ -86,14 +86,19 @@ test("admin routes are 403 for non-admins", async () => {
 test("approve and reject move only pending courses; reject needs a note", async () => {
   add("ua", "ann", "pending");
   add("ub", "ann", "link");
-  expect((await req("boss", "/admin/courses/ub/approve", "POST")).status).toBe(409);
-  expect((await req("boss", "/admin/courses/nope/approve", "POST")).status).toBe(404);
-  for (const note of [undefined, "", " ", "x".repeat(501)]) expect((await req("boss", "/admin/courses/ua/reject", "POST", { note })).status).toBe(400);
-  expect((await req("boss", "/admin/courses/ua/approve", "POST")).status).toBe(204);
+  const v1 = { version: 1 };
+  expect((await req("boss", "/admin/courses/ub/approve", "POST", v1)).status).toBe(409);
+  expect((await req("boss", "/admin/courses/nope/approve", "POST", v1)).status).toBe(404);
+  for (const note of [undefined, "", " ", "x".repeat(501)]) expect((await req("boss", "/admin/courses/ua/reject", "POST", { ...v1, note })).status).toBe(400);
+  expect((await req("boss", "/admin/courses/ua/approve", "POST")).status).toBe(400);
+  db.sqlite.prepare("UPDATE user_courses SET version = 2 WHERE id = 'ua'").run(); // the owner edited it after the admin opened it
+  expect((await req("boss", "/admin/courses/ua/approve", "POST", v1)).status).toBe(409);
+  expect(status("ua")).toBe("pending");
+  expect((await req("boss", "/admin/courses/ua/approve", "POST", { version: 2 })).status).toBe(204);
   const row = db.sqlite.prepare("SELECT status, published_at, reviewed_by, reviewed_at FROM user_courses WHERE id = 'ua'").get() as Record<string, string>;
   expect(row).toMatchObject({ status: "public", reviewed_by: "boss" });
   expect(row.published_at).toBe(row.reviewed_at);
-  expect((await req("boss", "/admin/courses/ua/reject", "POST", { note: "late" })).status).toBe(409);
+  expect((await req("boss", "/admin/courses/ua/reject", "POST", { version: 2, note: "late" })).status).toBe(409);
 });
 
 test("library lists public courses only, newest approval first, with the author", async () => {

@@ -49,8 +49,9 @@ export const uploadVersion = (id: string, course: unknown) =>
 export const listLibrary = () => call<UserCourseMeta[]>("/library");
 export const sendFlag = (f: FlagInput) => post<void>("/flags", f);
 export const getReview = () => call<ReviewQueue>("/admin/review");
-export const approve = (id: string) => post<void>(`/admin/courses/${encodeURIComponent(id)}/approve`);
-export const reject = (id: string, note: string) => post<void>(`/admin/courses/${encodeURIComponent(id)}/reject`, { note });
+/** Approve or reject the version the admin reviewed; a course edited since then is 409. */
+export const approve = (m: Pick<UserCourseMeta, "id" | "version">) => post<void>(`/admin/courses/${encodeURIComponent(m.id)}/approve`, { version: m.version });
+export const reject = (m: Pick<UserCourseMeta, "id" | "version">, note: string) => post<void>(`/admin/courses/${encodeURIComponent(m.id)}/reject`, { version: m.version, note });
 export const resolveFlag = (id: string) => post<void>(`/admin/flags/${encodeURIComponent(id)}/resolve`);
 
 export const STATUS_LABEL: Record<CourseStatus, string> = {

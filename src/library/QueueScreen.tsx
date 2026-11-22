@@ -27,7 +27,7 @@ export function QueueScreen() {
   const [error, setError] = useState(false);
   const [rejecting, setRejecting] = useState<UserCourseMeta | null>(null);
   // Approvals wait UNDO_MS before the request; leaving the screen sends them at once.
-  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const timers = useRef(new Map<string, { m: UserCourseMeta; t: ReturnType<typeof setTimeout> }>());
   const [held, setHeld] = useState<UserCourseMeta[]>([]);
 
   const load = useCallback(() => {
@@ -35,7 +35,7 @@ export function QueueScreen() {
     getReview().then(setQueue, () => setFailed(true));
   }, []);
   useEffect(load, [load]);
-  useEffect(() => () => { for (const [id, t] of timers.current) { clearTimeout(t); approve(id).catch(() => {}); } }, []);
+  useEffect(() => () => { for (const { m, t } of timers.current.values()) { clearTimeout(t); approve(m).catch(() => {}); } }, []);
 
   const drop = (id: string) => setQueue((q) => q && { ...q, pending: q.pending.filter((m) => m.id !== id) });
   const restore = (m: UserCourseMeta) => setQueue((q) => q && { ...q, pending: [m, ...q.pending.filter((x) => x.id !== m.id)] });
@@ -44,14 +44,14 @@ export function QueueScreen() {
     setError(false);
     drop(m.id);
     setHeld((h) => [...h, m]);
-    timers.current.set(m.id, setTimeout(() => {
+    timers.current.set(m.id, { m, t: setTimeout(() => {
       timers.current.delete(m.id);
       setHeld((h) => h.filter((x) => x.id !== m.id));
-      approve(m.id).catch(() => { restore(m); setError(true); });
-    }, UNDO_MS));
+      approve(m).catch(() => { restore(m); setError(true); });
+    }, UNDO_MS) });
   };
   const undo = (m: UserCourseMeta) => {
-    clearTimeout(timers.current.get(m.id));
+    clearTimeout(timers.current.get(m.id)?.t);
     timers.current.delete(m.id);
     setHeld((h) => h.filter((x) => x.id !== m.id));
     restore(m);
@@ -129,7 +129,7 @@ function RejectDialog({ course, onClose, onDone }: { course: UserCourseMeta; onC
   const [error, setError] = useState(false);
   const send = async () => {
     setBusy(true); setError(false);
-    try { await reject(course.id, note.trim()); onDone(); } catch { setError(true); setBusy(false); }
+    try { await reject(course, note.trim()); onDone(); } catch { setError(true); setBusy(false); }
   };
   return (
     <Dialog title="Reject course?" onClose={onClose}>
