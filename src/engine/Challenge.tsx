@@ -26,6 +26,7 @@ type Answer = (correct: boolean) => void;
 export const KICKER: Record<Challenge["type"], string> = {
   quiz: "Quiz", multi: "Select all", order: "Put in order", bug: "Find the bug", cloze: "Fill the blanks", written: "Written answer", kata: "Kata", match: "Match", sort: "Sort", flashcard: "Flashcard",
 };
+export const kicker = (c: Challenge) => (c.type === "multi" && c.style === "truefalse" ? "True or false" : KICKER[c.type]);
 
 /** Records a result in the store, plays feedback sound and returns XP gained. */
 function report(c: Challenge, result: Result, easy?: boolean): number {
@@ -40,9 +41,9 @@ function report(c: Challenge, result: Result, easy?: boolean): number {
 
 export { shuffled };
 
-function Quiz({ c, done, onAnswer }: { c: Of<"quiz">; done: boolean; onAnswer: Answer }) {
+function Quiz({ c, done, onAnswer, fixed = false }: { c: Of<"quiz">; done: boolean; onAnswer: Answer; fixed?: boolean }) {
   // Authored content keeps the right answer first; shuffle per attempt and map positions back.
-  const [order] = useState(() => permutation(c.options.length));
+  const [order] = useState(() => (fixed ? c.options.map((_, i) => i) : permutation(c.options.length)));
   const [pick, setPick] = useState<number | null>(null); // original option index
   const choose = (pos: number) => {
     if (done || pick !== null) return;
@@ -76,7 +77,7 @@ function Quiz({ c, done, onAnswer }: { c: Of<"quiz">; done: boolean; onAnswer: A
 }
 
 function Multi({ c, done, onAnswer }: { c: Of<"multi">; done: boolean; onAnswer: (r: Result) => void }) {
-  const [order] = useState(() => (c.style === "truefalse" ? c.options.map((_, i) => i) : permutation(c.options.length)));
+  const [order] = useState(() => permutation(c.options.length));
   const [sel, setSel] = useState<number[]>([]); // original option indexes
   const toggle = (oi: number) => setSel((s) => (done ? s : s.includes(oi) ? s.filter((x) => x !== oi) : [...s, oi]));
   const check = () => onAnswer(gradeMulti(c.answers, sel));
@@ -300,7 +301,7 @@ function Cloze({ c, done, onResult }: { c: Of<"cloze">; done: boolean; onResult:
     if (c.bank) {
       return (
         <button key={i} type="button" className={`blank ${state}${active === i ? " on" : ""}`} disabled={done}
-          onClick={() => (vals[i] ? set(i, "") : setActive(i))}>{vals[i] || "\u00a0"}</button>
+          aria-label={vals[i] ? undefined : `Blank ${i + 1}`} onClick={() => (vals[i] ? set(i, "") : setActive(i))}>{vals[i] || "\u00a0"}</button>
       );
     }
     return (
@@ -338,7 +339,9 @@ export function ChallengeBody({ c, done, onResult }: { c: Challenge; done: boole
   const onAnswer: Answer = (ok) => onResult(ok ? "ok" : "wrong");
   switch (c.type) {
     case "quiz": return <Quiz c={c} done={done} onAnswer={onAnswer} />;
-    case "multi": return <Multi c={c} done={done} onAnswer={onResult} />;
+    case "multi": return c.style === "truefalse" // one answer, fixed True/False order
+      ? <Quiz c={{ ...c, type: "quiz", answer: c.answers[0] }} fixed done={done} onAnswer={onAnswer} />
+      : <Multi c={c} done={done} onAnswer={onResult} />;
     case "order": return <Order c={c} done={done} onAnswer={onAnswer} />;
     case "match": return <Match c={c} done={done} onResult={onResult} />;
     case "sort": return <Sort c={c} done={done} onResult={onResult} />;
@@ -403,7 +406,7 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
     <article className={`qcard${fx ? ` fx-${fx.kind}` : ""}`}>
       {fx && fx.xp > 0 && <span key={fx.n} className="float-xp" aria-hidden="true">+{fx.xp} XP</span>}
       <div className="card-head">
-        <div className="qtype">{KICKER[c.type]}</div>
+        <div className="qtype">{kicker(c)}</div>
         <ReportButton courseId={courseOf(c.id)} itemId={c.id} />
       </div>
       {c.type !== "written" && <Md className="qtext" text={c.prompt} />}
