@@ -1,5 +1,5 @@
 {
   "mcpServers": {
-    "questlog": { "command": "npx", "args": ["tsx", "mcp/server.ts"] }
+    "questie": { "command": "npx", "args": ["tsx", "mcp/server.ts"] }
   }
 }

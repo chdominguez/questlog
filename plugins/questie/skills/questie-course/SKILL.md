@@ -1,11 +1,11 @@
 ---
-name: questlog-course
-description: Creates, extends or ports a course for Questlog, the gamified learning app (React + TypeScript), in a Questlog checkout. Covers where course files go (public courses/ or private courses-private/), course.ts with defineCourse or course.json, levels and katas split into files, step-through traces with at(), code highlights with hl(), request flows, inline SVG art rules, the grader persona, stable ids, building from a topic, from the user's notes or from a real repo, and the validate-test-run loop. Use when the user asks to "make a Questlog course", "add a level", "add a kata", "turn my notes into a course", "port this course to Questlog", "fix course validation errors", or edits files under courses/ or courses-private/.
+name: questie-course
+description: Creates, extends or ports a course for Questie, the gamified learning app (React + TypeScript), in a Questie checkout. Covers where course files go (public courses/ or private courses-private/), course.ts with defineCourse or course.json, levels and katas split into files, step-through traces with at(), code highlights with hl(), request flows, inline SVG art rules, the grader persona, stable ids, building from a topic, from the user's notes or from a real repo, and the validate-test-run loop. Use when the user asks to "make a Questie course", "add a level", "add a kata", "turn my notes into a course", "port this course to Questie", "fix course validation errors", or edits files under courses/ or courses-private/.
 ---
 
-# Questlog course authoring
+# Questie course authoring
 
-**Load the `quest-design` skill first** and follow its workflow (objectives → levels → cards → challenges → verify → self-review). This skill covers only how that design becomes valid Questlog files.
+**Load the `quest-design` skill first** and follow its workflow (objectives → levels → cards → challenges → verify → self-review). This skill covers only how that design becomes valid Questie files.
 
 ## Capabilities at a glance
 
@@ -15,7 +15,7 @@ description: Creates, extends or ports a course for Questlog, the gamified learn
 
 ## Before you start
 
-- Confirm you are in a Questlog checkout: `src/course/schema.ts` and `scripts/validate.ts` exist. If `node_modules` is missing, run `npm install`.
+- Confirm you are in a Questie checkout: `src/course/schema.ts` and `scripts/validate.ts` exist. If `node_modules` is missing, run `npm install`.
 - `src/course/schema.ts` is the contract. Field reference: [references/schema.md](references/schema.md). A complete annotated course using every block and challenge type: [references/example.md](references/example.md).
 - Read one existing course to match its style. `courses/http-basics/` is a complete public example: split levels and katas, shared `samples.ts`, three flows, a trace, every challenge type.
 
@@ -26,7 +26,7 @@ description: Creates, extends or ports a course for Questlog, the gamified learn
 | Public: general topics, safe to publish | `courses/<id>/` | yes, in this repo |
 | Private: personal notes, employer or project details, interview prep, people | `courses-private/<id>/` | no; gitignored here, often its own repo |
 
-Ask the user which one when it is not obvious. **Anything built from personal material defaults to private.** Never copy personal content into a public course. The private folder can be relocated with the `QUESTLOG_COURSES` env var; both `npm run validate` and the app read it.
+Ask the user which one when it is not obvious. **Anything built from personal material defaults to private.** Never copy personal content into a public course. The private folder can be relocated with the `QUESTIE_COURSES` env var; both `npm run validate` and the app read it.
 
 The app loads `courses/*/course.ts|json` and `<private>/*/course.ts|json`. The folder name should equal the course `id`.
 
@@ -46,17 +46,17 @@ courses/<id>/
   samples.ts            # optional: shared sample data, snippets, traces, flows
 ```
 
-Import helpers and types only from `questlog/authoring`:
+Import helpers and types only from `questie/authoring`:
 
 ```ts
-import { defineCourse, at, hl } from "questlog/authoring";
-import type { Level, Kata, TraceStep, FlowStep } from "questlog/authoring";
+import { defineCourse, at, hl } from "questie/authoring";
+import type { Level, Kata, TraceStep, FlowStep } from "questie/authoring";
 ```
 
 ### course.ts vs course.json
 
 - Write **`course.ts`** with `defineCourse` when you work in the repo: types, `at()`, `hl()`, shared constants, split files.
-- **`course.json`** is the same object serialized. The questlog MCP tool `course_save` writes `course.json`. Do not keep both in one folder. A course must stay JSON-serializable either way: no functions, no `undefined`, no class instances.
+- **`course.json`** is the same object serialized. The questie MCP tool `course_save` writes `course.json`. Do not keep both in one folder. A course must stay JSON-serializable either way: no functions, no `undefined`, no class instances.
 
 ## Ids are forever
 
@@ -145,7 +145,7 @@ Tests are JavaScript that runs after the learner's code and must `return eq(got,
 
 **From a topic.** Use quest-design. Cite specs or official docs in card text and explanations. Use reserved example data (`example.com`, `203.0.113.0/24`, `555-` numbers).
 
-**From the user's notes.** If the questlog MCP server is connected, use `note_search` and `note_get` to find and read the notes; otherwise ask for the files. Quote the notes, keep their terms, and flag where they look wrong instead of silently fixing them. Default to a private course. With MCP you can also `course_list`, `course_get` (read an existing course), `course_validate` and `course_save` (writes `course.json`).
+**From the user's notes.** If the questie MCP server is connected, use `note_search` and `note_get` to find and read the notes; otherwise ask for the files. Quote the notes, keep their terms, and flag where they look wrong instead of silently fixing them. Default to a private course. With MCP you can also `course_list`, `course_get` (read an existing course), `course_validate` and `course_save` (writes `course.json`).
 
 **From a repo or docs.** Read the real code first. Snippets, traces and flows must be **real excerpts** (trimmed with `// …` is fine), with the file path in the card title or text. Payloads in flows should match the real request and response shapes. Never paraphrase code into something that looks real.
 
@@ -159,7 +159,7 @@ Tests are JavaScript that runs after the learner's code and must `return eq(got,
 4. **Validate**: `npm run validate <id>`. Messages name the exact path, e.g. `levels[1].challenges[4].answer: answer 4 but only 3 options`. Fix and repeat until `✓`. A file that throws while loading (bad `at`/`hl` needle, syntax error) is reported as `failed to load: …`.
 5. **Critic pass**: reread every card and item against quest-design's `references/item-checklist.md` as a learner would. Check facts against sources. Fix.
 6. **Test**: `npx vitest run` (it re-validates every course and runs every kata) and `npx tsc --noEmit -p .`.
-7. **Run it**: `npm run dev`, open the course, play one level end to end at phone width (≈390 px) and desktop width: step through every trace and flow, answer a few challenges, open a kata. If you can't open a browser, say so in your report. Use the Unlock all toggle on the map to reach later levels. When scripting a browser (Playwright), set `localStorage.setItem("questlog-v1", '{"unlockAll":true}')` and reload right before opening each level: the app rewrites storage on every answer and when you leave a level. Quiz options are shuffled, so pick answers by text, not position.
+7. **Run it**: `npm run dev`, open the course, play one level end to end at phone width (≈390 px) and desktop width: step through every trace and flow, answer a few challenges, open a kata. If you can't open a browser, say so in your report. Use the Unlock all toggle on the map to reach later levels. When scripting a browser (Playwright), set `localStorage.setItem("questie-v1", '{"unlockAll":true}')` and reload right before opening each level: the app rewrites storage on every answer and when you leave a level. Quiz options are shuffled, so pick answers by text, not position.
 8. Report: files, level outline, validation and test results, and anything you could not verify.
 
 ## Common validation errors

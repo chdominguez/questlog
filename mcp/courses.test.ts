@@ -1,8 +1,8 @@
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { expect, test } from "vitest";
-import { listCourses, saveCourse, type Roots } from "./courses";
+import { afterEach, expect, test, vi } from "vitest";
+import { defaultRoots, listCourses, saveCourse, type Roots } from "./courses";
 
 const course = (id = "t") => ({
   id, title: "T", lang: "en",
@@ -10,7 +10,7 @@ const course = (id = "t") => ({
 });
 
 const roots = (): Roots => {
-  const dir = mkdtempSync(join(tmpdir(), "questlog-mcp-"));
+  const dir = mkdtempSync(join(tmpdir(), "questie-mcp-"));
   return { public: join(dir, "courses"), private: join(dir, "private") };
 };
 
@@ -48,4 +48,13 @@ test("never replaces a course.ts or duplicates an id across roots", () => {
   expect(saveCourse(course(), "private", true, r)).toEqual({ error: expect.stringContaining("TypeScript course") });
   saveCourse(course("p"), "public", false, r);
   expect(saveCourse(course("p"), "private", true, r)).toEqual({ error: expect.stringContaining("already exists as a public course") });
+});
+
+afterEach(() => vi.unstubAllEnvs());
+
+test("private root reads QUESTIE_COURSES, then QUESTLOG_COURSES", () => {
+  vi.stubEnv("QUESTLOG_COURSES", "/old");
+  expect(defaultRoots().private).toBe("/old");
+  vi.stubEnv("QUESTIE_COURSES", "/new");
+  expect(defaultRoots().private).toBe("/new");
 });

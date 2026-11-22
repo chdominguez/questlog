@@ -1,13 +1,13 @@
 ---
 name: quest-design
-description: Designs gamified learning quests on any topic (courses split into levels of short theory cards followed by challenges), grounded in learning science. Covers learning objectives, level structure, theory cards with step-through code traces and request flows, the challenge mix (quiz, multi-select and true/false, ordering, matching, cloze, sorting, flashcards, bug-spotting, written self-explanation, coding katas), media (images, GIFs, video, audio), item-writing rules, gamification that helps rather than hurts, hallucination guards and a final self-review. Use when asked to "design a course", "make a quest", "teach me X as a game", "turn my notes into a course", "write quiz questions", "write challenges or flashcards", "gamify learning", or before writing content for any learning platform, including Questlog.
+description: Designs gamified learning quests on any topic (courses split into levels of short theory cards followed by challenges), grounded in learning science. Covers learning objectives, level structure, theory cards with step-through code traces and request flows, the challenge mix (quiz, multi-select and true/false, ordering, matching, cloze, sorting, flashcards, bug-spotting, written self-explanation, coding katas), media (images, GIFs, video, audio), item-writing rules, gamification that helps rather than hurts, hallucination guards and a final self-review. Use when asked to "design a course", "make a quest", "teach me X as a game", "turn my notes into a course", "write quiz questions", "write challenges or flashcards", "gamify learning", or before writing content for any learning platform, including Questie.
 ---
 
 # Quest design
 
 A quest is a course split into **levels**. Each level is a short run of **theory cards** followed by **challenges**. The learner earns XP, keeps a combo going, has a few lives per level, and everything they answer feeds a spaced-repetition review queue. Your job is to make that loop teach.
 
-This skill is platform-agnostic. For Questlog file formats, use the `questlog-course` skill after this one.
+This skill is platform-agnostic. For Questie file formats, use the `questie-course` skill after this one.
 
 ## Workflow
 

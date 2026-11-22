@@ -1,4 +1,4 @@
-# Questlog MCP server
+# Questie MCP server
 
 A local stdio MCP server that lets Claude list, read, validate and create courses, upload course media, and read your notes from the deployed app. Run it by hand with `npm run mcp`.
 
@@ -15,21 +15,21 @@ A local stdio MCP server that lets Claude list, read, validate and create course
 | `note_search(query?, tag?)` | Your notes from the deployed app, without bodies |
 | `note_get(note_id)` | One note in full |
 
-Resources: `questlog://schema/course` (JSON Schema of a course) and `questlog://guide/authoring` (the `questlog-course` skill, when installed).
+Resources: `questie://schema/course` (JSON Schema of a course) and `questie://guide/authoring` (the `questie-course` skill, when installed). They were `questlog://...` before the rename; update saved URIs.
 
 ## Environment
 
 | Variable | Used for |
 | --- | --- |
-| `QUESTLOG_COURSES` | Private courses folder (default `courses-private`) |
+| `QUESTIE_COURSES` | Private courses folder (default `courses-private`). `QUESTLOG_COURSES` is still read |
 | `MEDIA_DIR` | Where media is stored and served from (default `media/` next to the database, `DB_PATH`) |
 | `MEDIA_MAX_BYTES` | Largest media upload in bytes (default 52428800, 50 MB) |
-| `QUESTLOG_URL` | Base URL of the deployed app, for the note tools |
+| `QUESTIE_URL` | Base URL of the deployed app, for the note tools. `QUESTLOG_URL` is still read |
 | `QUESTLOG_HEADERS` | JSON of headers to send, e.g. the user header a login proxy trusts (`{"x-auth-request-email":"me@x.com"}`) |
 
 ## Claude Code
 
-The repo's `.mcp.json` registers the server as `questlog`; open Claude Code in the repo and approve it. To give it the note variables, export them in the shell you start Claude Code from, or add an `env` block to `.mcp.json` in your own copy.
+The repo's `.mcp.json` registers the server as `questie`; open Claude Code in the repo and approve it. To give it the note variables, export them in the shell you start Claude Code from, or add an `env` block to `.mcp.json` in your own copy.
 
 ## Claude Desktop
 
@@ -38,12 +38,12 @@ Add this to `claude_desktop_config.json` (Settings > Developer > Edit Config), w
 ```json
 {
   "mcpServers": {
-    "questlog": {
+    "questie": {
       "command": "npx",
-      "args": ["tsx", "/absolute/path/to/questlog/mcp/server.ts"],
-      "cwd": "/absolute/path/to/questlog",
+      "args": ["tsx", "/absolute/path/to/questie/mcp/server.ts"],
+      "cwd": "/absolute/path/to/questie",
       "env": {
-        "QUESTLOG_URL": "https://questlog.example.com",
+        "QUESTIE_URL": "https://questie.example.com",
         "QUESTLOG_HEADERS": "{\"x-auth-request-email\":\"me@example.com\"}"
       }
     }
@@ -51,4 +51,4 @@ Add this to `claude_desktop_config.json` (Settings > Developer > Edit Config), w
 }
 ```
 
-`cwd` must be the repo root: course folders and the `questlog/authoring` import in TypeScript courses resolve from it. If Claude Desktop cannot find `npx`, use its absolute path (`which npx`).
+`cwd` must be the repo root: course folders and the `questie/authoring` import in TypeScript courses resolve from it. If Claude Desktop cannot find `npx`, use its absolute path (`which npx`).

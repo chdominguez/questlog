@@ -40,7 +40,7 @@ Rated **low utility** by Dunlosky et al. (2013): summarization, highlighting/und
 
 ## Spaced repetition scheduling (FSRS)
 
-FSRS (Free Spaced Repetition Scheduler) models each item's memory with stability and difficulty and schedules the next review for a target probability of recall. It is open source and ships in Anki (since 23.10) as an optional scheduler; Questlog uses it through `ts-fsrs`. The open-spaced-repetition srs-benchmark compares schedulers on prediction of recall over review logs from about 10,000 Anki users, using log loss, RMSE and AUC; FSRS variants are among the strongest non-neural models there.
+FSRS (Free Spaced Repetition Scheduler) models each item's memory with stability and difficulty and schedules the next review for a target probability of recall. It is open source and ships in Anki (since 23.10) as an optional scheduler; Questie uses it through `ts-fsrs`. The open-spaced-repetition srs-benchmark compares schedulers on prediction of recall over review logs from about 10,000 Anki users, using log loss, RMSE and AUC; FSRS variants are among the strongest non-neural models there.
 
 Design consequences:
 - Grade each answer as Again / Hard / Good (wrong / partial / right). A miss should come back soon.
@@ -73,7 +73,7 @@ Deci, Koestner & Ryan (1999) meta-analyzed 128 experiments: tangible rewards tha
 
 ## Streaks
 
-Duolingo reports, from its own experiments, that learners who reach a 7-day streak are 3.6 times more likely to complete their course, and that letting learners equip two Streak Freezes instead of one increased daily active learners by 0.38% without making them take more days off. The lesson for design: a streak is a strong habit cue, and **slack** (freezes, repair) keeps more people going than strict punishment. Questlog's in-level combo is different: it multiplies XP for consecutive correct answers and resets on a miss without any other penalty.
+Duolingo reports, from its own experiments, that learners who reach a 7-day streak are 3.6 times more likely to complete their course, and that letting learners equip two Streak Freezes instead of one increased daily active learners by 0.38% without making them take more days off. The lesson for design: a streak is a strong habit cue, and **slack** (freezes, repair) keeps more people going than strict punishment. Questie's in-level combo is different: it multiplies XP for consecutive correct answers and resets on a miss without any other penalty.
 
 ## Sources
 

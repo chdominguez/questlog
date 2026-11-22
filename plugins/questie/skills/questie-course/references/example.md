@@ -5,8 +5,8 @@ A complete, valid single-file course that uses every theory block and every chal
 Save as `courses/event-loop/course.ts` and run `npm run validate event-loop`.
 
 ```ts
-import { at, defineCourse, hl } from "questlog/authoring";
-import type { FlowStep, TraceStep } from "questlog/authoring";
+import { at, defineCourse, hl } from "questie/authoring";
+import type { FlowStep, TraceStep } from "questie/authoring";
 
 // One sample, reused by the code card, the trace, the flow and the challenges.
 const ORDER = `console.log("A");

@@ -23,7 +23,7 @@ How to write each type well. Examples use one sample world: a bakery site at `ww
 
 **Write it:**
 1. Start from a misconception you expect. The stem asks the question that separates it from the truth.
-2. Write the right answer first (Questlog shuffles).
+2. Write the right answer first (Questie shuffles).
 3. Write 2–3 distractors, each one a specific wrong belief. Name the belief to yourself; if you cannot, the distractor is filler.
 4. Equalize length and style. Read the options without the stem: if one stands out, rewrite.
 

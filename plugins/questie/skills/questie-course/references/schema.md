@@ -136,7 +136,7 @@ Theme variables: `--accent`, `--accent-ink`, `--ok`, `--info`, `--gold`, `--bad`
 - `kataId` exists.
 - Each kata: solution passes all tests; starter compiles and fails at least one.
 
-## Authoring helpers (`questlog/authoring`)
+## Authoring helpers (`questie/authoring`)
 
 - `defineCourse(c)`: identity, type-checks a course object.
 - `hl(src, ...needles)`: sorted 1-based lines containing any needle; throws on a needle that matches nothing.
