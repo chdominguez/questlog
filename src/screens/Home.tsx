@@ -20,7 +20,7 @@ import "../builder/builder.css";
 export function HomeScreen() {
   const p = useProgress();
   const [user, setUser] = useState(() => { try { return localStorage.getItem("ql.user") ?? ""; } catch { return ""; } }); // sync.ts keeps it current
-  useEffect(() => { getMe().then((me) => setUser(me.user), () => {}); }, []);
+  useEffect(() => { if (!isDemo) getMe().then((me) => setUser(me.user), () => {}); }, []);
   const all = useCourses();
   const courses = visibleTo(user, all);
   const { status, metas } = useUserCourses();
@@ -35,7 +35,7 @@ export function HomeScreen() {
       <Hud />
       <section className="home screen-in">
         <h1 className="sr">Courses</h1>
-        <JobCards />
+        {!isDemo && <JobCards />}
         <ul className="home-courses">
           {courses.map((c) => {
             const done = c.levels.filter((l) => p.levels[l.id]?.done).length;
