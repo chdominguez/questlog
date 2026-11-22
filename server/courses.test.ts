@@ -2,7 +2,7 @@ import { beforeEach, expect, test } from "vitest";
 import type { UserCourseMeta } from "../shared/api-types";
 import { CourseSchema } from "../src/course/schema";
 import { createApi, type Env } from "./api";
-import { builderProblems, findCourse, newCourseId, saveUserCourse } from "./courses";
+import { builderProblems, courseProblems, findCourse, newCourseId, saveUserCourse } from "./courses";
 import { memoryDb } from "./db";
 import { testEnv } from "./env";
 import { as, course, fakeSandbox, json, kata, level, session } from "./fixtures.test-util";
@@ -91,4 +91,11 @@ test("builder rules: 3+ challenge types, no media, known sources, katas used", (
   const w = (model: string) => ({ ...c, levels: [{ ...c.levels[0], challenges: [...c.levels[0].challenges, { id: "w", type: "written" as const, prompt: "P", model, keyPoints: ["a", "b"] }] }] });
   expect(builderProblems(w("M"), new Set())).toEqual([]);
   expect(builderProblems(w("M".repeat(20_000)), new Set()).join()).toMatch(/levels\[0\]\.challenges\[3\]: .*under 20000/);
+});
+
+test("more than 30 katas is refused before any sandbox run", async () => {
+  let runs = 0;
+  const c = course("c", { katas: Array.from({ length: 31 }, (_, i) => kata(`k${i}`)) });
+  expect(await courseProblems(c, async () => { runs++; return []; }, null)).toEqual(["katas: at most 30"]);
+  expect(runs).toBe(0);
 });

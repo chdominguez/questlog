@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterAll, beforeAll, expect, test } from "vitest";
 import type { Kata } from "../src/course/schema";
 import { validateCourse } from "../src/course/validate";
-import { childRunner, type KataRunner } from "./sandbox";
+import { childRunner, limiter, type KataRunner } from "./sandbox";
 
 // The real child, bundled exactly as build:server does it.
 const out = mkdtempSync(join(tmpdir(), "kata-build-"));
@@ -66,4 +66,15 @@ test("validateCourse with the sandbox", async () => {
   expect(await validateCourse(course(kata), run)).toEqual([]);
   expect((await validateCourse(course({ ...kata, solution: kata.starter }), run)).join()).toMatch(/solution fails "a"/);
   expect((await validateCourse({ id: "c" }, run)).length).toBeGreaterThan(0);
+});
+
+test("limiter runs at most n at once, in order", async () => {
+  const lim = limiter(2);
+  let now = 0, peak = 0;
+  const order: number[] = [];
+  const job = (i: number) => lim(async () => { now++; peak = Math.max(peak, now); await new Promise((r) => setTimeout(r, 5)); order.push(i); now--; return i; });
+  expect(await Promise.all([1, 2, 3, 4, 5].map(job))).toEqual([1, 2, 3, 4, 5]);
+  expect(peak).toBe(2);
+  await expect(lim(async () => { throw new Error("x"); })).rejects.toThrow("x");
+  expect(await lim(async () => 7)).toBe(7);
 });

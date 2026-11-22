@@ -95,8 +95,12 @@ export function builderProblems(c: CourseInput, sources: Set<string> | null, cit
   return out;
 }
 
-/** Schema, sandboxed katas, then builder rules. */
+export const MAX_KATAS = 30;
+
+/** Kata count (before any sandbox run), schema, sandboxed katas, then builder rules. */
 export async function courseProblems(raw: unknown, run: KataRunner, sources: Set<string> | null, cite = false): Promise<string[]> {
+  const katas = (raw as { katas?: unknown } | null)?.katas;
+  if (Array.isArray(katas) && katas.length > MAX_KATAS) return [`katas: at most ${MAX_KATAS}`];
   const p = await validateCourse(raw, run);
   return p.length ? p : builderProblems(raw as CourseInput, sources, cite);
 }

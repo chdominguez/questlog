@@ -233,6 +233,7 @@ export function createApi(over: Partial<Deps> = {}): Hono<App> {
     .post("/builder/jobs", limit("builder_jobs", 10, 3600))
     .post("/builder/uploads", limit("builder_uploads", 30, 3600))
     .post("/narration", limit("narration", 60, 3600))
+    .put("/courses/:id", limit("course_put", 20, 3600))
     .post("/billing/checkout", limit("billing", 20, 3600))
     .post("/billing/portal", limit("billing", 20, 3600))
     .post("/flags", limit("flags", 30, 3600))
