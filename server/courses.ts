@@ -112,6 +112,9 @@ export async function courseProblems(raw: unknown, run: KataRunner, sources: Set
   return p.length ? p : builderProblems(raw as CourseInput, sources, cite);
 }
 
+// Users with a PUT in the sandbox; one at a time, so one account can't hold every shared sandbox slot.
+const validating = new Set<string>();
+
 /** GET /courses (own + opened by link), GET/PUT/DELETE /courses/:id. */
 export function coursesRoutes(deps: Deps): Hono<App> {
   const row = (c: Context<App>) => c.env.DB.prepare(`${COURSE_SELECT} WHERE c.id = ?`).bind(c.req.param("id")).first<CourseRow>();
@@ -145,7 +148,9 @@ export function coursesRoutes(deps: Deps): Hono<App> {
       const body = await c.req.json().catch(() => undefined) as Record<string, unknown> | undefined;
       if (!body || typeof body !== "object" || body.id !== r.id) return err(c, 422, "course_invalid", { problems: [`id: must be "${r.id}"`] });
       delete body.users;
-      const problems = await courseProblems(body, deps.sandbox, null);
+      if (validating.has(user)) return err(c, 409, "in_progress");
+      validating.add(user);
+      const problems = await courseProblems(body, deps.sandbox, null).finally(() => validating.delete(user));
       if (problems.length) return err(c, 422, "course_invalid", { problems });
       const course = body as CourseInput;
       c.env.DB.tx((q) => q.run(

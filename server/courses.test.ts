@@ -67,6 +67,20 @@ test("PUT validates in the sandbox, keeps the id, bumps the version, sends publi
   expect((await (await req(`/courses/${id}`, as("u"))).json()).users).toBeUndefined();
 });
 
+test("PUT: one sandbox validation at a time per user", async () => {
+  const [a, b] = [await save("ud-a"), await save("ud-b")];
+  let release!: () => void;
+  const held = new Promise<void>((r) => { release = r; });
+  const slow = createApi({ session, sandbox: async (k, code) => { await held; return fakeSandbox(k, code); } });
+  const put = (id: string) => slow.request(`/courses/${id}`, as("u", json("PUT", course(id, { katas: [kata("k")], levels: [level("one", { kata: "k" })] }))), env);
+  const first = put(a);
+  await new Promise((r) => setTimeout(r, 10));
+  expect((await put(b)).status).toBe(409);
+  release();
+  expect((await first).status).toBe(200);
+  expect((await put(b)).status).toBe(200);
+});
+
 test("DELETE: owner only", async () => {
   const id = await save("ue-c");
   setStatus(id, "link");
