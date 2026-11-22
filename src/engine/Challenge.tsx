@@ -402,8 +402,10 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
   return (
     <article className={`qcard${fx ? ` fx-${fx.kind}` : ""}`}>
       {fx && fx.xp > 0 && <span key={fx.n} className="float-xp" aria-hidden="true">+{fx.xp} XP</span>}
-      <div className="qtype">{KICKER[c.type]}</div>
-      <ReportButton courseId={courseOf(c.id)} itemId={c.id} />
+      <div className="card-head">
+        <div className="qtype">{KICKER[c.type]}</div>
+        <ReportButton courseId={courseOf(c.id)} itemId={c.id} />
+      </div>
       {c.type !== "written" && <Md className="qtext" text={c.prompt} />}
       {c.code && c.type !== "bug" && c.type !== "written" && <Snippet lang={c.code.lang} src={c.code.src} />}
       {body}

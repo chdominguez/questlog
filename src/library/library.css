@@ -9,7 +9,7 @@
 .lib-dialog .lib-field, .lib-field { display: grid; gap: var(--s-1); }
 .lib-stack { display: grid; gap: var(--s-3); justify-items: start; }
 .lib-end { justify-content: flex-end; }
-.lib-report { position: relative; display: inline-flex; align-items: center; gap: var(--s-2); float: right; }
+.lib-report { position: relative; display: inline-flex; align-items: center; gap: var(--s-2); }
 .lib-tabs { display: flex; gap: var(--s-2); flex-wrap: wrap; }
 .lib-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-3); }
 .lib-row { display: grid; gap: var(--s-2); }
