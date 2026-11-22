@@ -1,4 +1,4 @@
-import type { Kata } from "questlog/authoring";
+import type { Kata } from "questie/authoring";
 
 const kata: Kata = {
   id: "parse-query",

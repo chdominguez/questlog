@@ -20,6 +20,9 @@
       "node"
     ],
     "paths": {
+      "questie/authoring": [
+        "./src/course/authoring.ts"
+      ],
       "questlog/authoring": [
         "./src/course/authoring.ts"
       ],

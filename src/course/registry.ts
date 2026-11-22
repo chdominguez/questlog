@@ -1,6 +1,6 @@
 /**
  * Loads every course under /courses/<id>/course.{ts,json} and the private courses folder (alias @private,
- * env QUESTLOG_COURSES). Ids are qualified as "<course>:<id>" so progress, answers and art never collide.
+ * env QUESTIE_COURSES, or QUESTLOG_COURSES). Ids are qualified as "<course>:<id>" so progress, answers and art never collide.
  */
 import { addArt } from "../art";
 import { mdMedia, mediaUrl } from "../../shared/media";

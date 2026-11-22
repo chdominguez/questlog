@@ -1,5 +1,5 @@
-import type { FlowStep, Level, TraceStep } from "questlog/authoring";
-import { at, hl } from "questlog/authoring";
+import type { FlowStep, Level, TraceStep } from "questie/authoring";
+import { at, hl } from "questie/authoring";
 import { ETAG, HOST } from "../samples";
 
 // Objectives: pick the status code for a situation; tell 401 from 403 and the redirect codes apart;

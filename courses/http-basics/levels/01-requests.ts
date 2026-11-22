@@ -1,5 +1,5 @@
-import type { FlowStep, Level } from "questlog/authoring";
-import { hl } from "questlog/authoring";
+import type { FlowStep, Level } from "questie/authoring";
+import { hl } from "questie/authoring";
 import { HOST, IP } from "../samples";
 
 // Objectives: name the parts of a URL and know which one stays in the browser; order the steps of loading a page;
