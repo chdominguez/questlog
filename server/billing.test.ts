@@ -202,6 +202,15 @@ test("revenuecat: bad auth 401, unknown user 200 and ignored", async () => {
   expect(kinds()).toEqual([]);
 });
 
+test("revenuecat: sandbox events grant nothing unless REVENUECAT_SANDBOX", async () => {
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  await api()("/webhooks/revenuecat", rc(rcEv("INITIAL_PURCHASE", "questie.plan.monthly", { environment: "SANDBOX" })));
+  expect(kinds()).toEqual([]);
+  env = { ...env, REVENUECAT_SANDBOX: true };
+  await api()("/webhooks/revenuecat", rc(rcEv("INITIAL_PURCHASE", "questie.plan.monthly", { environment: "SANDBOX" })));
+  expect(balance(db, "u").plan).toBe(1000);
+});
+
 test("revenuecat: plan, duplicate event, pack, store refund, status changes", async () => {
   const req = api();
   const buy = rc(rcEv("INITIAL_PURCHASE", "questie.plan.monthly:monthly"));

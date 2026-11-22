@@ -159,7 +159,7 @@ export async function cancelForUser(db: Db, env: Env, deps: Deps, user: string):
 // ---- RevenueCat ----
 
 type RcEvent = {
-  id: string; type: string; app_user_id: string; product_id?: string; store?: string; cancel_reason?: string;
+  id: string; type: string; app_user_id: string; product_id?: string; store?: string; cancel_reason?: string; environment?: string;
   original_transaction_id?: string; transaction_id?: string; expiration_at_ms?: number | null;
 };
 
@@ -237,6 +237,8 @@ export function billingPublic(deps: Deps): Hono<App> {
       if (!want || !sameSecret(c.req.header("authorization") ?? "", want)) return err(c, 401, "unauthorized");
       const ev = (await body(c)).event as RcEvent | undefined;
       if (!ev || typeof ev.id !== "string" || typeof ev.type !== "string" || typeof ev.app_user_id !== "string") return err(c, 400, "invalid_request");
+      // Sandbox purchases cost nothing (TestFlight, license testers).
+      if (ev.environment === "SANDBOX" && !c.env.REVENUECAT_SANDBOX) { console.warn(`revenuecat: sandbox event ignored (${ev.type} ${ev.id})`); return c.json({ received: true }); }
       c.env.DB.tx((q) => {
         // RevenueCat retries are pointless for an unknown user: log and answer 200.
         if (!q.get('SELECT 1 FROM "user" WHERE id = ?', ev.app_user_id)) return console.warn(`revenuecat: unknown user ${ev.app_user_id} (${ev.type} ${ev.id})`);

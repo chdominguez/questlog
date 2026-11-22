@@ -32,6 +32,7 @@ export interface Env {
   STRIPE_SECRET_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
   REVENUECAT_WEBHOOK_AUTH?: string;
+  REVENUECAT_SANDBOX: boolean; // grant credits for sandbox (test) purchases; staging only
   CREDITS_NOTICE?: string;
   VAPID_PUBLIC?: string; // web push public key; unset = reminders off
   VAPID_PRIVATE?: string;
@@ -93,6 +94,7 @@ export function readEnv(src: Src = process.env): Omit<Env, "DB"> {
     STRIPE_SECRET_KEY: s("STRIPE_SECRET_KEY"),
     STRIPE_WEBHOOK_SECRET: s("STRIPE_WEBHOOK_SECRET"),
     REVENUECAT_WEBHOOK_AUTH: s("REVENUECAT_WEBHOOK_AUTH"),
+    REVENUECAT_SANDBOX: s("REVENUECAT_SANDBOX") === "1",
     CREDITS_NOTICE: s("CREDITS_NOTICE"),
     VAPID_PUBLIC: s("VAPID_PUBLIC"),
     VAPID_PRIVATE: s("VAPID_PRIVATE"),

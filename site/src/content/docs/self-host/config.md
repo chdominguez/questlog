@@ -45,6 +45,7 @@ The server reads these at boot. It stops with an error when `APP_URL` or `BETTER
 |---|---|---|---|
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | no | | Both set: billing and credits on. Unset: AI is not metered |
 | `REVENUECAT_WEBHOOK_AUTH` | with mobile | | Expected `Authorization` value on the RevenueCat webhook |
+| `REVENUECAT_SANDBOX` | no | | `1` grants credits for sandbox purchases (staging only) |
 | `CREDITS_NOTICE` | no | | Notice text shown about cost changes |
 
 Prices live in `shared/pricing.ts`. Create the Stripe products with `npm run stripe:setup`.
