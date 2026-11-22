@@ -1,5 +1,7 @@
 import { sendNotification, setVapidDetails } from "web-push";
-import type { Db } from "./api";
+import type { Deps } from "./api";
+import type { Db } from "./db";
+import type { Env } from "./env";
 
 export const WINDOW_MIN = 5;
 
@@ -47,4 +49,13 @@ export async function runReminders(db: Db, send: Send, now = new Date()) {
       }
     }
   }
+}
+
+/** Runs reminders every minute when Web Push is configured; returns stop. */
+export function startReminders(env: Env, _deps: Deps): () => void {
+  const { VAPID_PUBLIC, VAPID_PRIVATE, VAPID_SUBJECT } = env;
+  if (!(VAPID_PUBLIC && VAPID_PRIVATE && VAPID_SUBJECT)) return () => {};
+  const send = webPushSend(VAPID_PUBLIC, VAPID_PRIVATE, VAPID_SUBJECT);
+  const t = setInterval(() => runReminders(env.DB, send).catch((e) => console.error("reminders failed:", e)), 60_000);
+  return () => clearInterval(t);
 }

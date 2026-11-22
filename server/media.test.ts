@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { expect, test } from "vitest";
 import { createMedia } from "./media";
 
-const dir = mkdtempSync(join(tmpdir(), "questlog-media-"));
+const dir = mkdtempSync(join(tmpdir(), "questie-media-"));
 mkdirSync(join(dir, "c"));
 writeFileSync(join(dir, "c", "a.mp4"), "0123456789");
 writeFileSync(join(dir, "c", "x.txt"), "no");

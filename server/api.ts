@@ -1,36 +1,70 @@
 import { Hono, type Context, type MiddlewareHandler } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import type { Grade, Note, Profile, NoteInput, PushSubscriptionInput, Reminder, SavedAnswer } from "../shared/api-types";
+import { cors } from "hono/cors";
+import Anthropic from "@anthropic-ai/sdk";
+import Stripe from "stripe";
+import type { Grade, Health, Improvement, Note, Profile, NoteInput, PushSubscriptionInput, Reminder, SavedAnswer } from "../shared/api-types";
 import { toMarkdown } from "../shared/export";
+import { BUILD } from "../shared/pricing";
 import { COURSES, courseOf, type Course } from "../src/course/registry";
 import { validZone } from "./reminders";
-import { claudeGrader, parseGrade, type Grader } from "./grader";
+import { claudeGrader, parseGrade, type GradeInput, type Grader } from "./grader";
+import type { Env } from "./env";
+import { err } from "./errors";
+import { limit } from "./limits";
+import { authRoutes, meRoutes } from "./auth";
+import { billingPublic, billingRoutes } from "./credits";
+import { coursesRoutes } from "./courses";
+import { sandboxRun, type KataRunner } from "./sandbox";
+import { gradingRoutes } from "./grading";
+import { narrationRoutes } from "./narration";
+import { builderRoutes } from "./builder";
+import { libraryRoutes } from "./library";
+import { devicesRoutes } from "./devices";
 
-// The slice of the database the API uses; server/db.ts implements it over node:sqlite.
-export interface Stmt {
-  bind(...values: unknown[]): Stmt;
-  first<T = Record<string, unknown>>(): Promise<T | null>;
-  all<T = Record<string, unknown>>(): Promise<{ results: T[] }>;
-  run(): Promise<{ meta: { changes: number } }>;
-}
-export interface Db { prepare(sql: string): Stmt }
+export type { Db, Stmt } from "./db";
+export type { Env } from "./env";
 
-export interface Env {
-  DB: Db;
-  ANTHROPIC_API_KEY?: string;
-  VAPID_PUBLIC?: string; // web push public key; unset = reminders off
-  LOGOUT_URL?: string; // where the Sign out link goes (proxy + IdP logout); unset = no link
-  NAME_HEADER?: string; // header the proxy sets to the signed-in user's display name
-  USER_HEADER?: string; // header a trusted reverse proxy sets to the signed-in user (e.g. x-auth-request-email); unset = single local user
+/** The signed-in account as the session lookup returns it. */
+export interface SessionUser { id: string; email: string; name: string; emailVerified: boolean; image?: string | null }
+export type App = { Bindings: Env; Variables: { user: string; account: SessionUser; appOrigin?: boolean } };
+
+/** Stronger answer + corrections for a graded answer. */
+export type Improver = (input: GradeInput & { grade: Grade }) => Promise<Improvement>;
+
+/** Everything a route needs from outside; tests replace any of it. */
+export interface Deps {
+  courses: Course[];
+  session(c: Context<App>): Promise<SessionUser | null>;
+  grader(env: Env): Grader | null;
+  improver(env: Env): Improver | null;
+  anthropic(env: Env): Anthropic | null; // builder, topic pre-check
+  stripe(env: Env): Stripe | null;
+  fetch: typeof fetch; // ElevenLabs, Resend, FCM
+  sandbox: KataRunner;
+  now(): Date;
 }
+
+export const defaultDeps = (over: Partial<Deps> = {}): Deps => ({
+  courses: COURSES,
+  session: async () => null, // server/index.ts sets the Better Auth lookup
+  grader: (env) => (env.ANTHROPIC_API_KEY ? claudeGrader(env.ANTHROPIC_API_KEY) : null),
+  improver: () => null,
+  anthropic: (env) => (env.ANTHROPIC_API_KEY ? new Anthropic({ apiKey: env.ANTHROPIC_API_KEY }) : null),
+  stripe: (env) => (env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET ? new Stripe(env.STRIPE_SECRET_KEY) : null),
+  fetch: (...a) => fetch(...a),
+  sandbox: sandboxRun,
+  now: () => new Date(),
+  ...over,
+});
 
 export const MAX_ANSWER = 8000;
 const MAX_TEXT = 20000;
 export const MAX_NOTE = 100_000;
 const SOURCES = ["typed", "dictated", "mixed"] as const;
 
-const str = (v: unknown, max: number, min = 0): v is string => typeof v === "string" && v.trim().length >= min && v.length <= max;
-const qualified = (v: unknown): v is string => str(v, 200, 1) && /^[^:]+:./.test(v);
+export const str = (v: unknown, max: number, min = 0): v is string => typeof v === "string" && v.trim().length >= min && v.length <= max;
+export const qualified = (v: unknown): v is string => str(v, 200, 1) && /^[^:]+:./.test(v);
 
 function parseSave(v: unknown): Omit<SavedAnswer, "id" | "createdAt"> | string {
   const b = (v ?? {}) as Record<string, unknown>;
@@ -110,58 +144,57 @@ const toNote = (r: NoteRow): Note => ({
   createdAt: r.created_at, updatedAt: r.updated_at,
 });
 
-type App = { Bindings: Env; Variables: { user: string } };
+const JSON_WRITE = new Set(["POST", "PUT", "PATCH"]);
 
-const userId = (v: string | undefined | null) => { const u = v?.trim().toLowerCase(); return u && u.length <= 320 ? u : ""; };
-
-/** Every /api call needs a user: the USER_HEADER a trusted reverse proxy sets (401 if missing); without USER_HEADER everyone is "local". */
-const auth: MiddlewareHandler<App> = async (c, next) => {
-  const user = c.env.USER_HEADER ? userId(c.req.header(c.env.USER_HEADER)) : "local";
-  if (!user) return c.json({ error: "Unauthorized" }, 401);
-  c.set("user", user);
-  await claimLegacy(c.env.DB, user);
-  await next();
-};
-
-/** Rows from before multi-user (user_id '') go to the first user ever seen; the marker row makes it happen once. */
-async function claimLegacy(db: Db, user: string) {
-  const { meta } = await db.prepare("INSERT OR IGNORE INTO kv (user_id, key, value, updated_at) VALUES ('', 'claimed', ?, 0)").bind(JSON.stringify(user)).run();
-  if (!meta.changes) return;
-  for (const sql of [
-    "UPDATE answers SET user_id = ? WHERE user_id = ''",
-    "UPDATE notes SET user_id = ? WHERE user_id = ''",
-    "UPDATE kv SET user_id = ? WHERE user_id = '' AND key <> 'claimed'",
-  ]) await db.prepare(sql).bind(user).run();
-}
-
-/** Only this app's own pages may call the API: blocks cross-site requests riding the login cookie, and simple (text/plain) writes. */
+/**
+ * Only this app's own pages and the native apps may call the API. Cross-site or foreign-origin requests pass only from an
+ * APP_ORIGINS origin, which then authenticates by bearer only (appOrigin). Writes must be JSON, except multipart uploads.
+ */
 const guard: MiddlewareHandler<App> = async (c, next) => {
-  const site = c.req.header("sec-fetch-site");
-  if (site && site !== "same-origin" && site !== "none") return c.json({ error: "Origin not allowed" }, 403);
   const origin = c.req.header("origin");
+  const appOrigin = !!origin && c.env.APP_ORIGINS.includes(origin);
+  const site = c.req.header("sec-fetch-site");
+  let foreign = !!site && site !== "same-origin" && site !== "none";
   if (origin) {
-    let ok = false;
-    try { ok = new URL(origin).host === new URL(c.req.url).host; } catch { /* malformed */ }
-    if (!ok) return c.json({ error: "Origin not allowed" }, 403);
+    try { if (new URL(origin).host !== new URL(c.req.url).host) foreign = true; } catch { foreign = true; }
   }
-  if ((c.req.method === "POST" || c.req.method === "PUT") && !/^application\/json\b/i.test(c.req.header("content-type") ?? "")) {
-    return c.json({ error: "Content-Type must be application/json" }, 415);
+  if (foreign && !appOrigin) return err(c, 403, "origin_not_allowed");
+  if (appOrigin) c.set("appOrigin", true);
+  const upload = c.req.method === "POST" && c.req.path.endsWith("/builder/uploads");
+  if (JSON_WRITE.has(c.req.method) && !upload && !/^application\/json\b/i.test(c.req.header("content-type") ?? "")) {
+    return err(c, 415, "unsupported_media_type", {}, "Content-Type must be application/json");
   }
   await next();
 };
 
-/** The written challenge with this qualified id and its course, or the status to answer with. */
-function written(courses: Course[], id: string) {
-  const course = courses.find((c) => c.id === courseOf(id));
-  const ch = course?.levels.flatMap((l) => l.challenges).find((x) => x.id === id);
-  if (!course || !ch) return 404;
-  return ch.type === "written" ? { course, ch } : 400;
-}
+const tooLarge = (c: Context) => err(c, 413, "too_large");
+const limits = {
+  upload: bodyLimit({ maxSize: BUILD.uploadMaxBytes + 64 * 1024, onError: tooLarge }), // file plus multipart framing
+  course: bodyLimit({ maxSize: 2 * 1024 * 1024, onError: tooLarge }),
+  other: bodyLimit({ maxSize: 256 * 1024, onError: tooLarge }),
+};
+/** 256 KB, except uploads (20 MB) and course re-uploads (2 MB). */
+const limitBody: MiddlewareHandler<App> = (c, next) => {
+  const p = c.req.path, m = c.req.method;
+  const l = m === "POST" && p.endsWith("/builder/uploads") ? limits.upload : m === "PUT" && /\/courses\/[^/]+$/.test(p) ? limits.course : limits.other;
+  return l(c, next);
+};
 
-export function createApi({
-  grader = (env: Env) => (env.ANTHROPIC_API_KEY ? claudeGrader(env.ANTHROPIC_API_KEY) : null),
-  courses = COURSES,
-}: { grader?: (env: Env) => Grader | null; courses?: Course[] } = {}) {
+/**
+ * Mount order (Hono runs in registration order): cors -> /health -> /auth/* -> /webhooks/* -> guard -> session -> limitBody -> the rest.
+ * Route modules are mounted with .route("/", ...); they must scope every middleware to a path (no path-less .use()),
+ * or it would run for every later route.
+ */
+export function createApi(over: Partial<Deps> = {}): Hono<App> {
+  const deps = defaultDeps(over);
+  const { grader } = deps;
+  const session: MiddlewareHandler<App> = async (c, next) => {
+    const u = await deps.session(c);
+    if (!u) return err(c, 401, "unauthorized");
+    c.set("user", u.id);
+    c.set("account", u);
+    await next();
+  };
   const json = async (c: Context<App>) => c.req.json().catch(() => undefined);
   const db = (c: Context<App>) => c.env.DB;
   const user = (c: Context<App>) => c.get("user");
@@ -176,31 +209,48 @@ export function createApi({
   };
 
   return new Hono<App>()
-    .use(auth)
+    .use(cors({
+      origin: (o, c) => (c.env.APP_ORIGINS.includes(o) ? o : null),
+      allowHeaders: ["Authorization", "Content-Type", "Idempotency-Key"],
+      exposeHeaders: ["set-auth-token", "x-credits-balance", "Retry-After"],
+      maxAge: 600,
+    }))
+    .get("/health", (c) => c.json({
+      ok: true, commit: c.env.COMMIT, grader: grader(c.env) !== null, narration: !!c.env.ELEVENLABS_API_KEY,
+    } satisfies Health))
+    .route("/", authRoutes(deps))
+    .route("/", billingPublic(deps))
     .use(guard)
-    .use(bodyLimit({ maxSize: 256 * 1024, onError: (c) => c.json({ error: "Request too large" }, 413) }))
-    .get("/health", (c) => c.json({ ok: true, grader: grader(c.env) !== null }))
-    .get("/me", (c) => {
-      const name = c.env.NAME_HEADER ? c.req.header(c.env.NAME_HEADER)?.trim().slice(0, 100) : undefined;
-      return c.json({ user: user(c), ...(name && { name }), ...(c.env.LOGOUT_URL && { logout: c.env.LOGOUT_URL }) });
-    })
+    .use(session)
+    .use(limitBody)
+    // Rate limits per user (docs/design/questie.md 3.2); the handlers live in the route modules below.
+    .post("/grade", limit("grade", 30, 60))
+    .post("/answers/:id/improve", limit("improve", 30, 60))
+    .post("/mock", limit("mock", 10, 3600))
+    .post("/builder/jobs", limit("builder_jobs", 10, 3600))
+    .post("/builder/uploads", limit("builder_uploads", 30, 3600))
+    .post("/narration", limit("narration", 60, 3600))
+    .post("/billing/checkout", limit("billing", 20, 3600))
+    .post("/billing/portal", limit("billing", 20, 3600))
+    .post("/flags", limit("flags", 30, 3600))
+    .route("/", meRoutes(deps))
     .get("/profile", async (c) => {
       const row = await db(c).prepare("SELECT value FROM kv WHERE user_id = ? AND key = 'profile'").bind(user(c)).first<{ value: string }>();
       return c.json({ name: "", title: "", location: "", link: "", bio: "", ...(row && JSON.parse(row.value)) } satisfies Profile);
     })
     .put("/profile", async (c) => {
       const p = parseProfile(await json(c));
-      if (typeof p === "string") return c.json({ error: p }, 400);
+      if (typeof p === "string") return err(c, 400, "invalid_request", {}, p);
       await db(c).prepare(
         `INSERT INTO kv (user_id, key, value, updated_at) VALUES (?, 'profile', ?, ?)
          ON CONFLICT (user_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
       ).bind(user(c), JSON.stringify(p), Date.now()).run();
       return c.json(p);
     })
-    .get("/push/key", (c) => c.env.VAPID_PUBLIC ? c.json({ key: c.env.VAPID_PUBLIC }) : c.json({ error: "Reminders not configured" }, 503))
+    .get("/push/key", (c) => c.env.VAPID_PUBLIC ? c.json({ key: c.env.VAPID_PUBLIC }) : err(c, 503, "not_configured", {}, "Reminders not configured"))
     .post("/push/subscription", async (c) => {
       const sub = parseSubscription(await json(c));
-      if (typeof sub === "string") return c.json({ error: sub }, 400);
+      if (typeof sub === "string") return err(c, 400, "invalid_request", {}, sub);
       await db(c).prepare(
         `INSERT INTO push_subscriptions (endpoint, user_id, p256dh, auth) VALUES (?, ?, ?, ?)
          ON CONFLICT (endpoint) DO UPDATE SET user_id = excluded.user_id, p256dh = excluded.p256dh, auth = excluded.auth`,
@@ -209,7 +259,7 @@ export function createApi({
     })
     .delete("/push/subscription", async (c) => {
       const b = ((await json(c)) ?? {}) as Record<string, unknown>;
-      if (!str(b.endpoint, 2000, 1)) return c.json({ error: "Invalid endpoint" }, 400);
+      if (!str(b.endpoint, 2000, 1)) return err(c, 400, "invalid_request", {}, "Invalid endpoint");
       await db(c).prepare("DELETE FROM push_subscriptions WHERE endpoint = ? AND user_id = ?").bind(b.endpoint, user(c)).run();
       return c.body(null, 204);
     })
@@ -220,7 +270,7 @@ export function createApi({
     })
     .put("/reminders", async (c) => {
       const r = parseReminder(await json(c));
-      if (typeof r === "string") return c.json({ error: r }, 400);
+      if (typeof r === "string") return err(c, 400, "invalid_request", {}, r);
       await db(c).prepare(
         `INSERT INTO reminders (user_id, course_id, title, time, tz) VALUES (?, ?, ?, ?, ?)
          ON CONFLICT (user_id, course_id) DO UPDATE SET title = excluded.title, time = excluded.time, tz = excluded.tz, last_sent = ''`,
@@ -231,30 +281,14 @@ export function createApi({
       await db(c).prepare("DELETE FROM reminders WHERE user_id = ? AND course_id = ?").bind(user(c), c.req.param("course")).run();
       return c.body(null, 204);
     })
-    .post("/grade", async (c) => {
-      const grade = grader(c.env);
-      if (!grade) return c.json({ error: "Grader not configured (missing ANTHROPIC_API_KEY)" }, 503);
-      const b = ((await json(c)) ?? {}) as Record<string, unknown>;
-      if (!qualified(b.challengeId)) return c.json({ error: "Invalid challengeId" }, 400);
-      if (!str(b.answer, MAX_ANSWER, 1)) return c.json({ error: `Answer must be 1 to ${MAX_ANSWER} characters` }, 400);
-      const found = written(courses, b.challengeId);
-      if (found === 404) return c.json({ error: "Unknown challenge" }, 404);
-      if (found === 400) return c.json({ error: "Not a written challenge" }, 400);
-      const { course, ch } = found;
-      try {
-        return c.json(await grade({
-          prompt: ch.prompt, model: ch.model, keyPoints: ch.keyPoints, answer: b.answer, lang: course.lang, persona: course.grader?.persona,
-        }));
-      } catch (e) {
-        console.error("grade failed:", e);
-        return c.json({ error: "Grader failed" }, 502);
-      }
-    })
     .post("/answers", async (c) => {
       const body = parseSave(await json(c));
-      if (typeof body === "string") return c.json({ error: body }, 400);
+      if (typeof body === "string") return err(c, 400, "invalid_request", {}, body);
       const a: SavedAnswer = { id: crypto.randomUUID(), ...body, createdAt: new Date().toISOString() };
-      await db(c).prepare("INSERT INTO answers VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(
+      await db(c).prepare(
+        `INSERT INTO answers (id, course_id, challenge_id, level_id, prompt, answer, source, seconds, grade, self_score, created_at, user_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).bind(
         a.id, courseOf(a.challengeId), a.challengeId, a.levelId, a.prompt, a.answer, a.source,
         a.seconds ?? null, a.grade ? JSON.stringify(a.grade) : null, a.selfScore ?? null, a.createdAt, user(c),
       ).run();
@@ -268,12 +302,12 @@ export function createApi({
     })
     .get("/progress", async (c) => {
       const row = await db(c).prepare("SELECT value, updated_at FROM kv WHERE user_id = ? AND key = 'progress'").bind(user(c)).first<{ value: string; updated_at: number }>();
-      return row ? c.json({ value: JSON.parse(row.value), updatedAt: row.updated_at }) : c.json({ error: "No progress" }, 404);
+      return row ? c.json({ value: JSON.parse(row.value), updatedAt: row.updated_at }) : err(c, 404, "not_found", {}, "No progress");
     })
     .put("/progress", async (c) => {
       const b = ((await json(c)) ?? {}) as Record<string, unknown>;
-      if (!b.value || typeof b.value !== "object" || Array.isArray(b.value)) return c.json({ error: "Invalid value" }, 400);
-      if (!Number.isSafeInteger(b.updatedAt) || (b.updatedAt as number) < 0) return c.json({ error: "Invalid updatedAt" }, 400);
+      if (!b.value || typeof b.value !== "object" || Array.isArray(b.value)) return err(c, 400, "invalid_request", {}, "Invalid value");
+      if (!Number.isSafeInteger(b.updatedAt) || (b.updatedAt as number) < 0) return err(c, 400, "invalid_request", {}, "Invalid updatedAt");
       const { meta } = await db(c).prepare(
         `INSERT INTO kv (user_id, key, value, updated_at) VALUES (?, 'progress', ?, ?)
          ON CONFLICT (user_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at WHERE excluded.updated_at > kv.updated_at`,
@@ -291,29 +325,36 @@ export function createApi({
     })
     .get("/notes/:id", async (c) => {
       const note = await getNote(c, c.req.param("id"));
-      return note ? c.json(note) : c.json({ error: "Note not found" }, 404);
+      return note ? c.json(note) : err(c, 404, "not_found", {}, "Note not found");
     })
     .post("/notes", async (c) => {
       const n = parseNote(await json(c));
-      if (typeof n === "string") return c.json({ error: n }, 400);
+      if (typeof n === "string") return err(c, 400, "invalid_request", {}, n);
       const now = new Date().toISOString();
       const note: Note = { id: crypto.randomUUID(), ...n, createdAt: now, updatedAt: now };
-      await db(c).prepare("INSERT INTO notes VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+      await db(c).prepare("INSERT INTO notes (id, title, body, tags, course_id, created_at, updated_at, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
         .bind(note.id, note.title, note.body, JSON.stringify(note.tags), note.courseId ?? null, now, now, user(c)).run();
       return c.json(note, 201);
     })
     .put("/notes/:id", async (c) => {
       const n = parseNote(await json(c));
-      if (typeof n === "string") return c.json({ error: n }, 400);
+      if (typeof n === "string") return err(c, 400, "invalid_request", {}, n);
       const id = c.req.param("id");
       const { meta } = await db(c).prepare("UPDATE notes SET title = ?, body = ?, tags = ?, course_id = ?, updated_at = ? WHERE id = ? AND user_id = ?")
         .bind(n.title, n.body, JSON.stringify(n.tags), n.courseId ?? null, new Date().toISOString(), id, user(c)).run();
-      return meta.changes ? c.json((await getNote(c, id))!) : c.json({ error: "Note not found" }, 404);
+      return meta.changes ? c.json((await getNote(c, id))!) : err(c, 404, "not_found", {}, "Note not found");
     })
     .delete("/notes/:id", async (c) => {
       const { meta } = await db(c).prepare("DELETE FROM notes WHERE id = ? AND user_id = ?").bind(c.req.param("id"), user(c)).run();
-      return meta.changes ? c.body(null, 204) : c.json({ error: "Note not found" }, 404);
+      return meta.changes ? c.body(null, 204) : err(c, 404, "not_found", {}, "Note not found");
     })
+    .route("/", gradingRoutes(deps))
+    .route("/", narrationRoutes(deps))
+    .route("/", builderRoutes(deps))
+    .route("/", coursesRoutes(deps))
+    .route("/", libraryRoutes(deps))
+    .route("/", billingRoutes(deps))
+    .route("/", devicesRoutes(deps))
     // A route, not notFound(): mounted with app.route, a sub-app's notFound is ignored.
-    .all("*", (c) => c.json({ error: "Not found" }, 404));
+    .all("*", (c) => err(c, 404, "not_found"));
 }

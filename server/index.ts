@@ -2,27 +2,33 @@ import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { readFileSync } from "node:fs";
-import { createApi, type Env } from "./api";
+import { createApi, defaultDeps } from "./api";
+import { createAuth, sessionFrom } from "./auth";
 import { openDb } from "./db";
+import { readEnv, type Env } from "./env";
+import { startJobs } from "./jobs";
 import { createMedia } from "./media";
-import { runReminders, webPushSend } from "./reminders";
+import { startReminders } from "./reminders";
 
-const env: Env = {
-  DB: openDb(process.env.DB_PATH ?? "data/questlog.db"),
-  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || undefined,
-  USER_HEADER: process.env.USER_HEADER || undefined,
-  NAME_HEADER: process.env.NAME_HEADER || undefined,
-  LOGOUT_URL: process.env.LOGOUT_URL || undefined,
-  VAPID_PUBLIC: process.env.VAPID_PUBLIC || undefined,
-};
+const config = readEnv();
+const db = openDb(config.DB_PATH);
+const env: Env = { ...config, DB: db };
+const deps = defaultDeps();
+deps.session = sessionFrom(createAuth(env, db.sqlite, deps));
+
 const index = () => readFileSync("dist/index.html", "utf8");
 
 const NO_CACHE = ["/sw.js", "/manifest.webmanifest", "/index.html"];
 
 // /api runs the API; everything else is the built app. Unknown paths without a file extension fall back to index.html (client-side routes).
 const app = new Hono<{ Bindings: Env }>()
-  .route("/api", createApi())
+  .route("/api", createApi(deps))
   .route("/", createMedia())
+  // No extension, so serveStatic would not send it as JSON, which iOS requires.
+  .get("/.well-known/apple-app-site-association", (c) => {
+    try { return c.body(readFileSync("dist/.well-known/apple-app-site-association"), 200, { "Content-Type": "application/json" }); }
+    catch { return c.text("Not found", 404); }
+  })
   .use(async (c, next) => {
     await next();
     if (c.res.status !== 200) return;
@@ -33,10 +39,7 @@ const app = new Hono<{ Bindings: Env }>()
   .use(serveStatic({ root: "dist" }))
   .get("*", (c) => /\.\w+$/.test(c.req.path) ? c.text("Not found", 404) : c.html(index()));
 
-serve({ fetch: (req) => app.fetch(req, env), port: Number(process.env.PORT ?? 8787), hostname: process.env.HOST ?? "127.0.0.1" });
+serve({ fetch: (req) => app.fetch(req, env), port: env.PORT, hostname: env.HOST });
 
-const { VAPID_PUBLIC, VAPID_PRIVATE, VAPID_SUBJECT } = process.env;
-if (VAPID_PUBLIC && VAPID_PRIVATE && VAPID_SUBJECT) {
-  const send = webPushSend(VAPID_PUBLIC, VAPID_PRIVATE, VAPID_SUBJECT);
-  setInterval(() => runReminders(env.DB, send).catch((e) => console.error("reminders failed:", e)), 60_000);
-}
+startJobs(env, deps);
+startReminders(env, deps);
