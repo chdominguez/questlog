@@ -26,6 +26,8 @@ export default defineConfig({
       { label: "Contribute", items: [{ autogenerate: { directory: "contribute" } }] },
       { label: "Pricing", link: "/pricing/" },
       { label: "License", link: "/license/" },
+      { label: "Terms", link: "/terms/" },
+      { label: "Privacy", link: "/privacy/" },
     ],
   })],
   vite: { server: { fs: { allow: [".."] } } }, // pricing and brand import ../shared
