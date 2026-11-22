@@ -8,7 +8,7 @@ import { toMarkdown } from "../shared/export";
 import { BUILD } from "../shared/pricing";
 import { COURSES, courseOf, type Course } from "../src/course/registry";
 import { validZone } from "./reminders";
-import { claudeGrader, parseGrade, type GradeInput, type Grader } from "./grader";
+import { claudeGrader, claudeImprover, parseGrade, type GradeInput, type Grader } from "./grader";
 import type { Env } from "./env";
 import { err } from "./errors";
 import { limit } from "./limits";
@@ -49,7 +49,7 @@ export const defaultDeps = (over: Partial<Deps> = {}): Deps => ({
   courses: COURSES,
   session: async () => null, // server/index.ts sets the Better Auth lookup
   grader: (env) => (env.ANTHROPIC_API_KEY ? claudeGrader(env.ANTHROPIC_API_KEY) : null),
-  improver: () => null,
+  improver: (env) => (env.ANTHROPIC_API_KEY ? claudeImprover(env.ANTHROPIC_API_KEY) : null),
   anthropic: (env) => (env.ANTHROPIC_API_KEY ? new Anthropic({ apiKey: env.ANTHROPIC_API_KEY }) : null),
   stripe: (env) => (env.STRIPE_SECRET_KEY && env.STRIPE_WEBHOOK_SECRET ? new Stripe(env.STRIPE_SECRET_KEY) : null),
   fetch: (...a) => fetch(...a),
