@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import type { TheoryBlock, TheoryCard } from "../course/schema";
 import { Md } from "../ui/Md";
 import { Snippet } from "../code/Snippet";
@@ -13,6 +13,7 @@ import { say } from "../questie/Questie";
 import { courseOf } from "../course/registry";
 import { ReportButton } from "../library/ReportButton";
 import { Sources } from "./Sources";
+import { useTheoryCard } from "../narration/card";
 import "./engine.css";
 
 export function Block({ b }: { b: TheoryBlock }) {
@@ -51,7 +52,7 @@ export const typingTarget = (e: KeyboardEvent) => {
 
 /** Card-by-card theory with progress dots; arrows navigate. `level` (qualified key) enables per-card reports. */
 export function Theory({ cards, onDone, level }: { cards: TheoryCard[]; onDone: () => void; level?: string }) {
-  const [i, setI] = useState(0);
+  const [i, setI] = useTheoryCard(level);
   useEffect(() => { scrollTo(0, 0); }, [i]);
   const last = i >= cards.length - 1;
   const goTo = (n: number) => { if (n >= 0 && n < cards.length && n !== i) { play("click"); setI(n); } };

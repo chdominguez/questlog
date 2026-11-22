@@ -17,3 +17,22 @@ export function pickMockQuestions(levels: Level[], n = 8, rnd = Math.random): Mo
   }
   return pool.slice(0, n);
 }
+
+/** A running mock in sessionStorage (ql.mock.<course>), so a reload resumes it without a new charge. */
+export type MockSession = { mockId?: string; endAt: number; i: number; ids: string[]; scores: (number | null)[] };
+const storeKey = (course: string) => `ql.mock.${course}`;
+
+/** The stored session with its questions, unless it ended or its questions are gone. */
+export function resumable(course: string, levels: Level[], now = Date.now()): (MockSession & { questions: MockQuestion[] }) | null {
+  try {
+    const s = JSON.parse(sessionStorage.getItem(storeKey(course)) ?? "null") as MockSession | null;
+    if (!s || !(s.endAt > now) || !Array.isArray(s.ids)) return null;
+    const all = levels.flatMap((l) => l.challenges.map((challenge) => ({ challenge, levelId: l.id })));
+    const questions = s.ids.map((id) => all.find((q) => q.challenge.id === id)).filter((q): q is MockQuestion => q?.challenge.type === "written");
+    return questions.length && questions.length === s.ids.length ? { ...s, questions } : null;
+  } catch { return null; }
+}
+
+export function storeMock(course: string, s: MockSession | null) {
+  try { if (s) sessionStorage.setItem(storeKey(course), JSON.stringify(s)); else sessionStorage.removeItem(storeKey(course)); } catch { /* storage off */ }
+}
