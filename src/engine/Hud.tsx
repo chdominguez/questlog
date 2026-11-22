@@ -7,6 +7,7 @@ import { courseDue } from "./srs";
 import { dispatch, multiplier, RANKS, rankIndex, rankProgress, useProgress } from "./store";
 import { useSession } from "../auth/session";
 import { CreditChip } from "../billing/CreditChip";
+import { LowBalance } from "../billing/LowBalance";
 import "./engine.css";
 
 export const isMilestone = (streak: number) => streak === 3 || (streak >= 5 && streak % 5 === 0);
@@ -48,6 +49,7 @@ export function Hud() {
   const mult = multiplier(p.streak);
 
   return (
+    <>
     <header className="hud">
       <div className="hud-row">
         <a className="brand" href={href.home()}>Questie</a>
@@ -92,5 +94,7 @@ export function Hud() {
         </nav>
       )}
     </header>
+    <LowBalance />
+    </>
   );
 }
