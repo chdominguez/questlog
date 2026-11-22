@@ -95,6 +95,7 @@ const level: Level = {
   theory: [
     {
       title: "Five classes of status",
+      tip: "First digit, who acts: 2 done, 3 look elsewhere, 4 the client's mistake, 5 the server's.",
       blocks: [
         { kind: "figure", art: "caching" },
         {
@@ -113,6 +114,7 @@ A client that doesn't know a code treats it as the \`x00\` of its class.`,
     },
     {
       title: "Lookalike codes",
+      tip: "`401` asks who you are. `403` knows who you are and still says no.",
       blocks: [
         {
           kind: "md",
@@ -129,6 +131,7 @@ A client that doesn't know a code treats it as the \`x00\` of its class.`,
     },
     {
       title: "Cache-Control says how long",
+      tip: "`no-cache` still lets the browser store it. Only `no-store` forbids storing.",
       blocks: [
         { kind: "code", lang: "http", src: MENU_RESPONSE, title: "GET /api/menu", highlight: hl(MENU_RESPONSE, "Cache-Control", "ETag", "Age:") },
         {
@@ -146,6 +149,7 @@ A client that doesn't know a code treats it as the \`x00\` of its class.`,
     },
     {
       title: "Fresh or stale?",
+      tip: "Fresh means its age is still below `max-age`.",
       blocks: [
         {
           kind: "md",
@@ -156,12 +160,14 @@ A client that doesn't know a code treats it as the \`x00\` of its class.`,
     },
     {
       title: "Revalidation: 304 Not Modified",
+      tip: "A `304` carries no body. The browser serves the copy it already had.",
       blocks: [
         { kind: "flow", actors: ["Page", "Browser cache", "Server"], steps: FLOW_REVALIDATE, caption: "A stale menu, revalidated with its ETag" },
       ],
     },
     {
       title: "The cache's decision",
+      tip: "Only a fresh copy skips the network. Revalidating still costs a round trip.",
       blocks: [
         { kind: "mermaid", src: DECIDE, caption: "What a cache does with each request" },
         {
@@ -174,6 +180,7 @@ A client that doesn't know a code treats it as the \`x00\` of its class.`,
   challenges: [
     {
       id: "cache-created",
+      tip: "Did the server create something, send you elsewhere, or queue the work for later?",
       type: "quiz",
       prompt: "`POST /api/orders` just created order `o-311`. Which response fits best?",
       options: [
@@ -186,6 +193,7 @@ A client that doesn't know a code treats it as the \`x00\` of its class.`,
     },
     {
       id: "cache-401-403",
+      tip: "Ana has already signed in.",
       type: "quiz",
       prompt: "Ana is signed in, but `GET /api/admin/sales` is only for staff. What should the server answer?",
       options: ["`403 Forbidden`", "`401 Unauthorized`", "`400 Bad Request`", "`405 Method Not Allowed`"],
@@ -194,6 +202,7 @@ A client that doesn't know a code treats it as the \`x00\` of its class.`,
     },
     {
       id: "cache-no-cache",
+      tip: "`no-cache` and `no-store` make different promises.",
       type: "quiz",
       prompt: "A response has `Cache-Control: no-cache`. What may the browser do with it?",
       options: [

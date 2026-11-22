@@ -1,0 +1,84 @@
+/* Questie, the sticky-note mascot. Fixed dark ink on its own yellow body; limbs and dots use the page ink. */
+.questie { --q-ink: #26231f; display: inline-block; width: 48px; flex: none; }
+.questie svg { width: 100%; height: auto; overflow: visible; display: block; }
+.questie .ink { fill: none; stroke: var(--q-ink); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.questie .limb { fill: none; stroke: var(--fg); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.questie .fill-ink { fill: var(--q-ink); }
+.questie .fill-limb { fill: var(--fg); }
+.questie .note { fill: #fff07a; }
+.questie .fold { fill: #e3cf4f; }
+.questie .white { fill: #fff; }
+.questie .tear { fill: #7cc4ff; stroke: #3b82c4; stroke-width: 1.2; }
+.questie .sparks { fill: #ffc94a; stroke: #c48a00; stroke-width: 1.2; }
+
+.questie .all { transform-box: fill-box; transform-origin: 50% 100%; animation: q-bob 2.6s ease-in-out infinite; }
+.questie .eye { transform-box: fill-box; transform-origin: center; animation: q-blink 4.4s infinite; }
+.questie .pupil { transition: transform .3s; }
+.questie .arm { transform-box: fill-box; transition: transform .3s cubic-bezier(.3, 1.6, .5, 1); }
+.questie .arm.l { transform-origin: 100% 0; }
+.questie .arm.r { transform-origin: 0 0; }
+.questie .leg { transform-box: fill-box; transform-origin: 50% 0; }
+
+.questie .happy-eyes, .questie .tear, .questie .m-happy, .questie .m-sad, .questie .m-think, .questie .dots, .questie .brows, .questie .sparks { display: none; }
+.questie:is([data-mood="happy"], [data-mood="cheer"]) .eyes { display: none; }
+.questie:is([data-mood="happy"], [data-mood="cheer"]) :is(.happy-eyes, .m-happy) { display: inline; }
+.questie:not([data-mood="idle"]) .m-idle { display: none; }
+.questie[data-mood="happy"] .all { animation: q-jump .7s cubic-bezier(.3, .7, .4, 1) 2; }
+.questie[data-mood="cheer"] .all { animation: q-cheer .9s cubic-bezier(.3, .7, .4, 1) 2; }
+.questie[data-mood="cheer"] .arm.l { transform: rotate(70deg); }
+.questie[data-mood="cheer"] .arm.r { transform: rotate(-70deg); }
+.questie[data-mood="cheer"] .sparks { display: inline; transform-box: fill-box; transform-origin: center; animation: q-spark .9s ease-out 2 both; }
+.questie[data-mood="sad"] :is(.m-sad, .tear, .brows) { display: inline; }
+.questie[data-mood="sad"] .all { animation: q-droop 1s ease forwards; }
+.questie[data-mood="sad"] .arm.l { transform: rotate(-25deg); }
+.questie[data-mood="sad"] .arm.r { transform: rotate(25deg); }
+.questie[data-mood="sad"] .pupil { transform: translateY(2px); }
+.questie .tear { animation: q-tear 1.4s ease-in infinite; }
+.questie[data-mood="think"] :is(.m-think, .dots) { display: inline; }
+.questie[data-mood="think"] .pupil { transform: translate(2px, -3px); }
+.questie[data-mood="think"] .all { animation: q-tilt 1.6s ease-in-out infinite alternate; }
+.questie[data-mood="think"] .arm.r { transform: rotate(-110deg); }
+.questie .dots circle { animation: q-dot 1.2s infinite; }
+.questie .dots circle:nth-child(2) { animation-delay: .2s; }
+.questie .dots circle:nth-child(3) { animation-delay: .4s; }
+
+.walking .questie .all { animation: q-hop .34s ease-in-out infinite; }
+.walking .questie .leg.l { animation: q-leg .34s ease-in-out infinite alternate; }
+.walking .questie .leg.r { animation: q-leg .34s ease-in-out infinite alternate-reverse; }
+.left .questie svg { transform: scaleX(-1); }
+
+@keyframes q-bob { 50% { transform: translateY(-3px) scaleY(1.02); } }
+@keyframes q-blink { 0%, 94%, 100% { transform: none; } 97% { transform: scaleY(.1); } }
+@keyframes q-jump { 20% { transform: scale(1.1, .88); } 50% { transform: translateY(-18px) scale(.94, 1.07); } 80% { transform: scale(1.06, .94); } }
+@keyframes q-cheer { 20% { transform: scale(1.1, .88); } 55% { transform: translateY(-22px) rotate(-8deg); } 85% { transform: scale(1.05, .95); } }
+@keyframes q-spark { from { opacity: 0; transform: scale(.4); } 50% { opacity: 1; } to { opacity: 0; transform: scale(1.3); } }
+@keyframes q-droop { to { transform: translateY(3px) rotate(-5deg) scaleY(.95); } }
+@keyframes q-tear { from { transform: translateY(0); opacity: 1; } to { transform: translateY(14px); opacity: 0; } }
+@keyframes q-tilt { from { transform: rotate(-4deg); } to { transform: rotate(5deg); } }
+@keyframes q-dot { 0%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+@keyframes q-hop { 50% { transform: translateY(-7px) rotate(4deg); } }
+@keyframes q-leg { from { transform: rotate(-22deg); } to { transform: rotate(22deg); } }
+
+/* Header Questie + tip bubble */
+.guide { position: relative; flex: none; display: grid; place-items: center; min-width: 48px; min-height: 48px; }
+.guide-btn { position: relative; background: none; border: 0; padding: 0; border-radius: var(--r-md); min-width: 48px; min-height: 48px; display: grid; place-items: center; }
+.guide-badge {
+  position: absolute; top: -2px; right: -4px; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent); color: var(--accent-ink); font: 700 12px/1 var(--f-body); box-shadow: 0 0 0 2px var(--bg);
+  animation: q-badge 1.8s ease-in-out infinite;
+}
+@keyframes q-badge { 50% { transform: scale(1.15); } }
+.say {
+  position: absolute; top: calc(100% + 10px); right: 0; z-index: 20; width: min(300px, calc(100vw - 32px));
+  background: var(--surface); color: var(--fg); border: 2px solid var(--fg); border-radius: 14px;
+  padding: var(--s-3) var(--s-7) var(--s-3) var(--s-4); box-shadow: 3px 3px 0 color-mix(in oklch, var(--fg) 25%, transparent);
+  font-size: var(--t-sm); text-align: left; animation: say-in .35s cubic-bezier(.3, 1.5, .5, 1);
+}
+.say::before { content: ""; position: absolute; top: -9px; right: 18px; width: 14px; height: 14px; background: var(--surface); border: 2px solid var(--fg); border-width: 2px 0 0 2px; transform: rotate(45deg); }
+.say-x { position: absolute; top: 4px; right: 4px; width: 44px; height: 44px; border: 0; background: none; color: var(--muted); font-size: 20px; border-radius: 50%; }
+.say-x:hover { color: var(--fg); }
+@keyframes say-in { from { opacity: 0; transform: translateY(-6px) scale(.92); } }
+
+/* Map walker */
+.map-questie { position: absolute; left: 0; top: 0; width: 52px; z-index: 2; pointer-events: none; will-change: transform; }
+.map-questie .questie { width: 52px; }

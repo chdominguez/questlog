@@ -7,14 +7,15 @@
 .wa-field { position: relative; }
 .wa-field textarea {
   width: 100%; min-height: 120px; resize: none; overflow: hidden; display: block;
-  background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: var(--r-md);
-  padding: var(--s-3) 52px var(--s-3) var(--s-3); font: inherit; line-height: 1.5;
+  background: var(--surface); color: var(--fg); border: 1.5px solid var(--line); border-radius: var(--r-md);
+  padding: var(--s-3) 60px var(--s-3) var(--s-3); font: inherit; font-size: max(16px, 1em); line-height: 1.5;
+  background-image: repeating-linear-gradient(180deg, transparent 0 23px, var(--rule) 23px 24px); background-attachment: local; background-position: 0 var(--s-3);
 }
 .wa-field textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .wa-field textarea[readonly] { color: var(--muted); }
 .wa-field.is-rec textarea { border-color: var(--bad); }
 .wa-mic {
-  position: absolute; right: var(--s-2); top: var(--s-2); width: 36px; height: 36px; border-radius: 50%;
+  position: absolute; right: var(--s-2); top: var(--s-2); width: 44px; height: 44px; border-radius: 50%;
   display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); color: var(--muted);
 }
 .wa-mic:hover { color: var(--fg); }
@@ -47,7 +48,7 @@
 .ring { flex: none; }
 .ring-track { fill: none; stroke: var(--raise); stroke-width: 3.2; }
 .ring-bar { fill: none; stroke-width: 3.2; stroke-linecap: round; transition: stroke-dasharray .6s ease-out; }
-.ring text { fill: var(--fg); font: 600 var(--t-xs) var(--f-display); }
+.ring text { fill: var(--fg); font: 700 var(--t-xs) var(--f-body); }
 .ring-ok .ring-bar { stroke: var(--ok); }
 .ring-mid .ring-bar { stroke: var(--gold); }
 .ring-bad .ring-bar { stroke: var(--bad); }
@@ -57,25 +58,22 @@
 .pill-bad { color: var(--bad); }
 
 /* Screens */
-.scr { display: grid; gap: var(--s-4); min-width: 0; }
-.scr-head { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; justify-content: space-between; }
-.scr-head h1 { font-size: var(--t-2xl); flex: 1; }
 .scr-input {
   width: 100%; background: var(--surface); color: var(--fg); border: 1px solid var(--line);
-  border-radius: var(--r-md); padding: var(--s-2) var(--s-3); min-height: 40px; font: inherit;
+  border-radius: var(--r-md); padding: var(--s-2) var(--s-3); min-height: 44px; font: inherit; font-size: max(16px, 1em);
 }
 .scr-input:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
 .scr-empty { color: var(--muted); margin: 0; }
 .ans-level { display: grid; gap: var(--s-2); }
-.ans-level h2 { font-size: var(--t-lg); }
-.ans-ch { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.ans-level h2 { font-size: var(--t-xl); }
+.ans-ch { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-card); }
 .ans-ch > summary { cursor: pointer; padding: var(--s-3) var(--s-4); display: flex; gap: var(--s-3); align-items: center; list-style: none; }
 .ans-ch > summary::-webkit-details-marker { display: none; }
 .ans-ch > summary .md { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .ans-count { color: var(--muted); font-size: var(--t-sm); font-variant-numeric: tabular-nums; flex: none; }
 .ans-body { padding: 0 var(--s-4) var(--s-3); display: grid; gap: var(--s-2); }
 .ans-try { border-top: 1px solid var(--line); padding-top: var(--s-2); }
-.ans-try > summary { cursor: pointer; min-height: 36px; display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; color: var(--muted); font-size: var(--t-sm); }
+.ans-try > summary { cursor: pointer; min-height: 44px; display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; color: var(--muted); font-size: var(--t-sm); }
 .ans-try-body { display: grid; gap: var(--s-3); padding: var(--s-3) 0 var(--s-1); }
 .ans-try-body > p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .mock-bar { display: flex; gap: var(--s-3); align-items: center; justify-content: space-between; font-variant-numeric: tabular-nums; }
@@ -87,5 +85,4 @@
 .mock-avg { display: flex; gap: var(--s-4); align-items: center; font-variant-numeric: tabular-nums; }
 @media (max-width: 520px) {
   .gv-head { flex-direction: column; }
-  .scr-head h1 { font-size: var(--t-xl); }
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft } from "@phosphor-icons/react";
 import type { Course } from "../course/registry";
 import { href } from "../ui/route";
-import { Md } from "../ui/Md";
+import { Md, summaryLine } from "../ui/Md";
 import { WrittenAnswer } from "../answers/WrittenAnswer";
 import { ScorePill, ScoreRing } from "../answers/GradeView";
 import { pickMockQuestions } from "../answers/mock";
@@ -82,7 +82,7 @@ export function MockScreen({ course }: { course: Course }) {
           <ol className="mock-sum">
             {questions.map((x, k) => (
               <li key={x.challenge.id}>
-                <Md text={x.challenge.prompt.split("\n")[0]} inline />
+                <Md text={summaryLine(x.challenge.prompt)} inline />
                 <ScorePill score={scores[k]} />
               </li>
             ))}

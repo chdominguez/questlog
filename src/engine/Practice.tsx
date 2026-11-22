@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Challenge } from "../course/schema";
 import { Md } from "../ui/Md";
+import { react } from "../questie/Questie";
 import { Snippet } from "../code/Snippet";
 import { play } from "../audio/sfx";
 import { ChallengeBody, Feedback, KICKER } from "./Challenge";
@@ -17,6 +18,7 @@ function PracticeRun({ c, onAgain }: { c: Challenge; onAgain: () => void }) {
   const finish = (r: Result) => {
     if (result) return;
     play(r === "ok" ? "ok" : r === "partial" ? "submit" : "bad");
+    react(r === "ok" ? "happy" : r === "partial" ? "think" : "sad");
     setResult(r);
   };
   return (

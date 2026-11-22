@@ -16,6 +16,7 @@ import { gradeSort } from "./sort";
 import { permutation, shuffled } from "./shuffle";
 import { gradeMatch } from "./match";
 import { gradeMulti } from "./grade";
+import { react, say } from "../questie/Questie";
 import "./engine.css";
 
 type Of<T extends Challenge["type"]> = Extract<Challenge, { type: T }>;
@@ -29,6 +30,7 @@ export const KICKER: Record<Challenge["type"], string> = {
 function report(c: Challenge, result: Result, easy?: boolean): number {
   const before = getProgress().xp;
   const after = dispatch({ type: "answer", id: c.id, ctype: c.type, result, easy, now: Date.now() });
+  react(result === "ok" ? (isMilestone(after.streak) ? "cheer" : "happy") : result === "partial" ? "think" : "sad");
   if (result === "ok") play(isMilestone(after.streak) ? "streak" : "ok");
   else if (result === "partial") play("submit");
   else play("bad");
@@ -371,10 +373,12 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
   const [fx, setFx] = useState<Fx | null>(null);
   const fxN = useRef(0);
   const done = result !== null;
+  useEffect(() => { say(c.tip); }, [c.tip]);
 
   const finish = (r: Result, easy?: boolean) => {
     if (done) return;
     const gained = report(c, r, easy);
+    say(c.tip); // close the hint bubble; Questie's face takes over
     setResult(r);
     setXp(gained);
     setFx({ kind: r === "ok" || r === "partial" ? "ok" : "bad", xp: gained, n: ++fxN.current });

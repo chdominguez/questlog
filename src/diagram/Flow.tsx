@@ -18,7 +18,7 @@ export function Flow({ actors, steps, caption }: { actors: string[]; steps: Flow
     const a = c?.querySelector(".flow-row.now .flow-arrow");
     if (!c || !a || c.scrollWidth <= c.clientWidth) return;
     const cr = c.getBoundingClientRect(), ar = a.getBoundingClientRect();
-    c.scrollTo({ left: c.scrollLeft + ar.left - cr.left + ar.width / 2 - c.clientWidth / 2, behavior: "smooth" });
+    c.scrollTo({ left: c.scrollLeft + ar.left - cr.left + ar.width / 2 - c.clientWidth / 2, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }, [s.i]);
 
   return (

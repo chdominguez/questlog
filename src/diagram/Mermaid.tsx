@@ -60,7 +60,9 @@ const init = (m: MermaidApi) => m.initialize({
   startOnLoad: false,
   securityLevel: "strict",
   theme: "base",
-  fontFamily: '"IBM Plex Sans", system-ui, sans-serif',
+  fontFamily: '"Atkinson Hyperlegible", system-ui, sans-serif',
+  look: "handDrawn",
+  handDrawnSeed: 7, // same sketch on every render
   themeVariables: { darkMode: isDark(), ...Object.fromEntries(Object.entries(VARS).map(([k, v]) => [k, token(v)])) },
 });
 
@@ -90,7 +92,7 @@ export function Mermaid({ src, caption }: { src: string; caption?: string }) {
     <figure className="mmd">
       {state.error ? (
         <div className="mmd-error" role="alert">
-          <p>Error en el diagrama: {state.error}</p>
+          <p>Diagram error: {state.error}</p>
           <pre>{src}</pre>
         </div>
       ) : state.svg ? (

@@ -36,7 +36,7 @@ export function HomeScreen() {
                     <b>{c.title}</b>
                     {c.summary && <span className="course-summary">{c.summary}</span>}
                     <span className="course-meta">{done}/{c.levels.length} levels · {stars}<Star weight="fill" aria-hidden /><span className="sr">stars</span>{p.completed.includes(c.id) ? " · Completed" : due > 0 ? ` · ${due} due` : ""}</span>
-                    <span className="bar" aria-hidden="true"><span style={{ width: `${(done / c.levels.length) * 100}%` }} /></span>
+                    <span className="bar" aria-hidden="true"><span style={{ transform: `scaleX(${c.levels.length ? done / c.levels.length : 0})` }} /></span>
                   </span>
                 </a>
               </li>

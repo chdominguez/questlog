@@ -113,6 +113,11 @@ Grading: `multi` the exact set is ok, only right picks and at least half of them
 
 All types accept `explain` (shown after answering); give it to every quiz, order and bug. `code` shows a snippet with the prompt (not for `bug` or `written`).
 
+**Questie tips.** Questie is the app's mascot. Both theory cards and challenges take an optional `tip` (Markdown, one or two short sentences).
+- On a theory card, Questie says the tip when the card opens. Make it the one takeaway worth remembering, not a summary of the card.
+- On a challenge, Questie keeps the tip until the learner taps it. Make it a nudge toward the right reasoning that never names or rules out an option.
+- Leave `tip` out rather than write filler; with no tip, Questie only reacts with faces.
+
 ### Katas
 
 Tests are JavaScript that runs after the learner's code and must `return eq(got, expected)` (deep equality; Map/Set compare order-insensitively). `export` in starter or solution is stripped, so either style works. The validator runs the solution against all tests (must pass) and the starter (must compile and fail at least one). Need ≥3 `tests` and ≥2 `hidden`. Test only behavior the statement states.

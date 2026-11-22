@@ -1,5 +1,5 @@
 .flow { margin: 0; display: grid; gap: var(--s-3); min-width: 0; }
-.flow-scroll { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--s-3) 0 var(--s-2); overflow-x: auto; max-width: 100%; }
+.flow-scroll { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-card); padding: var(--s-3) 0 var(--s-2); overflow-x: auto; max-width: 100%; }
 .flow-lanes {
   position: relative; display: grid; grid-template-columns: repeat(var(--n), minmax(104px, 1fr));
   min-width: calc(var(--n) * 104px);
@@ -29,15 +29,14 @@
   font: var(--t-xs)/1.2 var(--f-mono); color: var(--fg); background: var(--surface); padding: 0 var(--s-1); border-radius: var(--r-sm);
 }
 .flow-arrow.flow-self .flow-label { left: var(--s-2); transform: none; bottom: -7px; }
-.flow-dot {
-  position: absolute; top: -6px; left: 0; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%;
-  background: var(--accent);
-  animation: flow-go 1.1s ease-in-out forwards;
-}
+/* The dot spans the arrow, so translateX(100%) moves its ::before from one end to the other without animating layout. */
+.flow-dot { position: absolute; top: -6px; left: 0; width: 100%; height: 10px; animation: flow-go 1.1s ease-in-out forwards; }
+.flow-dot::before { content: ""; position: absolute; left: -5px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
 .flow-arrow.flow-rev .flow-dot { animation-name: flow-back; }
-.flow-arrow.flow-self .flow-dot { top: -5px; animation: flow-pulse 1.1s ease-in-out 2; }
-@keyframes flow-go { from { left: 0; } to { left: 100%; } }
-@keyframes flow-back { from { left: 100%; } to { left: 0; } }
+.flow-arrow.flow-self .flow-dot { top: -5px; width: 0; animation: none; }
+.flow-arrow.flow-self .flow-dot::before { animation: flow-pulse 1.1s ease-in-out 2; }
+@keyframes flow-go { from { transform: translateX(0); } to { transform: translateX(100%); } }
+@keyframes flow-back { from { transform: translateX(100%); } to { transform: translateX(0); } }
 @keyframes flow-pulse { 50% { transform: scale(1.5); } }
 .flow-payload { display: grid; gap: var(--s-2); min-width: 0; }
 .flow-payload .snippet { margin: 0; }

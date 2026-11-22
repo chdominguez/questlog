@@ -9,6 +9,7 @@ import { getArt } from "../art";
 import { play } from "../audio/sfx";
 import { Drill } from "./Drill";
 import { Practice } from "./Practice";
+import { say } from "../questie/Questie";
 import "./engine.css";
 
 export function Block({ b }: { b: TheoryBlock }) {
@@ -48,6 +49,7 @@ export const typingTarget = (e: KeyboardEvent) => {
 /** Card-by-card theory with progress dots; arrows navigate. */
 export function Theory({ cards, onDone }: { cards: TheoryCard[]; onDone: () => void }) {
   const [i, setI] = useState(0);
+  useEffect(() => { scrollTo(0, 0); }, [i]);
   const last = i >= cards.length - 1;
   const goTo = (n: number) => { if (n >= 0 && n < cards.length && n !== i) { play("click"); setI(n); } };
   const next = () => (last ? onDone() : goTo(i + 1));
@@ -63,6 +65,7 @@ export function Theory({ cards, onDone }: { cards: TheoryCard[]; onDone: () => v
   });
 
   const card = cards[i];
+  useEffect(() => { say(card?.tip, true); }, [card]);
   if (!card) return null;
   return (
     <section className="theory" aria-label="Theory">

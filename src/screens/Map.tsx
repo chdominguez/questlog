@@ -9,9 +9,10 @@ import { isUnlocked } from "../engine/levels";
 import { deleteReminder } from "../answers/api";
 import { href } from "../ui/route";
 import { Stars } from "./Level";
+import { MapQuestie } from "../questie/Questie";
 import "./screens.css";
 
-const ROW = 150; // px per node row on the path
+const ROW = 184; // px per node row: orb + 3-line title + stars, so rows never overlap
 const XS = [50, 76, 50, 24]; // winding x positions, % of width
 const ORB_Y = 40; // orb centre from the node top (see .orb in screens.css)
 
@@ -87,6 +88,7 @@ export function MapScreen({ course }: { course: Course }) {
                 );
               })}
             </ol>
+            <MapQuestie course={course.id} pts={pts} at={firstOpen >= 0 ? firstOpen : levels.length - 1} row={ROW} />
           </div>
         )}
 

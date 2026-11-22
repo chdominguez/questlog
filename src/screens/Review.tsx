@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft } from "@phosphor-icons/react";
 import { CHALLENGES, type Course } from "../course/registry";
 import { courseDue } from "../engine/srs";
@@ -6,6 +6,7 @@ import { href } from "../ui/route";
 import { play } from "../audio/sfx";
 import { Hud } from "../engine/Hud";
 import { ChallengeCard, shuffled } from "../engine/Challenge";
+import { Guide } from "../questie/Questie";
 import { LevelUp, burst } from "../engine/Celebrate";
 import { getProgress, rankIndex, useProgress } from "../engine/store";
 import "./screens.css";
@@ -24,6 +25,7 @@ export function ReviewScreen({ course }: { course: Course }) {
   const isDue = (id: string) => (cards[id]?.due ?? Infinity) <= Date.now();
   const [round, setRound] = useState(() => ({ queue: deck(course.id), startXp: getProgress().xp }));
   const [i, setI] = useState(0);
+  useEffect(() => { scrollTo(0, 0); }, [i]);
   const [rankUp, setRankUp] = useState<number | null>(null);
   const { queue } = round;
   const finished = i >= queue.length;
@@ -47,6 +49,7 @@ export function ReviewScreen({ course }: { course: Course }) {
         <div className="level-head">
           <a className="back" href={href.map(course.id)} aria-label={course.title}><ArrowLeft aria-hidden /></a>
           <h1>Review</h1>
+          <Guide />
         </div>
 
         {queue.length === 0 && (
@@ -60,7 +63,7 @@ export function ReviewScreen({ course }: { course: Course }) {
           <div className="screen-in" key={`${round.startXp}-${i}`}>
             <div className="runbar">
               <div className="progress" role="progressbar" aria-label="Progress" aria-valuemin={0} aria-valuemax={queue.length} aria-valuenow={i}>
-                <div style={{ width: `${(i / queue.length) * 100}%` }} />
+                <div style={{ transform: `scaleX(${i / queue.length})` }} />
               </div>
               <span className="count-label">{i + 1}/{queue.length}</span>
             </div>

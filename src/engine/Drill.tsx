@@ -4,6 +4,7 @@ import { Md } from "../ui/Md";
 import { play } from "../audio/sfx";
 import { permutation } from "./shuffle";
 import { ladder } from "./drill";
+import { react } from "../questie/Questie";
 
 type DrillBlock = Extract<TheoryBlock, { kind: "drill" }>;
 type Side = "l" | "r";
@@ -20,7 +21,7 @@ export function Drill({ b }: { b: DrillBlock }) {
   const onRound = (clean: boolean) => {
     if (!clean) { setAttempt((a) => a + 1); return; }
     play("ok");
-    if (r + 1 < rounds.length) { setR(r + 1); setAttempt(0); } else setFinished(true);
+    if (r + 1 < rounds.length) { setR(r + 1); setAttempt(0); } else { setFinished(true); react("cheer"); }
   };
   const again = () => { play("click"); setR(0); setAttempt(0); setFinished(false); };
 

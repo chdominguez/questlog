@@ -202,7 +202,7 @@ function TestRow({ r }: { r: TestResult | { name: string; pending: true } }) {
     <div className={`kata-test ${r.pass ? "ok" : "bad"}`}>
       <span className="kata-dot" aria-hidden="true" />
       <span className="kata-test-name">
-        <span className="sr-only">{r.pass ? "Pass: " : "Fail: "}</span>
+        <span className="sr">{r.pass ? "Pass: " : "Fail: "}</span>
         {r.name}
       </span>
       {!r.pass && (
