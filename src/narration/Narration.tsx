@@ -93,8 +93,11 @@ function Player({ course, level }: { course: string; level: string }) {
     const t = setInterval(async () => {
       n++;
       const s = await getNarration(course, level).catch(() => null);
-      if (s && !s.unlocked) { setRefunded(!!me?.credits); setPhase("failed"); } // the job failed: refunded, unlock removed
-      else if (s) {
+      if (s && !s.unlocked) {
+        // A failed job refunds and removes the unlock; an edit to the lesson only locks it again.
+        const status = jobId.current ? await jobStatus(jobId.current).catch(() => null) : null;
+        if (status === "failed") { setRefunded(!!me?.credits); setPhase("failed"); } else settle(s);
+      } else if (s) {
         setSt(s);
         if (!allReady(s) && n % CHECK_EVERY === 0) {
           const status = jobId.current ? await jobStatus(jobId.current).catch(() => null) : "failed";
