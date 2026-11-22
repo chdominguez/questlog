@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Star } from "@phosphor-icons/react";
-import { getMe } from "../answers/api";
 import { COURSE_ERRORS, coursesLoaded, useCourses, visibleTo } from "../course/registry";
 import { useSession } from "../auth/session";
 import { JobCards } from "../builder/JobCards";
@@ -19,13 +18,11 @@ import "../builder/builder.css";
 
 export function HomeScreen() {
   const p = useProgress();
-  const [user, setUser] = useState(() => { try { return localStorage.getItem("ql.user") ?? ""; } catch { return ""; } }); // sync.ts keeps it current
-  useEffect(() => { if (!isDemo) getMe().then((me) => setUser(me.user), () => {}); }, []);
+  const session = useSession();
   const all = useCourses();
-  const courses = visibleTo(user, all);
+  const courses = visibleTo(session.me?.email ?? "", all); // course `users` lists hold emails, not account ids
   const { status, metas } = useUserCourses();
   const mine = new Set(metas.filter((m) => m.mine).map((m) => m.id));
-  const session = useSession();
   const ai = session.me?.features.ai ?? false;
   useEffect(() => { if (!isDemo) void refreshMetas(); }, []);
   // Signed in after a failed load (e.g. signed out at start): load again.
