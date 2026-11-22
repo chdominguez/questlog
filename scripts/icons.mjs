@@ -3,10 +3,10 @@ import sharp from "sharp";
 import { readFileSync } from "node:fs";
 
 const svg = readFileSync("public/icon.svg");
-// Maskable: full-bleed background, glyph shrunk into the 80% safe zone.
+// Maskable: full-bleed paper, Questie shrunk into the 80% safe zone.
 const maskable = Buffer.from(svg.toString()
   .replace('rx="112"', 'rx="0"')
-  .replace(/<path/, '<g transform="translate(51.2 51.2) scale(.8)"><path').replace(/<\/svg>/, "</g></svg>"));
+  .replace('translate(56 20) scale(4)', 'translate(111 85) scale(2.9)'));
 const square = Buffer.from(svg.toString().replace('rx="112"', 'rx="0"')); // iOS rounds the corners itself
 const out = (name, input, size) => sharp(input, { density: 384 }).resize(size, size).png().toFile(`public/icons/${name}.png`);
 await Promise.all([
