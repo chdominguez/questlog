@@ -8,3 +8,15 @@ playwright-report
 *.tsbuildinfo
 docker-compose.override.yml
 dist-server
+site/dist
+site/node_modules
+site/.astro
+site/public/demo
+site/public/schema
+site/src/content/docs/authoring/reference.md
+android/app/build/
+ios/App/build/
+android/app/google-services.json
+ios/App/App/GoogleService-Info.plist
+*.jks
+*.keystore
