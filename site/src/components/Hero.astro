@@ -28,7 +28,7 @@ const landing = Astro.locals.starlightRoute.id === "";
     <div class="shots" aria-hidden="true">
       <figure class="shot map">
         <Image src={mapLight} alt="" widths={[300, 600]} sizes="300px" loading="eager" fetchpriority="high" class="dark:sl-hidden" />
-        <Image src={mapDark} alt="" widths={[300, 600]} sizes="300px" loading="eager" class="light:sl-hidden" />
+        <Image src={mapDark} alt="" widths={[300, 600]} sizes="300px" loading="lazy" class="light:sl-hidden" />
       </figure>
       <img class="mascot" src={mascot.src} alt="" width="96" height="107" />
     </div>
