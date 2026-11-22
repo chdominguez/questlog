@@ -1,8 +1,9 @@
 name: Deploy
 
 # Every push to main tests, rebuilds and restarts the container on the self-hosted runner.
-# Box-local files live in BOX (gitignored there): .env (ANTHROPIC_API_KEY), data/, courses-private/,
+# Box-local files live in BOX (gitignored there): .env (app env, see self-host/config), data/, courses-private/,
 # docker-compose.override.yml (joins Caddy's network).
+# The runner label stays `questlog` until the host runner is relabelled (runbook in README).
 on:
   push:
     branches: [main]
@@ -33,12 +34,17 @@ jobs:
       - name: Build and restart
         env:
           DATA_DIR: ${{ env.BOX }}/data
-        run: docker compose --env-file "$BOX/.env" -f docker-compose.yml -f "$BOX/docker-compose.override.yml" up -d --build
+          ENV_FILE: ${{ env.BOX }}/.env
+          COMMIT: ${{ github.sha }}
+        run: |
+          # The project was called questlog before the rename; free its port first.
+          docker compose -p questlog down --remove-orphans || true
+          docker compose -f docker-compose.yml -f "$BOX/docker-compose.override.yml" up -d --build
       - name: Health check
         run: |
           for i in $(seq 1 20); do
-            curl -fsS -H 'x-auth-request-email: deploy@ci' http://127.0.0.1:8790/api/health && exit 0
+            curl -fsS http://127.0.0.1:8790/api/health && exit 0
             sleep 2
           done
-          docker logs --tail 50 questlog
+          docker logs --tail 50 questie
           exit 1
