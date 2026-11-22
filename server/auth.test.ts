@@ -74,6 +74,19 @@ test("db.tx while Better Auth writes: no nested transaction", async () => {
   expect(errors).toEqual([]);
 });
 
+test("kata-style imports of /auth/* get no session token", async () => {
+  const { req } = setup();
+  const { cookie } = await signUp(req);
+  for (const path of ["/auth/get-session", "/auth/list-sessions"]) {
+    expect(await (await req(path, { headers: { cookie } })).text(), path).toContain("token"); // the same request without the import marker
+    for (const dest of ["json", "script"]) {
+      const res = await req(path, { headers: { cookie, "Sec-Fetch-Site": "same-origin", "Sec-Fetch-Dest": dest } });
+      expect(res.status, `${path} ${dest}`).toBe(403);
+      expect(await res.text()).not.toContain("token");
+    }
+  }
+});
+
 test("app-origin requests ignore cookies and use the bearer token", async () => {
   const { req } = setup();
   const { cookie, token } = await signUp(req);

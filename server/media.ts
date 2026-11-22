@@ -45,8 +45,11 @@ export const createMedia = (root: () => string = mediaRoot) => new Hono().get("/
 });
 
 /** App pages run only scripts from this origin (and Pyodide's CDN): an injected inline script or event handler never runs. */
-export const CSP = "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'";
+export const CSP = "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net/pyodide/; object-src 'none'; base-uri 'self'";
+/** The kata worker (one bundled file) reaches only Pyodide's CDN: course code can't send anything to this origin or another. */
+export const WORKER_CSP = "default-src 'none'; script-src 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net/pyodide/; connect-src https://cdn.jsdelivr.net/pyodide/";
 export const cspHeader: MiddlewareHandler = async (c, next) => {
   await next();
   if (c.res.headers.get("content-type")?.startsWith("text/html")) c.res.headers.set("Content-Security-Policy", CSP);
+  else if (/\/runner\.worker-[\w-]+\.js$/.test(c.req.path)) c.res.headers.set("Content-Security-Policy", WORKER_CSP);
 };

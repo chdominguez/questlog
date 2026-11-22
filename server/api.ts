@@ -151,6 +151,11 @@ const JSON_WRITE = new Set(["POST", "PUT", "PATCH"]);
  * APP_ORIGINS origin, which then authenticates by bearer only (appOrigin). Writes must be JSON, except multipart uploads.
  */
 const SCRIPT_DESTS = new Set(["script", "json", "style", "worker", "sharedworker", "serviceworker"]);
+/** Kata code from courses runs in a worker without fetch; a module or JSON import is the read it has left. Before /auth/*, which returns session tokens. */
+const noImports: MiddlewareHandler<App> = async (c, next) => {
+  if (SCRIPT_DESTS.has(c.req.header("sec-fetch-dest") ?? "")) return err(c, 403, "origin_not_allowed");
+  await next();
+};
 const guard: MiddlewareHandler<App> = async (c, next) => {
   const origin = c.req.header("origin");
   const appOrigin = !!origin && c.env.APP_ORIGINS.includes(origin);
@@ -160,8 +165,6 @@ const guard: MiddlewareHandler<App> = async (c, next) => {
     try { if (new URL(origin).host !== new URL(c.req.url).host) foreign = true; } catch { foreign = true; }
   }
   if (foreign && !appOrigin) return err(c, 403, "origin_not_allowed");
-  // Kata code from courses runs in a worker without fetch; a module or JSON import is the read it has left.
-  if (SCRIPT_DESTS.has(c.req.header("sec-fetch-dest") ?? "")) return err(c, 403, "origin_not_allowed");
   if (appOrigin) c.set("appOrigin", true);
   const upload = c.req.method === "POST" && c.req.path.endsWith("/builder/uploads");
   if (JSON_WRITE.has(c.req.method) && !upload && !/^application\/json\b/i.test(c.req.header("content-type") ?? "")) {
@@ -184,7 +187,7 @@ const limitBody: MiddlewareHandler<App> = (c, next) => {
 };
 
 /**
- * Mount order (Hono runs in registration order): cors -> /health -> body limits for /auth/* and /webhooks/* -> /auth/* -> /webhooks/* -> guard -> session -> limitBody -> the rest.
+ * Mount order (Hono runs in registration order): cors -> noImports -> /health -> body limits for /auth/* and /webhooks/* -> /auth/* -> /webhooks/* -> guard -> session -> limitBody -> the rest.
  * Route modules are mounted with .route("/", ...); they must scope every middleware to a path (no path-less .use()),
  * or it would run for every later route.
  */
@@ -218,6 +221,7 @@ export function createApi(over: Partial<Deps> = {}): Hono<App> {
       exposeHeaders: ["set-auth-token", "x-credits-balance", "Retry-After"],
       maxAge: 600,
     }))
+    .use(noImports)
     .get("/health", (c) => c.json({
       ok: true, commit: c.env.COMMIT, grader: grader(c.env) !== null, narration: !!c.env.ELEVENLABS_API_KEY,
     } satisfies Health))

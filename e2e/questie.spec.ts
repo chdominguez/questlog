@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { readdirSync } from "node:fs";
 
 // The product flow end to end, in order, against server/e2e.ts. Screenshots land in e2e/screenshots.
 test.describe.configure({ mode: "serial" });
@@ -57,6 +58,26 @@ test("sign up, verify email, welcome", async ({ request }) => {
   await signUp(page, request, USER, true);
   await expect(page.getByRole("heading", { name: "What do you want to learn?" })).toBeVisible();
   await snap(page, "welcome");
+});
+
+test("course code can't read the session token", async () => {
+  // A JSON import carries the session cookie; the API refuses it, other JSON on this origin loads.
+  const load = (p: string) => page.evaluate((p) => import(p, { with: { type: "json" } }).then(() => "loaded", () => "blocked"), p);
+  expect(await load("/api/auth/get-session")).toBe("blocked");
+  expect(await load("/api/auth/list-sessions")).toBe("blocked");
+  expect(await load("/.well-known/assetlinks.json")).toBe("loaded");
+  // The kata worker's own CSP stops imports to this origin; a kata still runs.
+  const worker = `/assets/${readdirSync("dist/assets").find((f) => f.startsWith("runner.worker-"))}`;
+  const got = await page.evaluate((url) => new Promise<unknown[]>((done) => {
+    const w = new Worker(url), out: unknown[] = [];
+    const code = `import("/.well-known/assetlinks.json", { with: { type: "json" } }).then(() => postMessage("loaded"), () => postMessage("blocked")); return eq(1, 1);`;
+    w.onmessage = (e) => {
+      if (e.data === "ready") return w.postMessage({ source: "", tests: [{ name: "t", code }] });
+      out.push(e.data);
+      if (typeof e.data === "string") { w.terminate(); done(out); }
+    };
+  }), worker);
+  expect(got).toEqual([[expect.objectContaining({ pass: true })], "blocked"]);
 });
 
 test("free AI course from a topic", async () => {
