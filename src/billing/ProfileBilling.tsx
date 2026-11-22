@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PLAN } from "../../shared/pricing";
 import { isDemo, isNative } from "../platform";
-import { useSession } from "../auth/session";
+import { loadMe, useSession } from "../auth/session";
 import { href } from "../ui/route";
 import { portal } from "./api";
 import { day, num, price, live } from "./format";
@@ -15,6 +15,7 @@ export function ProfileBilling() {
   const c = useSession().me?.credits;
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  useEffect(() => { if (!isDemo) void loadMe(); }, []); // the x-credits-balance header patches only the total
   if (!c || isDemo) return null;
   const s = live(c) ? c.subscription! : null;
   const store = s?.provider === "revenuecat";
