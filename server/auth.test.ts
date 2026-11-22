@@ -58,6 +58,22 @@ test("session via cookie and via bearer; /me returns the account", async () => {
   expect((await req("/me")).status).toBe(401);
 });
 
+test("db.tx while Better Auth writes: no nested transaction", async () => {
+  const { db, req } = setup();
+  const errors: unknown[] = [];
+  let stop = false;
+  const spin = (async () => {
+    while (!stop) {
+      try { db.tx((q) => q.get("SELECT 1")); } catch (e) { errors.push(e); }
+      await new Promise((r) => setImmediate(r));
+    }
+  })();
+  for (const email of ["a@x.com", "b@x.com", "c@x.com"]) await signUp(req, email);
+  stop = true;
+  await spin;
+  expect(errors).toEqual([]);
+});
+
 test("app-origin requests ignore cookies and use the bearer token", async () => {
   const { req } = setup();
   const { cookie, token } = await signUp(req);

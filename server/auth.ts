@@ -4,6 +4,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { bearer, magicLink } from "better-auth/plugins";
 import { apiKey } from "@better-auth/api-key";
+import { NodeSqliteDialect } from "@better-auth/kysely-adapter/node-sqlite-dialect";
 import type { Me } from "../shared/api-types";
 import { BUILD } from "../shared/pricing";
 import type { App, Deps, SessionUser } from "./api";
@@ -39,7 +40,9 @@ export function authOptions(env: Env, sqlite: DatabaseSync, deps: Deps): BetterA
   const apple = env.APPLE_TEAM_ID && env.APPLE_KEY_ID && env.APPLE_PRIVATE_KEY && (env.APPLE_CLIENT_ID || env.APPLE_BUNDLE_ID);
   const google = env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET;
   return {
-    database: sqlite,
+    // Same connection as db.tx, so no Better Auth transactions: its async BEGIN would interleave with our sync BEGIN IMMEDIATE.
+    // shortcut: Better Auth's multi-row writes (user + account) are not atomic; give it its own connection if that ever matters.
+    database: { dialect: new NodeSqliteDialect({ database: sqlite }), type: "sqlite", transaction: false },
     baseURL: env.APP_URL,
     basePath: "/api/auth",
     secret: env.BETTER_AUTH_SECRET,
