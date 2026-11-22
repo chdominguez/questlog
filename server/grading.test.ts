@@ -19,13 +19,21 @@ vi.mock("./credits", async (orig) => {
     bank.balance -= cost;
     const s = { action, cost, refunded: false };
     bank.spent.push(s);
-    try { return await run(); } catch {
+    try { return await run(`s${bank.spent.length - 1}`); } catch {
       s.refunded = true;
       bank.balance += cost;
       return err(c, 502, "ai_failed", { refunded: true });
     }
   };
-  return { ...real, metered: () => true, charge };
+  const refund: typeof real.refund = (_db, id) => {
+    const s = bank.spent[Number(id.slice(1))];
+    if (!s || s.refunded) return false;
+    s.refunded = true;
+    bank.balance += s.cost;
+    return true;
+  };
+  const balance = (() => ({ plan: 0, topup: bank.balance, total: bank.balance, planExpiresAt: null, freeCourses: 0 })) as typeof real.balance;
+  return { ...real, metered: () => true, charge, refund, balance };
 });
 
 const course = resolve(CourseSchema.parse({
@@ -126,6 +134,27 @@ test("mock debits 20 once; grades inside are free until the cap or expiry", asyn
   expect(late.status).toBe(410);
   expect(await late.json()).toMatchObject({ code: "mock_expired" });
   expect(bank.spent.map((s) => s.action)).toEqual(["mock", "mock"]);
+});
+
+test("mock: a failed first grade refunds the exam and closes it; later failures do not", async () => {
+  const req = api();
+  const start = async () => ((await (await req("/mock", post({ courseId: "t" }))).json()) as MockStart).mockId;
+  const g = (mockId: string) => req("/grade", post({ challengeId: "t:w2", answer: "x", mockId }));
+
+  fail.grade = true;
+  const a = await start();
+  const bad = await g(a);
+  expect(bad.status).toBe(502);
+  expect(await bad.json()).toMatchObject({ code: "ai_failed", refunded: true });
+  expect(bad.headers.get("x-credits-balance")).toBe("100");
+  expect((await g(a)).status).toBe(409); // closed
+
+  fail.grade = false;
+  const b = await start();
+  expect((await g(b)).status).toBe(200);
+  fail.grade = true;
+  expect(await (await g(b)).json()).toMatchObject({ code: "ai_failed", refunded: false });
+  expect(bank.balance).toBe(80);
 });
 
 test("mock needs a course with a mock exam and a grader", async () => {

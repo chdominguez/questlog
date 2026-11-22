@@ -22,12 +22,14 @@ type Phase = "edit" | "grading" | "graded" | "improving" | "rating" | "rated";
 
 const MAX = 8000; // matches server MAX_ANSWER
 
-export function WrittenAnswer({ challenge, levelId, onDone, saveOnExit = false, mockId }: {
+export function WrittenAnswer({ challenge, levelId, onDone, saveOnExit = false, mockId, onMockFailed }: {
   challenge: Written; levelId: string; onDone: (score: number) => void;
   /** Save whatever is written, ungraded, if the component unmounts before the answer was saved (mock clock). */
   saveOnExit?: boolean;
   /** Paid mock session: grading inside it is free. */
   mockId?: string;
+  /** The mock's first grade failed and the server refunded the exam. */
+  onMockFailed?: () => void;
 }) {
   const { me } = useSession();
   const ai = me?.features.ai !== false;
@@ -130,6 +132,8 @@ export function WrittenAnswer({ challenge, levelId, onDone, saveOnExit = false, 
       if (e instanceof ApiError && (e.status === 400 || e.status === 402)) {
         if (e.status === 400) setNotice(e.message); // 402 opened the top-up sheet; the answer stays for a retry
         setPhase("edit");
+      } else if (mockId && e instanceof ApiError && e.body.refunded === true) {
+        onMockFailed?.();
       } else {
         const timeout = e instanceof DOMException && e.name === "TimeoutError";
         const paid = !mockId && (timeout || (e instanceof ApiError && e.body.refunded === true));
@@ -221,7 +225,7 @@ export function WrittenAnswer({ challenge, levelId, onDone, saveOnExit = false, 
               {phase === "grading" ? "Grading…" : "Grade"}
             </button>
           ) : (
-            <CostButton action="grade" label="Grade" busy={phase === "grading"} busyLabel="Grading…" disabled={!text.trim()} onPress={correct} />
+            <CostButton action="grade" label="Grade" busy={phase === "grading"} busyLabel="Grading…" disabled={!text.trim()} keyshortcuts="Control+Enter Meta+Enter" onPress={correct} />
           ))}
           <button type="button" className="btn ghost" onClick={() => setPhase("rating")} disabled={phase === "grading"}>
             Show model answer

@@ -144,7 +144,7 @@ export function grant(db: Db, g: GrantInput): boolean {
 }
 
 /** spend -> 402/409 response; run(); on throw: refund + 502 ai_failed { refunded }; sets x-credits-balance. */
-export async function charge(c: Context<App>, action: Action, ref: string, run: () => Promise<Response>): Promise<Response> {
+export async function charge(c: Context<App>, action: Action, ref: string, run: (spendId: string | null) => Promise<Response>): Promise<Response> {
   const db = c.env.DB, user = c.get("user");
   const key = c.req.header("idempotency-key")?.slice(0, 200) || crypto.randomUUID();
   const s = spend(db, c.env, { user, action, key, ref });
@@ -158,7 +158,7 @@ export async function charge(c: Context<App>, action: Action, ref: string, run: 
   const k = `${user}:${key}`;
   if (on) inflight.add(k);
   try {
-    return await run();
+    return await run(s.spendId);
   } catch (e) {
     console.error("ai call failed:", e);
     const refunded = !!s.spendId && !s.replay && refund(db, s.spendId, "ai_failed");

@@ -14,11 +14,12 @@ export interface CostButtonProps {
   busyLabel?: string;
   disabled?: boolean;
   className?: string;
+  keyshortcuts?: string;
   onPress(): void;
 }
 
 /** "label · cost" ("· Free", or the plain label when billing is off); spends at or above confirmAt ask first. */
-export function CostButton({ action, label, free, busy, busyLabel, disabled, className = "btn", onPress }: CostButtonProps) {
+export function CostButton({ action, label, free, busy, busyLabel, disabled, className = "btn", keyshortcuts, onPress }: CostButtonProps) {
   const credits = useSession().me?.credits;
   const [asking, setAsking] = useState(false);
   if (isDemo) return null;
@@ -30,7 +31,7 @@ export function CostButton({ action, label, free, busy, busyLabel, disabled, cla
   };
   return (
     <>
-      <button type="button" className={className} disabled={disabled || busy} aria-busy={busy || undefined} onClick={press}>
+      <button type="button" className={className} disabled={disabled || busy} aria-busy={busy || undefined} aria-keyshortcuts={keyshortcuts} onClick={press}>
         {busy && busyLabel ? busyLabel : (
           <>{label}{text && <> <span aria-hidden="true">·</span> {text}{text !== "Free" && <span className="sr"> credits</span>}</>}</>
         )}
