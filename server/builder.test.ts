@@ -297,3 +297,20 @@ test("assemble and problem routing", () => {
   const m = problemsByLevel(c, ["levels[1].challenges[0]: bad", "katas[0] (k): solution fails", "(root): odd"]);
   expect([...m.entries()]).toEqual([[1, ["challenges[0]: bad", "katas[0] (k): solution fails"]], [0, ["(root): odd"]]]);
 });
+
+// Last: it replaces the build handler.
+test("jobs: narration has its own lane, so running builds never hold it back", async () => {
+  env.JOB_CONCURRENCY = 1;
+  let release!: () => void;
+  const gate = new Promise<void>((r) => { release = r; });
+  registerJob("build", async () => { await gate; return {}; });
+  registerJob("narration", async () => ({ tracks: 1 }));
+  const b = enqueue(env.DB, { user: "u", kind: "build", input: {}, spendId: null });
+  enqueue(env.DB, { user: "u", kind: "build", input: {}, spendId: null });
+  const n = enqueue(env.DB, { user: "u", kind: "narration", input: {}, spendId: null });
+  start();
+  expect((await settle(n)).job.status).toBe("done");
+  expect((await (await req(`/jobs/${b}`, as("u"))).json() as JobPoll).job.status).toBe("running");
+  release();
+  expect((await settle(b)).job.status).toBe("done");
+});

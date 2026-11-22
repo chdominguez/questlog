@@ -87,7 +87,7 @@ export function startJobs(env: Env, deps: Deps): () => void {
     if (r.attempts < 2) db.tx((q) => q.run("UPDATE jobs SET status = 'queued' WHERE id = ?", r.id));
     else failJob(db, r.id, "ai_failed", "Job interrupted");
   }
-  let active = 0;
+  const active = { narration: 0, build: 0 }; // one lane per kind, JOB_CONCURRENCY each: builds never hold back narration
   let stopped = false;
   const run = async (job: JobRow) => {
     const beat = setInterval(() => {
@@ -108,14 +108,16 @@ export function startJobs(env: Env, deps: Deps): () => void {
   // Runs from timers: a throw here would end the process, so log it and try again next tick.
   const tick = () => {
     try {
-      while (!stopped && active < env.JOB_CONCURRENCY) {
-        const t = now();
-        const job = db.tx((q) => q.get<JobRow>(
-          `UPDATE jobs SET status = 'running', started_at = ?, heartbeat_at = ?, attempts = attempts + 1
-           WHERE id = (SELECT id FROM jobs WHERE status = 'queued' ORDER BY created_at, rowid LIMIT 1) RETURNING *`, t, t));
-        if (!job) return;
-        active++;
-        void run(job).finally(() => { active--; tick(); });
+      for (const kind of ["narration", "build"] as const) {
+        while (!stopped && active[kind] < env.JOB_CONCURRENCY) {
+          const t = now();
+          const job = db.tx((q) => q.get<JobRow>(
+            `UPDATE jobs SET status = 'running', started_at = ?, heartbeat_at = ?, attempts = attempts + 1
+             WHERE id = (SELECT id FROM jobs WHERE status = 'queued' AND kind = ? ORDER BY created_at, rowid LIMIT 1) RETURNING *`, t, t, kind));
+          if (!job) break;
+          active[kind]++;
+          void run(job).finally(() => { active[kind]--; tick(); });
+        }
       }
     } catch (e) { console.error("job tick failed:", e); }
   };
