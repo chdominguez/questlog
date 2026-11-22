@@ -16,7 +16,7 @@ export interface Db { prepare(sql: string): Stmt; tx<T>(fn: (q: Tx) => T): T }
 /** Opens the SQLite file (":memory:" for tests) and applies each migrations/*.sql once, in name order. */
 export function openDb(path: string): Db & { sqlite: DatabaseSync } {
   const db = new DatabaseSync(path);
-  db.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON;");
+  db.exec("PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON;");
   db.exec("CREATE TABLE IF NOT EXISTS _migrations (name TEXT PRIMARY KEY)");
   for (const f of readdirSync("migrations").filter((f) => f.endsWith(".sql")).sort()) {
     if (db.prepare("SELECT 1 FROM _migrations WHERE name = ?").get(f)) continue;
