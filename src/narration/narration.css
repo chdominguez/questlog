@@ -1,0 +1,8 @@
+.narr { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; margin-bottom: var(--s-3); }
+.narr-bar {
+  display: flex; align-items: center; gap: var(--s-2); width: 100%; min-width: 0;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--s-1) var(--s-2);
+}
+.narr-pos { flex: 1; min-width: 0; accent-color: var(--accent); }
+.narr-time { flex: none; color: var(--muted); font-size: var(--t-sm); font-variant-numeric: tabular-nums; }
+.narr-rate { flex: none; min-width: 64px; font-variant-numeric: tabular-nums; }
