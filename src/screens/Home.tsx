@@ -6,6 +6,8 @@ import { useSession } from "../auth/session";
 import { JobCards } from "../builder/JobCards";
 import { loadCourses, useUserCourses } from "../builder/api";
 import { StatusPill } from "../library/StatusPill";
+import { refreshMetas } from "../library/api";
+import { isDemo } from "../platform";
 import { getArt } from "../art";
 import { play } from "../audio/sfx";
 import { Hud } from "../engine/Hud";
@@ -25,6 +27,7 @@ export function HomeScreen() {
   const mine = new Set(metas.filter((m) => m.mine).map((m) => m.id));
   const session = useSession();
   const ai = session.me?.features.ai ?? false;
+  useEffect(() => { if (!isDemo) void refreshMetas(); }, []);
   // Signed in after a failed load (e.g. signed out at start): load again.
   useEffect(() => { if (session.status === "signedIn" && status === "error") void loadCourses(); }, [session.status]); // eslint-disable-line react-hooks/exhaustive-deps
   return (

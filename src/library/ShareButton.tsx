@@ -4,7 +4,7 @@ import { APP_URL } from "../../shared/brand";
 import { ApiError, call } from "../api";
 import { registerCourses } from "../course/registry";
 import { Dialog } from "./Dialog";
-import { publish, share, SHARE_ACTIONS, STATUS_LABEL, STATUS_PILL, unpublish, uploadVersion, useMeta } from "./api";
+import { publish, refreshMetas, share, SHARE_ACTIONS, STATUS_LABEL, STATUS_PILL, unpublish, uploadVersion, useMeta } from "./api";
 
 /** Share and publish on the course map, owners only. */
 export function ShareButton({ courseId }: { courseId: string }) {
@@ -13,7 +13,7 @@ export function ShareButton({ courseId }: { courseId: string }) {
   if (!m?.mine) return null;
   return (
     <>
-      <button type="button" className="btn ghost" onClick={() => setOpen(true)}>Share</button>
+      <button type="button" className="btn ghost" onClick={() => { setOpen(true); void refreshMetas(); }}>Share</button>
       {open && <ShareDialog meta={m} onClose={() => setOpen(false)} />}
     </>
   );

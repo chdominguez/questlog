@@ -1,5 +1,8 @@
-import { expect, test } from "vitest";
-import { filterLibrary, isUserCourse, SHARE_ACTIONS, type LibraryItem } from "./api";
+import { expect, test, vi } from "vitest";
+import { call } from "../api";
+import { filterLibrary, isUserCourse, refreshMetas, SHARE_ACTIONS, type LibraryItem } from "./api";
+
+vi.mock("../api", () => ({ call: vi.fn(async () => []) }));
 
 const item = (id: string, over: Partial<LibraryItem> = {}): LibraryItem =>
   ({ id, title: id, summary: "", levels: 1, author: "Questie", cited: false, community: false, ...over });
@@ -24,4 +27,10 @@ test("user course ids and share actions per status", () => {
   expect(SHARE_ACTIONS.public).toEqual([]);
   expect(SHARE_ACTIONS.rejected).toEqual(["submitAgain", "makePrivate"]);
   expect(SHARE_ACTIONS.pending).not.toContain("submit");
+});
+
+test("refreshMetas loads /courses again each time", async () => {
+  await refreshMetas();
+  await refreshMetas();
+  expect(vi.mocked(call).mock.calls.filter(([p]) => p === "/courses")).toHaveLength(2);
 });

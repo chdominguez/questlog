@@ -24,6 +24,9 @@ function loadMetas() {
   return loading;
 }
 
+/** Load every meta again: an admin may have approved or rejected since. */
+export function refreshMetas() { loading = null; return loadMetas(); }
+
 /** The course meta, or undefined for bundled courses, the demo, and until loaded. */
 export function useMeta(id: string): UserCourseMeta | undefined {
   const user = isUserCourse(id) && !isDemo;
