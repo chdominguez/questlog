@@ -80,7 +80,7 @@ export function SignInScreen({ next }: { next?: string }) {
       </form>
       <div className="auth-links">
         <a href={href.forgot()}>Forgot password?</a>
-        <a href={href.signup()}>Create account</a>
+        <a href={href.signup(next)}>Create account</a>
       </div>
       <Legal />
     </AuthFrame>

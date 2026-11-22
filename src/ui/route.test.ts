@@ -27,6 +27,10 @@ test("app routes and hash query", () => {
   expect(parse("#/profile/credits")).toEqual({ name: "credits" });
   expect(parse("#/signin")).toEqual({ name: "signin" });
   expect(parse(href.signin("#/c/x?y=1"))).toEqual({ name: "signin", next: "#/c/x?y=1" });
+  expect(parse(href.signup("#/plans"))).toEqual({ name: "signup", next: "#/plans" });
+  expect(parse(href.verify("#/plans"))).toEqual({ name: "verify", next: "#/plans" });
+  expect(parse("#/signup")).toEqual({ name: "signup" });
+  expect(parse("#/signin?next=%2F%2Fevil.example")).toEqual({ name: "signin" });
   expect(parse("#/reset?token=abc")).toEqual({ name: "reset", token: "abc" });
   for (const n of ["signup", "verify", "forgot", "welcome", "library"] as const) expect(parse(href[n]())).toEqual({ name: n });
   expect(parse("#/plans")).toEqual({ name: "plans", canceled: false });

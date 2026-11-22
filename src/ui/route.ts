@@ -21,8 +21,8 @@ export type Route =
   | { name: "profile" }
   | { name: "credits" }
   | { name: "signin"; next?: string }
-  | { name: "signup" }
-  | { name: "verify" }
+  | { name: "signup"; next?: string }
+  | { name: "verify"; next?: string }
   | { name: "forgot" }
   | { name: "reset"; token?: string }
   | { name: "welcome" }
@@ -51,9 +51,12 @@ export function parse(hash: string): Route {
     return { name: "map", course: b };
   }
   if (a === "profile") return b === "credits" ? { name: "credits" } : { name: "profile" };
-  if (a === "signin") return qs.get("next") ? { name: "signin", next: qs.get("next")! } : { name: "signin" };
+  if (a === "signin" || a === "signup" || a === "verify") {
+    const next = qs.get("next");
+    return next?.startsWith("#/") ? { name: a, next } : { name: a }; // in-app hashes only
+  }
   if (a === "reset") return qs.get("token") ? { name: "reset", token: qs.get("token")! } : { name: "reset" };
-  if (a === "signup" || a === "verify" || a === "forgot" || a === "welcome" || a === "library") return { name: a };
+  if (a === "forgot" || a === "welcome" || a === "library") return { name: a };
   if (a === "plans") return { name: "plans", canceled: qs.get("canceled") === "1" };
   if (a === "billing" && b === "done") return { name: "billingDone" };
   if (a === "build") return b ? { name: "job", id: b } : { name: "build" };
@@ -77,8 +80,8 @@ export const href = {
   profile: () => "#/profile",
   credits: () => "#/profile/credits",
   signin: (next?: string) => `#/signin${next ? `?next=${e(next)}` : ""}`,
-  signup: () => "#/signup",
-  verify: () => "#/verify",
+  signup: (next?: string) => `#/signup${next ? `?next=${e(next)}` : ""}`,
+  verify: (next?: string) => `#/verify${next ? `?next=${e(next)}` : ""}`,
   forgot: () => "#/forgot",
   reset: () => "#/reset",
   welcome: () => "#/welcome",
