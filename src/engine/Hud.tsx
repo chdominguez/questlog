@@ -45,7 +45,7 @@ export function Hud() {
   return (
     <header className="hud">
       <div className="hud-row">
-        <a className="brand" href={href.home()}>Questlog</a>
+        <a className="brand" href={href.home()}>Questie</a>
         <nav className="hud-nav">
           {nav.map((n) => (
             <a key={n.href} href={n.href} aria-current={n.on ? "page" : undefined}>

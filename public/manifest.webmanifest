@@ -1,6 +1,6 @@
 {
-  "name": "Questlog",
-  "short_name": "Questlog",
+  "name": "Questie",
+  "short_name": "Questie",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

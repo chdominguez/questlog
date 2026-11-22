@@ -1,5 +1,5 @@
 // Shell cache + web push. Hashed /assets are immutable, so cache-first is safe; pages and /api always try the network.
-const CACHE = "questlog-v1";
+const CACHE = "questie-v1";
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => e.waitUntil(
@@ -25,7 +25,7 @@ self.addEventListener("fetch", (e) => {
 
 self.addEventListener("push", (e) => {
   const d = e.data?.json() ?? {};
-  e.waitUntil(self.registration.showNotification(d.title ?? "Questlog", {
+  e.waitUntil(self.registration.showNotification(d.title ?? "Questie", {
     body: d.body, icon: "/icons/icon-192.png", badge: "/icons/icon-192.png", tag: d.tag, data: { url: d.url ?? "/" },
   }));
 });
