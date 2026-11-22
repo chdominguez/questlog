@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 chdominguez and contributors
 /**
  * Course content contract: the single source for types, validation and the JSON Schema given to AI authors.
  * Fields marked (md) are Markdown rendered by <Md> (src/ui/Md.tsx). A course must stay JSON-serializable.

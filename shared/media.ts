@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 chdominguez and contributors
 /** Media files a course may reference, shared by the schema, the server and the MCP server. */
 export const MEDIA_TYPES = {
   image: ["png", "jpg", "jpeg", "webp", "gif", "avif"],
