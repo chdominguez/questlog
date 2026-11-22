@@ -74,3 +74,11 @@ Oboe, Gauth AI Course, NerdSip, Morso build courses from prompts with MCQ + stre
 6. MIT course-format package: DCO sign-off (same as courses). App code: CLA.
 7. No in-app course editor in v1. Owners can download their course file and edit with the MCP server / Claude Code plugin, then re-upload (validated).
 8. Admins: ADMIN_EMAILS env var (comma-separated). Admins see the review queue.
+
+## Coordinator answers after design (wave 1)
+- Sign-in required for the app (free account). The website has a static /demo/ build for signed-out visitors.
+- Apple sign-in hidden on Android. In-app account deletion: required (App Store rule).
+- Placeholders: site domain questie.app, app domain app.questie.app, Capacitor appId app.questie, GitHub repo stays chdominguez/questlog until the owner renames it (all in one config place).
+- UX defaults accepted: one build at a time per user, 10 files x 20 MB upload limit, a user's public courses are removed on account deletion, no build cancel in v1, low-balance threshold 100 credits.
+- Backend choices accepted: own Stripe webhook handler (no plugin); Resend for auth email via fetch (dev fallback: log the link); Python katas checked statically on the server; TS katas in a node --permission child with time/memory limits (outbound network accepted for now, documented as a known limit); stripe + better-auth dependencies OK.
+- Frontend must ship the sync.ts alias change in the same release as the backend re-key.
