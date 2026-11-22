@@ -29,6 +29,18 @@ test("runReminders sends once, and drops subscriptions the push service reports 
   expect((await db.prepare("SELECT endpoint FROM push_subscriptions").all()).results).toEqual([{ endpoint: "live" }]);
 });
 
+test("runReminders marks every due row before sending, so an overlapping sweep sends nothing", async () => {
+  const db = memoryDb();
+  await db.prepare("INSERT INTO reminders (user_id, course_id, title, time, tz) VALUES ('u', 'a', 'A', '08:00', 'UTC'), ('v', 'b', 'B', '08:00', 'UTC')").run();
+  await db.prepare("INSERT INTO push_subscriptions VALUES ('eu', 'u', 'k', 'a'), ('ev', 'v', 'k', 'a')").run();
+  const now = new Date("2026-11-15T08:01:00Z");
+  const sent: string[] = [];
+  let second: Promise<void> | null = null;
+  await runReminders(db, { web: async (s) => { sent.push(s.endpoint); second ??= runReminders(db, { web: async (x) => { sent.push(`2:${x.endpoint}`); } }, now); } }, now);
+  await second;
+  expect(sent.sort()).toEqual(["eu", "ev"]);
+});
+
 test("runReminders sends to web and native devices, and drops tokens FCM reports unregistered", async () => {
   const db = memoryDb();
   await db.prepare("INSERT INTO reminders (user_id, course_id, title, time, tz) VALUES ('u', 'c', 'Course', '08:00', 'UTC')").run();

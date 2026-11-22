@@ -28,7 +28,7 @@ export type Send = (sub: Sub, payload: string) => Promise<void>;
 
 export const webPushSend = (publicKey: string, privateKey: string, subject: string): Send => {
   setVapidDetails(subject, publicKey, privateKey);
-  return (s, payload) => sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload).then(() => {});
+  return (s, payload) => sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { timeout: 10_000 }).then(() => {});
 };
 
 export interface Senders { web?: Send; fcm?: FcmSend }
@@ -38,10 +38,10 @@ export async function runReminders(db: Db, { web, fcm }: Senders, now = new Date
   const { results } = await db.prepare("SELECT user_id, course_id, title, time, tz, last_sent FROM reminders").all<{
     user_id: string; course_id: string; title: string; time: string; tz: string; last_sent: string;
   }>();
-  for (const r of results) {
-    const date = dueDate(now, r.tz, r.time, r.last_sent);
-    if (!date) continue;
-    await db.prepare("UPDATE reminders SET last_sent = ? WHERE user_id = ? AND course_id = ?").bind(date, r.user_id, r.course_id).run();
+  // Every due row is marked sent in one transaction before any send, so a later sweep never sends it again.
+  const due = results.flatMap((r) => { const date = dueDate(now, r.tz, r.time, r.last_sent); return date ? [{ ...r, date }] : []; });
+  db.tx((q) => { for (const r of due) q.run("UPDATE reminders SET last_sent = ? WHERE user_id = ? AND course_id = ?", r.date, r.user_id, r.course_id); });
+  for (const r of due) {
     const msg = { title: r.title, body: "Time to study", url: `/#/c/${encodeURIComponent(r.course_id)}` };
     if (web) {
       const { results: subs } = await db.prepare("SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ?").bind(r.user_id).all<Sub>();
@@ -74,6 +74,14 @@ export function startReminders(env: Env, deps: Deps): () => void {
     try { senders.fcm = fcmSender(FCM_SERVICE_ACCOUNT, deps.fetch); } catch (e) { console.error("FCM_SERVICE_ACCOUNT invalid, native push off:", e); }
   }
   if (!senders.web && !senders.fcm) return () => {};
-  const t = setInterval(() => runReminders(env.DB, senders, deps.now()).catch((e) => console.error("reminders failed:", e)), 60_000);
-  return () => clearInterval(t);
+  // The next sweep starts a minute after this one ends, so sweeps never overlap.
+  let t: ReturnType<typeof setTimeout>;
+  let stopped = false;
+  const next = () => {
+    t = setTimeout(() => {
+      runReminders(env.DB, senders, deps.now()).catch((e) => console.error("reminders failed:", e)).finally(() => { if (!stopped) next(); });
+    }, 60_000);
+  };
+  next();
+  return () => { stopped = true; clearTimeout(t); };
 }

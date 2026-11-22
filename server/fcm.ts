@@ -34,6 +34,7 @@ export function fcmSender(serviceAccount: string, f: typeof fetch, now = () => D
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: assertion(a, now()) }),
+      signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) throw new Error(`FCM auth failed: ${res.status}`);
     const j = (await res.json()) as { access_token: string; expires_in: number };
@@ -45,6 +46,7 @@ export function fcmSender(serviceAccount: string, f: typeof fetch, now = () => D
       method: "POST",
       headers: { Authorization: `Bearer ${await access()}`, "Content-Type": "application/json" },
       body: JSON.stringify({ message: { token, notification: { title: m.title, body: m.body }, data: { url: m.url } } }),
+      signal: AbortSignal.timeout(10_000),
     });
     if (res.ok) return "ok";
     if (unregistered(await res.json().catch(() => null))) return "gone";
