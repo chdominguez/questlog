@@ -9,6 +9,7 @@ import { ChallengeCard } from "../engine/Challenge";
 import { LevelUp, burst } from "../engine/Celebrate";
 import { dispatch, getProgress, MAX_LIVES, rankIndex, useProgress } from "../engine/store";
 import { isUnlocked } from "../engine/levels";
+import { Guide, react } from "../questie/Questie";
 import "./screens.css";
 
 type Phase = "choose" | "theory" | "play" | "result" | "fail";
@@ -41,6 +42,7 @@ function LevelRun({ course, id }: { course: Course; id: string }) {
   const [i, setI] = useState(0);
   const [out, setOut] = useState<Outcome | null>(null);
   const [showRank, setShowRank] = useState(false);
+  useEffect(() => { scrollTo(0, 0); }, [i, phase]);
 
   useEffect(() => {
     dispatch({ type: "start", levelId: id });
@@ -84,10 +86,11 @@ function LevelRun({ course, id }: { course: Course; id: string }) {
     setShowRank(rank > startRank);
     setPhase("result");
     if (rank === startRank) { play(firstClear ? "unlock" : "ok"); burst(); }
+    react("cheer", 3200);
   };
 
   const next = () => {
-    if (lives <= 0) { dispatch({ type: "quit" }); play("fail"); setPhase("fail"); return; }
+    if (lives <= 0) { dispatch({ type: "quit" }); play("fail"); react("sad", 3200); setPhase("fail"); return; }
     if (i + 1 < total) setI(i + 1);
     else complete();
   };
@@ -102,6 +105,7 @@ function LevelRun({ course, id }: { course: Course; id: string }) {
           <a className="back" href={href.map(course.id)} aria-label="Map"><ArrowLeft aria-hidden /></a>
           <h1>{level.title}</h1>
           {phase === "play" && <Lives n={lives} />}
+          <Guide />
         </div>
 
         {phase === "choose" && (
@@ -119,7 +123,7 @@ function LevelRun({ course, id }: { course: Course; id: string }) {
           <div className="screen-in" key={`${level.challenges[i].id}`}>
             <div className="runbar">
               <div className="progress" role="progressbar" aria-label="Progress" aria-valuemin={0} aria-valuemax={total} aria-valuenow={i}>
-                <div style={{ width: `${(i / total) * 100}%` }} />
+                <div style={{ transform: `scaleX(${i / total})` }} />
               </div>
               <span className="count-label">{i + 1}/{total}</span>
             </div>

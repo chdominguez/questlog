@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useRoute } from "./ui/route";
+import { useHash, useRoute } from "./ui/route";
 import { unlock } from "./audio/sfx";
 import { courseById } from "./course/registry";
 import { HomeScreen } from "./screens/Home";
@@ -19,6 +19,8 @@ import { q } from "./course/registry";
 
 export function App() {
   const r = useRoute();
+  const hash = useHash();
+  useEffect(() => { scrollTo(0, 0); }, [hash]); // a new screen starts at the top
   useEffect(() => {
     // Every gesture, not once: the first one can come before zzfx loads, and Safari suspends audio again
     // in background tabs. pointerup/touchend because a touch pointerdown doesn't count as a gesture.

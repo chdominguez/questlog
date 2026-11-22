@@ -59,7 +59,7 @@ export function Hud() {
             <div className="hud-rank-line"><b>{RANKS[ri].name}</b><span className="hud-xp">{p.xp} XP</span></div>
             <div className="bar" role="progressbar" aria-label={next ? `Toward ${next.name}` : "Top rank"}
               aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(rankProgress(p.xp) * 100)}>
-              <div style={{ width: `${rankProgress(p.xp) * 100}%` }} />
+              <div style={{ transform: `scaleX(${rankProgress(p.xp)})` }} />
             </div>
           </div>
         </div>

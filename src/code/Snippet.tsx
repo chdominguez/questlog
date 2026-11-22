@@ -33,7 +33,7 @@ export function Snippet({ lang, src, title, highlight = [] }: { lang: CodeLang; 
       <div className="snippet-bar">
         {title && <figcaption className="snippet-title">{title}</figcaption>}
         <button type="button" className="snippet-copy" onClick={copy}>
-          {copied ? "Copiado" : "Copiar"}
+          {copied ? "Copied" : "Copy"}
         </button>
       </div>
       <pre className="snippet-pre" tabIndex={0}>

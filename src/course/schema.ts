@@ -30,6 +30,7 @@ const base = {
   id: id.describe("Unique within the course"),
   prompt: md("The question"),
   explain: md("Shown after answering").optional(),
+  tip: md("Hint from Questie, the mascot, shown when the learner taps it; must not give the answer away").optional(),
   code: z.object({ lang: CodeLangSchema, src: z.string().min(1) }).strict().optional().describe("Snippet shown with the prompt (not for bug)"),
 };
 
@@ -115,7 +116,11 @@ export const TheoryBlockSchema = z.discriminatedUnion("kind", [
   }).strict().describe("Ungraded challenge inside a theory card to reinforce what was just read"),
 ]);
 
-export const TheoryCardSchema = z.object({ title: z.string().min(1), blocks: z.array(TheoryBlockSchema).min(1) }).strict();
+export const TheoryCardSchema = z.object({
+  title: z.string().min(1),
+  blocks: z.array(TheoryBlockSchema).min(1),
+  tip: md("One-line takeaway Questie, the mascot, says when the card opens").optional(),
+}).strict();
 
 export const LevelSchema = z.object({
   id,

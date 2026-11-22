@@ -48,4 +48,5 @@ export const href = {
 export const go = (hash: string) => { location.hash = hash; };
 
 const sub = (cb: () => void) => { addEventListener("hashchange", cb); return () => removeEventListener("hashchange", cb); };
-export const useRoute = () => parse(useSyncExternalStore(sub, () => location.hash));
+export const useHash = () => useSyncExternalStore(sub, () => location.hash);
+export const useRoute = () => parse(useHash());

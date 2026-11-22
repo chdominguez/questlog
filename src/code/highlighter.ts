@@ -1,11 +1,13 @@
-import { createHighlighterCore, type ThemedToken } from "shiki/core";
+import { createCssVariablesTheme, createHighlighterCore, type ThemedToken } from "shiki/core";
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
 import type { CodeLang } from "../course/schema";
-import { isDark } from "../ui/theme";
 
-// Fine-grained bundle: only these grammars and a light and a dark theme get shipped.
+// Token colors are CSS variables (--shiki-* in global.css), so snippets follow the palette and the OS scheme live.
+const theme = createCssVariablesTheme({ name: "questlog", variablePrefix: "--shiki-" });
+
+// Fine-grained bundle: only these grammars get shipped.
 const highlighter = createHighlighterCore({
-  themes: [import("shiki/themes/github-light.mjs"), import("shiki/themes/github-dark.mjs")],
+  themes: [theme],
   langs: [
     import("shiki/langs/typescript.mjs"),
     import("shiki/langs/tsx.mjs"),
@@ -27,6 +29,5 @@ const LANG: Record<CodeLang, string> = {
 
 export async function tokenize(src: string, lang: CodeLang): Promise<ThemedToken[][]> {
   const h = await highlighter;
-  // shortcut: picked per render, so open snippets keep their theme until re-rendered after an OS scheme switch.
-  return h.codeToTokens(src, { lang: LANG[lang], theme: isDark() ? "github-dark" : "github-light" }).tokens;
+  return h.codeToTokens(src, { lang: LANG[lang], theme: "questlog" }).tokens;
 }

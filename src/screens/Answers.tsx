@@ -4,7 +4,7 @@ import type { SavedAnswer } from "../../shared/api-types";
 import { courseOf, type Course } from "../course/registry";
 import { href } from "../ui/route";
 
-import { Md } from "../ui/Md";
+import { Md, summaryLine } from "../ui/Md";
 import { listAnswers } from "../answers/api";
 import { toMarkdown } from "../../shared/export";
 import { groupAnswers, scoreOf } from "../../shared/group";
@@ -51,7 +51,7 @@ export function AnswersScreen({ course }: { course: Course }) {
           {l.challenges.map((ch) => (
             <details key={ch.challengeId} className="ans-ch">
               <summary>
-                <Md text={ch.prompt.split("\n")[0]} inline />
+                <Md text={summaryLine(ch.prompt)} inline />
                 <span className="ans-count">{ch.attempts.length}×</span>
                 <ScorePill score={ch.best} />
               </summary>

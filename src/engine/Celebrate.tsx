@@ -22,9 +22,12 @@ export function LevelUp({ rank, onClose }: { rank: number; onClose: () => void }
     play("levelup");
     burst(true);
     btn.current?.focus();
-    const on = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    // The only control is the button: Tab stays on it, and the page under the overlay doesn't scroll.
+    const on = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); if (e.key === "Tab") { e.preventDefault(); btn.current?.focus(); } };
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     addEventListener("keydown", on);
-    return () => removeEventListener("keydown", on);
+    return () => { removeEventListener("keydown", on); document.body.style.overflow = overflow; };
   }, []);
   return (
     <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="levelup-title" onClick={onClose}>
