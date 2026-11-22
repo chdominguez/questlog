@@ -27,12 +27,12 @@ type FieldProps = { label: string; error?: string; hint?: string; extra?: ReactN
 export function Field({ label, error, hint, extra, id, inputRef, ...input }: FieldProps) {
   const auto = useId();
   const fid = id ?? auto;
-  const describedBy = [hint && `${fid}-hint`, error && `${fid}-err`].filter(Boolean).join(" ") || undefined;
+  const describedBy = [hint && !error && `${fid}-hint`, error && `${fid}-err`].filter(Boolean).join(" ") || undefined;
   return (
     <div className="profile-field">
       <div className="auth-pass"><label htmlFor={fid}>{label}</label>{extra}</div>
       <input ref={inputRef} id={fid} className="scr-input" aria-invalid={error ? true : undefined} aria-describedby={describedBy} {...input} />
-      {hint && <p id={`${fid}-hint`} className="auth-hint">{hint}</p>}
+      {hint && !error && <p id={`${fid}-hint`} className="auth-hint">{hint}</p>}
       {error && <p id={`${fid}-err`} className="auth-err">{error}</p>}
     </div>
   );
