@@ -89,7 +89,9 @@ export function startJobs(env: Env, deps: Deps): () => void {
   let active = 0;
   let stopped = false;
   const run = async (job: JobRow) => {
-    const beat = setInterval(() => db.tx((q) => q.run("UPDATE jobs SET heartbeat_at = ? WHERE id = ?", now(), job.id)), HEARTBEAT_MS);
+    const beat = setInterval(() => {
+      try { db.tx((q) => q.run("UPDATE jobs SET heartbeat_at = ? WHERE id = ?", now(), job.id)); } catch (e) { console.error("job heartbeat failed:", e); }
+    }, HEARTBEAT_MS);
     try {
       const h = handlers.get(job.kind);
       if (!h) throw new JobError("ai_failed", `No handler for ${job.kind}`);
@@ -102,16 +104,19 @@ export function startJobs(env: Env, deps: Deps): () => void {
       clearInterval(beat);
     }
   };
+  // Runs from timers: a throw here would end the process, so log it and try again next tick.
   const tick = () => {
-    while (!stopped && active < env.JOB_CONCURRENCY) {
-      const t = now();
-      const job = db.tx((q) => q.get<JobRow>(
-        `UPDATE jobs SET status = 'running', started_at = ?, heartbeat_at = ?, attempts = attempts + 1
-         WHERE id = (SELECT id FROM jobs WHERE status = 'queued' ORDER BY created_at, rowid LIMIT 1) RETURNING *`, t, t));
-      if (!job) return;
-      active++;
-      void run(job).finally(() => { active--; tick(); });
-    }
+    try {
+      while (!stopped && active < env.JOB_CONCURRENCY) {
+        const t = now();
+        const job = db.tx((q) => q.get<JobRow>(
+          `UPDATE jobs SET status = 'running', started_at = ?, heartbeat_at = ?, attempts = attempts + 1
+           WHERE id = (SELECT id FROM jobs WHERE status = 'queued' ORDER BY created_at, rowid LIMIT 1) RETURNING *`, t, t));
+        if (!job) return;
+        active++;
+        void run(job).finally(() => { active--; tick(); });
+      }
+    } catch (e) { console.error("job tick failed:", e); }
   };
   const sweep = () => { for (const s of sweeps) s({ db, env, deps }).catch((e) => console.error("sweep failed:", e)); };
   const timer = setInterval(tick, 1000);
