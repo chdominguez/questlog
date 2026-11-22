@@ -2,7 +2,7 @@ import { Hono, type Context } from "hono";
 import type { Grade, MockStart } from "../shared/api-types";
 import { courseOf, type Course } from "../src/course/registry";
 import { MAX_ANSWER, qualified, str, type App, type Deps } from "./api";
-import { findCourse } from "./courses";
+import { findCourse, GRADER_MAX_CHARS, graderChars } from "./courses";
 import type { Db } from "./db";
 import { balance, charge, metered, refund } from "./credits";
 import { err } from "./errors";
@@ -20,10 +20,11 @@ const writtenIn = (course: Course | null, id: string) => {
 };
 
 /** The written challenge with this qualified id as grader input, or the status to answer with. */
-async function written(deps: Deps, c: Context<App>, id: string, answer: string): Promise<GradeInput | 400 | 404> {
+async function written(deps: Deps, c: Context<App>, id: string, answer: string): Promise<GradeInput | 400 | 404 | 413> {
   const course = await courseFor(deps, c.env.DB, c.get("user"), courseOf(id));
   const ch = writtenIn(course, id);
   if (typeof ch === "number") return ch;
+  if (graderChars(ch, course!.grader?.persona) > GRADER_MAX_CHARS) return 413; // stored before the PUT check, or a bundled course
   return { prompt: ch.prompt, model: ch.model, keyPoints: ch.keyPoints, answer, lang: course!.lang, persona: course!.grader?.persona };
 }
 
@@ -52,6 +53,7 @@ export function gradingRoutes(deps: Deps): Hono<App> {
       const input = await written(deps, c, b.challengeId, b.answer);
       if (input === 404) return err(c, 404, "not_found", {}, "Unknown challenge");
       if (input === 400) return err(c, 400, "invalid_request", {}, "Not a written challenge");
+      if (input === 413) return err(c, 400, "too_large", {}, "Challenge too long to grade");
       const run = async () => c.json(await grade(input));
       if (b.mockId === undefined) return charge(c, "grade", b.challengeId, run);
 
@@ -92,6 +94,7 @@ export function gradingRoutes(deps: Deps): Hono<App> {
       const input = await written(deps, c, row.challenge_id, row.answer);
       if (input === 404) return err(c, 404, "not_found", {}, "Unknown challenge");
       if (input === 400) return err(c, 400, "invalid_request", {}, "Not a written challenge");
+      if (input === 413) return err(c, 400, "too_large", {}, "Challenge too long to grade");
       return charge(c, "improve", id, async () => {
         const out = parseImprovement(await improve({ ...input, grade }));
         if (!out) throw new Error("Invalid improver output");

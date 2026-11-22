@@ -88,4 +88,7 @@ test("builder rules: 3+ challenge types, no media, known sources, katas used", (
   const media = { ...c, levels: [{ ...c.levels[0], theory: [{ title: "T", blocks: [{ kind: "media" as const, type: "image" as const, src: "a.png", alt: "A" }] }] }] };
   expect(builderProblems(media as never, new Set()).join()).toMatch(/media blocks/);
   expect(builderProblems({ ...c, art: { a: '<svg viewBox="0 0 1 1"></svg>' } }, new Set()).join()).toMatch(/inline art is not allowed/);
+  const w = (model: string) => ({ ...c, levels: [{ ...c.levels[0], challenges: [...c.levels[0].challenges, { id: "w", type: "written" as const, prompt: "P", model, keyPoints: ["a", "b"] }] }] });
+  expect(builderProblems(w("M"), new Set())).toEqual([]);
+  expect(builderProblems(w("M".repeat(20_000)), new Set()).join()).toMatch(/levels\[0\]\.challenges\[3\]: .*under 20000/);
 });

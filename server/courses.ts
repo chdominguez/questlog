@@ -54,6 +54,11 @@ export function newCourseId(slug: string): string {
   }
 }
 
+/** Most characters a written challenge (with the course's grader persona) may send to the grader. */
+export const GRADER_MAX_CHARS = 20_000;
+export const graderChars = (ch: { prompt: string; model: string; keyPoints: string[] }, persona = "") =>
+  ch.prompt.length + ch.model.length + ch.keyPoints.join("").length + persona.length;
+
 const sourceCount = (c: CourseInput) => new Set(c.levels.flatMap((l) => l.theory.flatMap((t) => (t.sources ?? []).map((s) => s.url)))).size;
 
 /** Saves a validated course for its owner (private); returns the course id. */
@@ -77,6 +82,9 @@ export function builderProblems(c: CourseInput, sources: Set<string> | null, cit
   if (Object.keys(c.art ?? {}).length) out.push("art: inline art is not allowed"); // rendered inline for every viewer
   const types = new Set(c.levels.flatMap((l) => l.challenges.map((ch) => ch.type)));
   if (types.size < 3) out.push(`levels[0]: the course uses ${types.size} challenge type(s) (${[...types].join(", ")}); use at least 3 across the course, not only quiz and multi`);
+  c.levels.forEach((l, li) => l.challenges.forEach((ch, ci) => {
+    if (ch.type === "written" && graderChars(ch, c.grader?.persona) > GRADER_MAX_CHARS) out.push(`levels[${li}].challenges[${ci}]: prompt, model answer, key points and grader persona must total under ${GRADER_MAX_CHARS} characters`);
+  }));
   c.levels.forEach((l, li) => l.theory.forEach((card, ti) => {
     card.blocks.forEach((b, bi) => { if (b.kind === "media") out.push(`levels[${li}].theory[${ti}].blocks[${bi}]: media blocks are not allowed`); });
     if (cite && !card.sources?.length) out.push(`levels[${li}].theory[${ti}].sources: cite at least one source from the list`);

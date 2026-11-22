@@ -53,6 +53,15 @@ const plain = resolve(CourseSchema.parse({
   levels: [{ id: "l", order: 1, title: "L", theory: [], challenges: [{ id: "w", type: "written", prompt: "P", model: "M", keyPoints: ["a", "b"] }] }],
 }));
 
+const quizOnly = resolve(CourseSchema.parse({
+  id: "z", title: "Z", lang: "en",
+  levels: [{ id: "l", order: 1, title: "L", theory: [], challenges: [{ id: "q", type: "quiz", prompt: "Q", options: ["a", "b"], answer: 0 }] }],
+}));
+const huge = resolve(CourseSchema.parse({
+  id: "h", title: "H", lang: "en",
+  levels: [{ id: "l", order: 1, title: "L", theory: [], challenges: [{ id: "w", type: "written", prompt: "P", model: "M".repeat(20_000), keyPoints: ["a", "b"] }] }],
+}));
+
 const grade: Grade = { score: 6, covered: ["a"], missing: ["b"], mistakes: ["c"] };
 const improvement: Improvement = { improved: "Better.", corrections: [{ quote: "c", fix: "d" }] };
 const post = (body: unknown, user = "u") => ({ method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID(), "x-test-user": user }, body: JSON.stringify(body) });
@@ -72,7 +81,7 @@ beforeEach(() => {
 
 const api = (over: Partial<Deps> = {}) => {
   const app = createApi({
-    courses: [course, plain],
+    courses: [course, plain, quizOnly, huge],
     session: async (c) => ({ id: c.req.header("x-test-user") ?? "u", email: "u@x.com", name: "U", emailVerified: true }),
     grader: () => async () => { calls.grade++; if (fail.grade) throw new Error("boom"); return grade; },
     improver: () => async () => { calls.improve++; if (fail.improve) throw new Error("boom"); return improvement; },
@@ -107,6 +116,9 @@ test("grade validates before charging", async () => {
   expect((await req("/grade", post({ challengeId: "t:q", answer: "x" }))).status).toBe(400);
   expect((await req("/grade", post({ challengeId: "t:nope", answer: "x" }))).status).toBe(404);
   expect((await req("/grade", post({ challengeId: "t:w1", answer: "x", mockId: 5 }))).status).toBe(400);
+  const big = await req("/grade", post({ challengeId: "h:w", answer: "x" }));
+  expect(big.status).toBe(400);
+  expect((await big.json()).code).toBe("too_large");
   expect((await req("/grade", post({ challengeId: "t:w1", answer: "x" }))).status).toBe(200);
   expect(bank.spent.map((s) => s.action)).toEqual(["grade"]);
   expect((await api({ grader: () => null })("/grade", post({ challengeId: "t:w1", answer: "x" }))).status).toBe(503);
