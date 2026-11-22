@@ -1,5 +1,5 @@
 {
-  "name": "questlog",
+  "name": "questie",
   "version": "0.1.0",
   "scripts": {
     "dev": "vite",
@@ -53,5 +53,5 @@
   },
   "private": true,
   "description": "A personal, gamified learning platform: courses as quests, spaced repetition, AI-graded answers.",
-  "license": "MIT"
+  "license": "AGPL-3.0-only"
 }
