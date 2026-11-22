@@ -184,7 +184,7 @@ const limitBody: MiddlewareHandler<App> = (c, next) => {
 };
 
 /**
- * Mount order (Hono runs in registration order): cors -> /health -> /auth/* -> /webhooks/* -> guard -> session -> limitBody -> the rest.
+ * Mount order (Hono runs in registration order): cors -> /health -> body limits for /auth/* and /webhooks/* -> /auth/* -> /webhooks/* -> guard -> session -> limitBody -> the rest.
  * Route modules are mounted with .route("/", ...); they must scope every middleware to a path (no path-less .use()),
  * or it would run for every later route.
  */
@@ -221,6 +221,8 @@ export function createApi(over: Partial<Deps> = {}): Hono<App> {
     .get("/health", (c) => c.json({
       ok: true, commit: c.env.COMMIT, grader: grader(c.env) !== null, narration: !!c.env.ELEVENLABS_API_KEY,
     } satisfies Health))
+    .use("/auth/*", limits.other) // public routes, so before limitBody
+    .use("/webhooks/*", limits.other)
     .route("/", authRoutes(deps))
     .route("/", billingPublic(deps))
     .use(guard)

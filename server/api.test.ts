@@ -199,6 +199,8 @@ test("body limits: 256 KB, 2 MB for course re-uploads, 20 MB for uploads", async
   expect(res.status).toBe(413);
   expect((await res.json()).code).toBe("too_large");
   expect((await big("PUT", "/courses/t", 300 * 1024)).status).not.toBe(413);
+  expect((await big("POST", "/webhooks/stripe", 300 * 1024)).status).toBe(413);
+  expect((await big("POST", "/auth/sign-in/email", 300 * 1024)).status).toBe(413);
   expect((await big("PUT", "/courses/t", 3 * 1024 * 1024)).status).toBe(413);
   expect((await big("POST", "/builder/uploads", 3 * 1024 * 1024, "multipart/form-data; boundary=x")).status).not.toBe(413);
   expect((await big("POST", "/builder/uploads", 21 * 1024 * 1024, "multipart/form-data; boundary=x")).status).toBe(413);
