@@ -1,0 +1,338 @@
+---
+title: Challenge types
+description: Every challenge type in a Questie course, what it trains, its fields, how it is graded and a working example.
+sidebar: { order: 3 }
+---
+
+{/* SPDX-License-Identifier: MIT */}
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+
+After the theory cards, a level plays its `challenges` in the order you write them. `type` picks the challenge. There are 11 types counting true/false, and every example on this page passes the validator.
+
+Every type takes these fields:
+
+| Field | Required | What it does |
+|---|---|---|
+| `id` | yes | Lowercase kebab-case, unique across the whole course. Progress and review are keyed by it, so never rename it. |
+| `prompt` | yes | The question, in Markdown. |
+| `explain` | no | Shown after answering. Give one to every quiz, order and bug. |
+| `tip` | no | A nudge from Questie, shown when the learner taps the mascot. It must never name or rule out an option. |
+| `code` | no | `{ "lang", "src" }`, a snippet shown under the prompt. Not used by `bug` and `written`. |
+
+## Grading, lives and XP
+
+A level gives the learner 3 lives. A wrong answer on a self-graded type costs one, and losing all three fails the level. Stars are the lives left at the end. Every result schedules the item for [review](/learn/review/).
+
+| Type | Base XP | Costs a life when wrong | Partial credit |
+|---|---|---|---|
+| `quiz` | 10 | yes | no |
+| `multi` | 15 | yes | only right picks and at least half of them |
+| `order` | 15 | yes | no |
+| `bug` | 15 | yes | no |
+| `match` | 15 | yes | up to 2 wrong links, and under half |
+| `sort` | 15 | yes | at least half placed right |
+| `cloze` | 20 | yes | at least half the blanks right |
+| `written` | 25 | no | score 4 to 6 out of 10 (7 or more is right) |
+| `kata` | 40 | no | no |
+| `flashcard` | 8 | no | no (self-rated) |
+
+Partial pays half XP, resets the combo and costs no life. A combo of 3 right answers in a row multiplies XP by 1.5, and 5 in a row by 2.
+
+## quiz
+
+Multiple choice with one right option. Trains telling similar ideas apart. Write the right option first with `"answer": 0` (the app shuffles), then 2 or 3 distractors that each stand for a specific wrong belief. 2 to 6 options.
+
+<Tabs syncKey="format">
+<TabItem label="JSON">
+
+```json challenge
+{ "id": "cache-no-cache", "type": "quiz", "prompt": "A response has `Cache-Control: no-cache`. What may the browser do with it?", "options": ["Store it, and revalidate before every reuse", "Reuse it until it expires", "Never store it"], "answer": 0, "explain": "`no-store` forbids storing. `no-cache` forces revalidation." }
+```
+
+</TabItem>
+<TabItem label="course.ts">
+
+```ts
+{
+  id: "cache-no-cache",
+  type: "quiz",
+  prompt: "A response has `Cache-Control: no-cache`. What may the browser do with it?",
+  options: ["Store it, and revalidate before every reuse", "Reuse it until it expires", "Never store it"],
+  answer: 0,
+  explain: "`no-store` forbids storing. `no-cache` forces revalidation.",
+}
+```
+
+</TabItem>
+</Tabs>
+
+## multi
+
+Select every right option. Trains knowing all the facts that hold. 2 to 6 options; `answers` lists the 0-based indexes of the right ones, unique and fewer than the options. Do not state the count in the prompt.
+
+<Tabs syncKey="format">
+<TabItem label="JSON">
+
+```json challenge
+{ "id": "safe-methods", "type": "multi", "prompt": "Which methods are safe?", "options": ["GET", "HEAD", "POST", "DELETE"], "answers": [0, 1], "explain": "Safe methods do not change server state." }
+```
+
+</TabItem>
+<TabItem label="course.ts">
+
+```ts
+{
+  id: "safe-methods",
+  type: "multi",
+  prompt: "Which methods are safe?",
+  options: ["GET", "HEAD", "POST", "DELETE"],
+  answers: [0, 1],
+  explain: "Safe methods do not change server state.",
+}
+```
+
+</TabItem>
+</Tabs>
+
+## true/false
+
+A `multi` with `"style": "truefalse"`: one statement, options exactly `["True", "False"]`, one answer, fixed order. Best for a misconception a half-learner believes.
+
+<Tabs syncKey="format">
+<TabItem label="JSON">
+
+```json challenge
+{ "id": "put-idempotent", "type": "multi", "style": "truefalse", "prompt": "PUT is idempotent.", "options": ["True", "False"], "answers": [0] }
+```
+
+</TabItem>
+<TabItem label="course.ts">
+
+```ts
+{ id: "put-idempotent", type: "multi", style: "truefalse", prompt: "PUT is idempotent.", options: ["True", "False"], answers: [0] }
+```
+
+</TabItem>
+</Tabs>
+
+## order
+
+Put steps in sequence. Trains processes, lifecycles and protocol steps. Write `steps` in the correct order (the app shuffles); at least 3, and each one with a single defensible position.
+
+<Tabs syncKey="format">
+<TabItem label="JSON">
+
+```json challenge
+{ "id": "https-order", "type": "order", "prompt": "Order the steps of a first HTTPS request.", "steps": ["DNS lookup", "TCP handshake", "TLS handshake", "HTTP request"], "explain": "TLS runs over an open TCP connection, and HTTP runs over TLS." }
+```
+
+</TabItem>
+<TabItem label="course.ts">
+
+```ts
+{
+  id: "https-order",
+  type: "order",
+  prompt: "Order the steps of a first HTTPS request.",
+  steps: ["DNS lookup", "TCP handshake", "TLS handshake", "HTTP request"],
+  explain: "TLS runs over an open TCP connection, and HTTP runs over TLS.",
+}
+```
+
+</TabItem>
+</Tabs>
+
+## bug
+
+Find the one wrong line. Trains code reading. `lines` holds at least 3 lines, one statement each; `answer` is the 0-based index of the bug; `lang` sets highlighting. The prompt states the intended behavior.
+
+<Tabs syncKey="format">
+<TabItem label="JSON">
+
+```json challenge
+{ "id": "retry-bug", "type": "bug", "prompt": "`retry` must call `fn` at most 3 times.", "lang": "ts", "lines": ["let tries = 0;", "while (tries <= 3) {", "  if (await fn()) break;", "  tries++;", "}"], "answer": 1, "explain": "`<= 3` runs 4 times. Use `< 3`." }
+```
+
+</TabItem>
+<TabItem label="course.ts">
+
+```ts
+{
+  id: "retry-bug",
+  type: "bug",
+  prompt: "`retry` must call `fn` at most 3 times.",
+  lang: "ts",
+  lines: ["let tries = 0;", "while (tries <= 3) {", "  if (await fn()) break;", "  tries++;", "}"],
+  answer: 1,
+  explain: "`<= 3` runs 4 times. Use `< 3`.",
+}
+```
+
+</TabItem>
+</Tabs>
+
+## written
+
+An answer in the learner's own words, typed or dictated, graded by Claude against your key points. Trains explaining. `model` is the reference answer; `keyPoints` (2 or more, ideally 2 to 5) are short, independently checkable claims; `seconds` is an optional soft time limit. The course's [grader persona](/authoring/grader-mock/) sets how strict grading is. Learners can also rate themselves against the model answer for free.
+
+<Tabs syncKey="format">
+<TabItem label="JSON">
+
+```json challenge
+{ "id": "why-etag", "type": "written", "prompt": "Why does a browser send `If-None-Match`?", "model": "To revalidate a cached copy: the server compares the ETag and answers 304 with no body when nothing changed, which saves bandwidth.", "keyPoints": ["Server compares the ETag", "304 Not Modified with no body", "Saves bandwidth"], "seconds": 120 }
+```
+
+</TabItem>
+<TabItem label="course.ts">
+
+```ts
+{
+  id: "why-etag",
+  type: "written",
+  prompt: "Why does a browser send `If-None-Match`?",
+  model: "To revalidate a cached copy: the server compares the ETag and answers 304 with no body when nothing changed, which saves bandwidth.",
+  keyPoints: ["Server compares the ETag", "304 Not Modified with no body", "Saves bandwidth"],
+  seconds: 120,
+}
+```
+
+</TabItem>
+</Tabs>
+
+## match
+
+Link each left item to its right item. Trains term-to-definition links. 3 to 8 `pairs`, unique lefts and unique rights; the app shuffles the right column.
+
+<Tabs syncKey="format">
+<TabItem label="JSON">
+
+```json challenge
+{ "id": "status-match", "type": "match", "prompt": "Match each status to its meaning.", "pairs": [{ "left": "200", "right": "OK" }, { "left": "304", "right": "Not Modified" }, { "left": "404", "right": "Not Found" }] }
+```
+
+</TabItem>
+<TabItem label="course.ts">
+
+```ts
+{
+  id: "status-match",
+  type: "match",
+  prompt: "Match each status to its meaning.",
+  pairs: [{ left: "200", right: "OK" }, { left: "304", right: "Not Modified" }, { left: "404", right: "Not Found" }],
+}
+```
+
+</TabItem>
+</Tabs>
+
+## cloze
+
+Fill the blanks. Trains exact syntax and terms. `text` holds the markers `{{1}}`, `{{2}}` and so on, in order and once each. Each blank lists its accepted `answers` (the first is shown as the answer) and matches ignoring case and extra spaces unless `"exact": true`. Add a `bank` of chips for an easier, phone-friendly version (each blank's first answer must be in it), or leave it out for typed blanks. `lang` renders the text as code.
+
+<Tabs syncKey="format">
+<TabItem label="JSON">
+
+```json challenge
+{ "id": "preflight-cloze", "type": "cloze", "prompt": "Complete the preflight response.", "text": "Access-Control-Allow-Origin: {{1}}\nAccess-Control-Allow-Methods: {{2}}", "blanks": [{ "answers": ["https://www.example.com"] }, { "answers": ["PUT"] }], "lang": "http" }
+```
+
+</TabItem>
+<TabItem label="course.ts">
+
+```ts
+{
+  id: "preflight-cloze",
+  type: "cloze",
+  prompt: "Complete the preflight response.",
+  text: "Access-Control-Allow-Origin: {{1}}\nAccess-Control-Allow-Methods: {{2}}",
+  blanks: [{ answers: ["https://www.example.com"] }, { answers: ["PUT"] }],
+  lang: "http",
+}
+```
+
+</TabItem>
+</Tabs>
+
+## sort
+
+Drop each item into its bucket. Trains classification. 2 to 4 `buckets`, 4 to 12 `items`, each item's `bucket` a 0-based index, and every bucket with at least one item.
+
+<Tabs syncKey="format">
+<TabItem label="JSON">
+
+```json challenge
+{ "id": "header-sort", "type": "sort", "prompt": "Request or response header?", "buckets": ["Request", "Response"], "items": [{ "text": "`If-None-Match`", "bucket": 0 }, { "text": "`Cookie`", "bucket": 0 }, { "text": "`ETag`", "bucket": 1 }, { "text": "`Set-Cookie`", "bucket": 1 }] }
+```
+
+</TabItem>
+<TabItem label="course.ts">
+
+```ts
+{
+  id: "header-sort",
+  type: "sort",
+  prompt: "Request or response header?",
+  buckets: ["Request", "Response"],
+  items: [
+    { text: "`If-None-Match`", bucket: 0 },
+    { text: "`Cookie`", bucket: 0 },
+    { text: "`ETag`", bucket: 1 },
+    { text: "`Set-Cookie`", bucket: 1 },
+  ],
+}
+```
+
+</TabItem>
+</Tabs>
+
+## flashcard
+
+Front and back. Trains high-volume recall. The prompt is the front, `back` is the reveal. The learner rates Again, Hard, Good or Easy, and the rating sets the next review. One fact per card.
+
+<Tabs syncKey="format">
+<TabItem label="JSON">
+
+```json challenge
+{ "id": "fc-304", "type": "flashcard", "prompt": "What does `304` mean?", "back": "Not Modified: reuse your cached copy." }
+```
+
+</TabItem>
+<TabItem label="course.ts">
+
+```ts
+{ id: "fc-304", type: "flashcard", prompt: "What does `304` mean?", back: "Not Modified: reuse your cached copy." }
+```
+
+</TabItem>
+</Tabs>
+
+## kata
+
+A coding exercise inside the level. `kataId` points at a kata in the course's `katas` list. The learner solves it in the editor and passes the hidden tests to clear it, or skips it without losing a life. See [Katas](/authoring/katas/) for the kata object.
+
+<Tabs syncKey="format">
+<TabItem label="JSON">
+
+```json challenge
+{ "id": "sum-kata", "type": "kata", "prompt": "Sum a list.", "kataId": "sum" }
+```
+
+</TabItem>
+<TabItem label="course.ts">
+
+```ts
+{ id: "sum-kata", type: "kata", prompt: "Sum a list.", kataId: "sum" }
+```
+
+</TabItem>
+</Tabs>
+
+## Writing good items
+
+- One idea per item, tied to an objective of the level.
+- Put an easy item first. Keep error-prone types (`bug`, `order`) after the learner has warmed up.
+- Distractors are specific wrong beliefs, similar in length and style to the right answer.
+- Every quiz, multi, match, cloze, sort, order and bug item gets a 1 to 3 sentence `explain`: why the right answer is right, and why the most tempting wrong one is wrong.
+
+The full checklist is in [Designing a course](/authoring/design/).

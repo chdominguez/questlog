@@ -1,0 +1,72 @@
+---
+// Free and Questie plan cards plus top-up packs; every number comes from shared/pricing.ts.
+import { APP_URL } from "../../../shared/brand.ts";
+import { FREE_COURSES } from "../../../shared/pricing.ts";
+import { packs, plan } from "./price.ts";
+
+interface Props { compact?: boolean }
+const { compact = false } = Astro.props;
+const freeCourse = FREE_COURSES === 1 ? "One AI-built course from a topic" : `${FREE_COURSES} AI-built courses from a topic`;
+---
+
+<div class:list={["not-content", "plans", { compact }]}>
+  <section class="plan">
+    <h3>Free</h3>
+    <p class="price"><span class="amount">€0</span></p>
+    <ul>
+      <li>Every library course</li>
+      <li>Games, katas, review and notes</li>
+      <li>{freeCourse}</li>
+      <li>Top-up packs any time</li>
+    </ul>
+    <a class="q-btn ghost" href={APP_URL}>Start free</a>
+  </section>
+  <section class="plan main">
+    <h3>Questie</h3>
+    <p class="price"><span class="amount">{plan.price}</span> <span class="per">a month, VAT included</span></p>
+    <ul>
+      <li><strong>{plan.credits} credits</strong> every month</li>
+      <li>Every AI feature</li>
+      <li>One balance on web, iOS and Android</li>
+      <li>Manage or cancel any time</li>
+    </ul>
+    <a class="q-btn" href={`${APP_URL}/#/plans`}>Subscribe</a>
+  </section>
+  <section class="plan packs">
+    <h3>Top-up packs</h3>
+    <ul class="pack-list">
+      {packs.map((p) => <li><span class="amount">{p.price}</span> <span>{p.credits} credits</span></li>)}
+    </ul>
+    <p class="note">Top-up credits never expire.</p>
+  </section>
+</div>
+
+<style>
+  .plans { display: grid; gap: 1.25rem; margin-block: 2rem; grid-template-columns: 1fr; }
+  @media (min-width: 50rem) { .plans { grid-template-columns: 1fr 1.15fr .9fr; align-items: start; } }
+  .plan {
+    background: var(--q-surface); border: 1px solid var(--q-line); border-radius: 8px; padding: 1.5rem;
+    box-shadow: var(--q-shadow); display: grid; gap: .9rem;
+  }
+  .plan.main { border: 2px solid var(--sl-color-accent); }
+  .plan.packs { background: var(--q-sticky); color: var(--q-sticky-ink); border-color: transparent; rotate: 1deg; }
+  h3 { font-family: var(--q-display); font-size: 2rem; line-height: 1; margin: 0; color: inherit; }
+  .price { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem; }
+  .amount { font-family: var(--sl-font-mono); font-weight: 600; font-size: 1.9rem; letter-spacing: -.02em; }
+  .per { color: var(--q-muted); font-size: .95rem; }
+  ul { list-style: none; padding: 0; margin: 0; display: grid; gap: .45rem; }
+  li { padding-left: 1.4rem; position: relative; }
+  .plan:not(.packs) li::before { content: ""; position: absolute; left: .1rem; top: .45em; width: .7rem; height: .4rem; border: solid var(--q-ok); border-width: 0 0 2px 2px; rotate: -45deg; }
+  .pack-list li { padding: 0; display: flex; align-items: baseline; gap: .6rem; }
+  .pack-list .amount { font-size: 1.4rem; }
+  .note { margin: 0; font-weight: 700; }
+  .q-btn {
+    justify-self: start; display: inline-flex; align-items: center; min-height: 44px; padding: .5rem 1.1rem; font-weight: 700;
+    background: var(--sl-color-accent); color: var(--q-accent-ink); border: 2px solid var(--sl-color-accent); text-decoration: none;
+  }
+  .q-btn.ghost { background: var(--q-surface); color: var(--sl-color-white); border-color: var(--q-line); }
+  .q-btn:hover { filter: brightness(1.06); }
+  .compact { margin-block: 1.5rem 0; }
+  .compact ul { display: none; }
+  .compact .note { font-weight: 400; }
+</style>
