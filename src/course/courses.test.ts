@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { COURSE_ERRORS, COURSES, visibleTo } from "./registry";
+import { CHALLENGES, COURSE_ERRORS, COURSES, courseById, coursesLoaded, markCoursesLoaded, registerCourses, subscribeCourses, unregisterCourse, visibleTo } from "./registry";
 import { validateCourse } from "./validate";
 import { CourseSchema } from "./schema";
 
@@ -122,4 +122,41 @@ test("drill and practice blocks validate like challenges", () => {
   expect(mk({ kind: "practice", challenge: { id: "p", type: "quiz", prompt: "P", options: ["a", "b"], answer: 5 } })).toMatch(/challenge\.answer: answer 5/);
   expect(mk({ kind: "practice", challenge: { id: "q", type: "quiz", prompt: "P", options: ["a", "b"], answer: 0 } })).toMatch(/duplicate challenge id "q"/);
   expect(mk({ kind: "practice", challenge: { id: "p", type: "flashcard", prompt: "P", back: "B" } })).toMatch(/practice challenge type/);
+});
+
+test("registerCourses skips invalid and bundled ids, replaces, fills CHALLENGES; unregisterCourse removes", () => {
+  const bundled = COURSES[0];
+  const before = COURSES.length;
+  let calls = 0;
+  const stop = subscribeCourses(() => calls++);
+  registerCourses([{ id: "bad" }, course({ id: bundled.id, title: "Shadow" }), course({ id: "rt", title: "Runtime" })]);
+  expect(calls).toBe(1);
+  expect(COURSES.length).toBe(before + 1);
+  expect(courseById(bundled.id)?.title).toBe(bundled.title);
+  expect(courseById("bad")).toBeUndefined();
+  expect(courseById("rt")?.levels[0].id).toBe("rt:l1");
+  expect(CHALLENGES["rt:q"]).toMatchObject({ type: "quiz", levelId: "rt:l1" });
+
+  const c2 = course({ id: "rt", title: "Runtime 2" });
+  (c2.levels as any)[0].challenges = [{ id: "q2", type: "quiz", prompt: "P", options: ["a", "b"], answer: 1 }];
+  registerCourses([c2]);
+  expect(COURSES.length).toBe(before + 1);
+  expect(courseById("rt")?.title).toBe("Runtime 2");
+  expect(CHALLENGES["rt:q"]).toBeUndefined();
+  expect(CHALLENGES["rt:q2"]).toBeDefined();
+
+  unregisterCourse(bundled.id);
+  expect(courseById(bundled.id)).toBeDefined();
+  unregisterCourse("rt");
+  expect(courseById("rt")).toBeUndefined();
+  expect(CHALLENGES["rt:q2"]).toBeUndefined();
+  expect(COURSES.length).toBe(before);
+  stop();
+});
+
+test("coursesLoaded flips once", () => {
+  expect(coursesLoaded()).toBe(false);
+  markCoursesLoaded();
+  markCoursesLoaded();
+  expect(coursesLoaded()).toBe(true);
 });
