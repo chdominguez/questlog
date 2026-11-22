@@ -43,6 +43,16 @@ export function compile(ts: string): string {
   return transform(ts.replace(/^(\s*)export\s+(default\s+)?/gm, "$1"), { transforms: ["typescript"] }).code;
 }
 
+/** Network and code-loading APIs that course code must not reach: it can come from another user's course and runs with the viewer's cookies. */
+export const NETWORK = ["fetch", "XMLHttpRequest", "WebSocket", "WebSocketStream", "EventSource", "WebTransport", "importScripts", "Worker", "SharedWorker", "caches", "BroadcastChannel"];
+
+/** Removes NETWORK from the scope and its prototypes, for good. Throws rather than run with any left. */
+export function lockdown(scope: object = globalThis) {
+  for (let o: object | null = scope; o; o = Object.getPrototypeOf(o)) {
+    for (const n of NETWORK) if (Object.hasOwn(o, n)) Object.defineProperty(o, n, { value: undefined, writable: false, configurable: false });
+  }
+}
+
 const message = (e: unknown) => (e instanceof Error ? `${e.name}: ${e.message}` : String(e));
 
 /** Compiles the user's TS once, then runs it fresh before each test so state never leaks between tests. */

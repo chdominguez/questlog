@@ -4,7 +4,7 @@ import { Md } from "../ui/Md";
 import { react } from "../questie/Questie";
 import { Snippet } from "../code/Snippet";
 import { play } from "../audio/sfx";
-import { ChallengeBody, Feedback, KICKER } from "./Challenge";
+import { ChallengeBody, Feedback, kicker } from "./Challenge";
 import type { Result } from "./store";
 
 /** A challenge inline in theory: same inputs and feedback, never recorded. */
@@ -23,7 +23,7 @@ function PracticeRun({ c, onAgain }: { c: Challenge; onAgain: () => void }) {
   };
   return (
     <div className="practice">
-      <div className="qtype">{KICKER[c.type]}</div>
+      <div className="qtype">{kicker(c)}</div>
       <Md text={c.prompt} />
       {c.code && <Snippet lang={c.code.lang} src={c.code.src} />}
       <ChallengeBody c={c} done={result !== null} onResult={finish} />

@@ -5,7 +5,12 @@ import { href } from "../ui/route";
 import { Md, summaryLine } from "../ui/Md";
 import { WrittenAnswer } from "../answers/WrittenAnswer";
 import { ScorePill, ScoreRing } from "../answers/GradeView";
-import { pickMockQuestions } from "../answers/mock";
+import { pickMockQuestions, resumable, storeMock } from "../answers/mock";
+import { ApiError, startMock } from "../answers/api";
+import { newKey } from "../api";
+import { useSession } from "../auth/session";
+import { CostButton } from "../billing/CostButton";
+import { isDemo } from "../platform";
 import { average, mmss } from "../answers/text";
 import { Hud } from "../engine/Hud";
 import "../answers/answers.css";
@@ -13,12 +18,24 @@ import "./screens.css";
 
 export function MockScreen({ course }: { course: Course }) {
   const seconds = course.mock?.seconds ?? 30 * 60;
-  const [questions] = useState(() => pickMockQuestions(course.levels));
-  const [phase, setPhase] = useState<"intro" | "run" | "end">("intro");
-  const [endAt, setEndAt] = useState(0);
+  const [resume] = useState(() => resumable(course.id, course.levels));
+  const [questions] = useState(() => resume?.questions ?? pickMockQuestions(course.levels));
+  const [phase, setPhase] = useState<"intro" | "run" | "end" | "failed">(resume ? "run" : "intro");
+  const [mockId, setMockId] = useState(resume?.mockId);
+  const [endAt, setEndAt] = useState(resume?.endAt ?? 0);
   const [left, setLeft] = useState(seconds);
-  const [i, setI] = useState(0);
-  const [scores, setScores] = useState<(number | undefined)[]>([]);
+  const [i, setI] = useState(resume?.i ?? 0);
+  const [scores, setScores] = useState<(number | undefined)[]>(() => resume?.scores.map((x) => x ?? undefined) ?? []);
+  const [starting, setStarting] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const me = useSession().me;
+  const ai = me?.features.ai !== false;
+
+  useEffect(() => {
+    if (phase === "end" || phase === "failed") storeMock(course.id, null);
+    if (phase !== "run") return;
+    storeMock(course.id, { mockId, endAt, i, ids: questions.map((q) => q.challenge.id), scores: scores.map((x) => x ?? null) });
+  }, [phase, mockId, endAt, i, scores, questions, course.id]);
 
   useEffect(() => {
     if (phase !== "run") return;
@@ -30,7 +47,20 @@ export function MockScreen({ course }: { course: Course }) {
     return () => clearInterval(t);
   }, [phase, endAt]);
 
-  const start = () => { setEndAt(Date.now() + seconds * 1000); setPhase("run"); };
+  async function start() {
+    setStarting(true);
+    setFailed(false);
+    try {
+      if (!isDemo) setMockId((await startMock(course.id, newKey())).mockId);
+      setI(0);
+      setScores([]);
+      setEndAt(Date.now() + seconds * 1000);
+      setPhase("run");
+    } catch (e) {
+      if (!(e instanceof ApiError && e.status === 402)) setFailed(true); // 402 opened the top-up sheet
+    }
+    setStarting(false);
+  }
   const next = () => (i + 1 < questions.length ? setI(i + 1) : setPhase("end"));
   const q = questions[i];
   const answered = scores.filter((s): s is number => s !== undefined);
@@ -47,13 +77,22 @@ export function MockScreen({ course }: { course: Course }) {
       </div>
 
       {phase === "intro" && (
-        questions.length ? (
+        !ai ? <p className="scr-empty">No grader</p> : questions.length ? (
           <div className="mock-bar">
-            <span>{questions.length} questions · {mmss(seconds)}</span>
-            <button type="button" className="btn" onClick={start}>Start</button>
+            <span>{questions.length} {questions.length === 1 ? "question" : "questions"} · {mmss(seconds)}</span>
+            {isDemo
+              ? <button type="button" className="btn" onClick={start}>Start</button>
+              : <CostButton action="mock" label="Start" busy={starting} busyLabel="Starting…" onPress={start} />}
           </div>
         ) : <p className="scr-empty">No questions</p>
       )}
+      {phase === "failed" && (
+        <div className="mock-bar">
+          <span className="wa-error" role="alert">Exam failed{me?.credits ? ` · ${me.credits.costs.mock} credits refunded` : ""}</span>
+          <CostButton action="mock" label="Try again" busy={starting} busyLabel="Starting…" onPress={start} />
+        </div>
+      )}
+      {failed && <p className="wa-error" role="alert">Couldn't start exam</p>}
 
       {phase === "run" && q && (
         <>
@@ -68,6 +107,8 @@ export function MockScreen({ course }: { course: Course }) {
             challenge={{ ...q.challenge, seconds: undefined }}
             levelId={q.levelId}
             saveOnExit
+            mockId={mockId}
+            onMockFailed={() => setPhase("failed")}
             onDone={(s) => setScores((xs) => { const c = [...xs]; c[i] = s; return c; })}
           />
         </>

@@ -39,12 +39,35 @@ export function GradeView({ grade }: { grade: Grade }) {
           <List title="Mistakes" items={grade.mistakes} kind="bad" />
         </div>
       </div>
+      <Stronger grade={grade} />
+    </div>
+  );
+}
+
+/** Stronger answer and corrections, when the attempt has them. */
+export function Stronger({ grade }: { grade: Grade }) {
+  return (
+    <>
       {grade.improved && (
         <section className="gv-improved">
           <h4>Stronger answer</h4>
           <p>{grade.improved}</p>
         </section>
       )}
-    </div>
+      {!!grade.corrections?.length && (
+        <section className="gv-improved gv-fixes">
+          <h4>Corrections</h4>
+          <ul>
+            {grade.corrections.map((x, i) => (
+              <li key={i}>
+                <span className="gv-quote">"{x.quote}"</span>
+                <span aria-hidden="true"> → </span><span className="sr">, change to </span>
+                <span className="gv-fix">"{x.fix}"</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </>
   );
 }

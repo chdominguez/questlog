@@ -1,4 +1,4 @@
-import { runKata } from "./runner";
+import { lockdown, runKata } from "./runner";
 import { PY_HARNESS } from "./pyHarness";
 import type { KataTest } from "../course/schema";
 
@@ -15,8 +15,9 @@ const loadPython = () => (py ??= (async () => {
 
 self.onmessage = async (e: MessageEvent<Msg>) => {
   const { source, tests, lang } = e.data;
-  if (lang !== "python") return self.postMessage(runKata(source, tests));
+  if (lang !== "python") { lockdown(); return self.postMessage(runKata(source, tests)); }
   const run = await loadPython();
+  lockdown(); // after Pyodide has loaded what it needs
   self.postMessage("running"); // the run budget starts now, not at the Pyodide download
   self.postMessage(JSON.parse(run(source, JSON.stringify(tests))));
 };

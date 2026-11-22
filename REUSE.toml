@@ -1,0 +1,19 @@
+version = 1
+
+[[annotations]]
+path = "**"
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 chdominguez and contributors"
+SPDX-License-Identifier = "AGPL-3.0-only"
+
+[[annotations]]
+path = ["src/course/schema.ts", "src/course/authoring.ts", "shared/media.ts", "scripts/schema-ref.ts", "plugins/questie/**", "site/src/content/docs/authoring/**", "site/public/schema/**"]
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 chdominguez and contributors"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "courses/**"
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 chdominguez and contributors"
+SPDX-License-Identifier = "CC-BY-4.0"

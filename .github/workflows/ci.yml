@@ -10,4 +10,20 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit -p .
       - run: npm test
+      - run: npm run validate
+      - uses: fsfe/reuse-action@v5
       - run: npm run build
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --build-arg COMMIT=${{ github.sha }} -t questie .
+      - name: Start and check health
+        run: |
+          docker run -d --name questie -p 8787:8787 -e APP_URL=http://localhost:8787 -e BETTER_AUTH_SECRET=ci-secret-ci-secret-ci-secret-ci questie
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8787/api/health && exit 0
+            sleep 2
+          done
+          docker logs questie
+          exit 1

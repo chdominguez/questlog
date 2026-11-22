@@ -1,7 +1,8 @@
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 import { useMemo } from "react";
-import { wrapTables } from "./markdown";
+import { API_BASE } from "../platform";
+import { localImage, wrapTables } from "./markdown";
 
 export { summaryLine } from "./markdown";
 
@@ -10,6 +11,10 @@ DOMPurify.addHook("afterSanitizeAttributes", (node) => {
   if (node.tagName === "A" && /^https?:/i.test(node.getAttribute("href") ?? "")) {
     node.setAttribute("target", "_blank");
     node.setAttribute("rel", "noopener noreferrer");
+  }
+  if (node.tagName === "IMG" && (!localImage(node.getAttribute("src") ?? "", location.href, API_BASE) || node.hasAttribute("srcset"))) {
+    node.removeAttribute("src");
+    node.removeAttribute("srcset");
   }
 });
 

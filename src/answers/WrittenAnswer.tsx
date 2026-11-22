@@ -5,24 +5,36 @@ import type { Grade, SavedAnswer } from "../../shared/api-types";
 import { Md } from "../ui/Md";
 import { Snippet } from "../code/Snippet";
 import { play } from "../audio/sfx";
-import { ApiError, gradeAnswer, listAnswers, saveAnswer } from "./api";
+import { ApiError, gradeAnswer, improveAnswer, listAnswers, saveAnswer } from "./api";
+import { newKey } from "../api";
+import { useSession } from "../auth/session";
+import { CostButton } from "../billing/CostButton";
+import { isDemo } from "../platform";
 import { useDictation } from "./useDictation";
-import { GradeView, ScorePill } from "./GradeView";
+import { GradeView, ScorePill, Stronger } from "./GradeView";
 import { fmtDate, insertAt, mmss, SELF_RATINGS, SOURCE_LABEL, sourceOf } from "./text";
 import { scoreOf } from "../../shared/group";
 import { courseById, courseOf } from "../course/registry";
 import "./answers.css";
 
 type Written = Extract<Challenge, { type: "written" }>;
-type Phase = "edit" | "grading" | "graded" | "rating" | "rated";
+type Phase = "edit" | "grading" | "graded" | "improving" | "rating" | "rated";
 
 const MAX = 8000; // matches server MAX_ANSWER
 
-export function WrittenAnswer({ challenge, levelId, onDone, saveOnExit = false }: {
+export function WrittenAnswer({ challenge, levelId, onDone, saveOnExit = false, mockId, onMockFailed }: {
   challenge: Written; levelId: string; onDone: (score: number) => void;
   /** Save whatever is written, ungraded, if the component unmounts before the answer was saved (mock clock). */
   saveOnExit?: boolean;
+  /** Paid mock session: grading inside it is free. */
+  mockId?: string;
+  /** The mock's first grade failed and the server refunded the exam. */
+  onMockFailed?: () => void;
 }) {
+  const { me } = useSession();
+  const ai = me?.features.ai !== false;
+  /** " · <n> credits refunded" when billing is on and the action was paid. */
+  const refunded = (cost: "grade" | "improve") => (me?.credits ? ` · ${me.credits.costs[cost]} credits refunded` : "");
   const [text, setText] = useState("");
   const [phase, setPhase] = useState<Phase>("edit");
   const [grade, setGrade] = useState<Grade | null>(null);
@@ -30,6 +42,8 @@ export function WrittenAnswer({ challenge, levelId, onDone, saveOnExit = false }
   const [notice, setNotice] = useState("");
   const [left, setLeft] = useState(challenge.seconds ?? 0);
   const [previous, setPrevious] = useState<SavedAnswer[]>([]);
+  const [improveFailed, setImproveFailed] = useState(false);
+  const [answerId, setAnswerId] = useState<string | null>(null);
   const used = useRef({ typed: false, dictated: false });
   const startedAt = useRef(Date.now());
   const area = useRef<HTMLTextAreaElement>(null);
@@ -98,30 +112,52 @@ export function WrittenAnswer({ challenge, levelId, onDone, saveOnExit = false }
   }, [text]);
 
   async function save(extra: Pick<SavedAnswer, "grade" | "selfScore">) {
-    await record(extra).catch(() => setNotice("Couldn't save"));
+    const a = await record(extra).catch(() => { setNotice("Couldn't save"); return null; });
+    setAnswerId(a?.id ?? null);
   }
 
   async function correct() {
-    if (!editing || !text.trim()) return;
+    if (!editing || !text.trim() || !ai || isDemo) return;
     setPhase("grading");
     setNotice("");
     abort.current = new AbortController();
     try {
-      const g = await gradeAnswer({ challengeId: challenge.id, answer: text.trim() }, abort.current.signal);
+      const g = await gradeAnswer({ challengeId: challenge.id, answer: text.trim(), ...(mockId && { mockId }) }, newKey(), abort.current.signal);
       setGrade(g);
       setPhase("graded");
       await save({ grade: g });
       onDone(g.score);
     } catch (e) {
       if (abort.current?.signal.aborted) return; // unmounted
-      if (e instanceof ApiError && e.status === 400) {
-        setNotice(e.message);
+      if (e instanceof ApiError && (e.status === 400 || e.status === 402)) {
+        if (e.status === 400) setNotice(e.message); // 402 opened the top-up sheet; the answer stays for a retry
         setPhase("edit");
+      } else if (mockId && e instanceof ApiError && e.body.refunded === true) {
+        onMockFailed?.();
       } else {
-        setNotice(e instanceof DOMException && e.name === "TimeoutError" ? "Grader timed out" : "Grader unavailable");
+        const timeout = e instanceof DOMException && e.name === "TimeoutError";
+        const paid = !mockId && (timeout || (e instanceof ApiError && e.body.refunded === true));
+        setNotice(`${timeout ? "Grader timed out" : "Grader unavailable"}${paid ? refunded("grade") : ""}`);
         setPhase("rating");
       }
     }
+  }
+
+  async function improve() {
+    if (!grade || !answerId || phase !== "graded") return;
+    setPhase("improving");
+    setNotice("");
+    try {
+      const imp = await improveAnswer(answerId, newKey());
+      setGrade({ ...grade, ...imp });
+      setImproveFailed(false);
+    } catch (e) {
+      if (!(e instanceof ApiError && e.status === 402)) {
+        setImproveFailed(true);
+        setNotice(`Couldn't write it${e instanceof ApiError && e.body.refunded === true ? refunded("improve") : ""}`);
+      }
+    }
+    setPhase("graded");
   }
 
   async function rate(score: number) {
@@ -133,7 +169,8 @@ export function WrittenAnswer({ challenge, levelId, onDone, saveOnExit = false }
 
   const toggleMic = () => (dict.recording ? dict.stop() : (area.current?.focus(), dict.start()));
   const syncCaret = () => { caret.current = area.current?.selectionStart ?? textRef.current.length; };
-  const showModel = phase === "graded" || phase === "rating" || phase === "rated";
+  const graded = phase === "graded" || phase === "improving";
+  const showModel = graded || phase === "rating" || phase === "rated";
 
   return (
     <div className="wa card">
@@ -183,16 +220,20 @@ export function WrittenAnswer({ challenge, levelId, onDone, saveOnExit = false }
 
       {(phase === "edit" || phase === "grading") && (
         <div className="wa-actions">
-          <button type="button" className="btn" onClick={correct} disabled={!text.trim() || phase === "grading"} aria-keyshortcuts="Control+Enter Meta+Enter">
-            {phase === "grading" ? "Grading…" : "Grade"}
-          </button>
+          {ai && (mockId ? (
+            <button type="button" className="btn" onClick={correct} disabled={!text.trim() || phase === "grading"} aria-keyshortcuts="Control+Enter Meta+Enter">
+              {phase === "grading" ? "Grading…" : "Grade"}
+            </button>
+          ) : (
+            <CostButton action="grade" label="Grade" busy={phase === "grading"} busyLabel="Grading…" disabled={!text.trim()} keyshortcuts="Control+Enter Meta+Enter" onPress={correct} />
+          ))}
           <button type="button" className="btn ghost" onClick={() => setPhase("rating")} disabled={phase === "grading"}>
             Show model answer
           </button>
         </div>
       )}
 
-      {grade && phase === "graded" && <GradeView grade={grade} />}
+      {grade && graded && <GradeView grade={grade} />}
 
       {showModel && (
         <section className="wa-model">
@@ -200,6 +241,12 @@ export function WrittenAnswer({ challenge, levelId, onDone, saveOnExit = false }
           <Md text={challenge.model} />
           {challenge.explain && <Md text={challenge.explain} className="wa-explain" />}
         </section>
+      )}
+
+      {grade && graded && !grade.improved && answerId && (
+        <div className="wa-actions">
+          <CostButton action="improve" label={improveFailed ? "Retry" : "Stronger answer"} busy={phase === "improving"} busyLabel="Writing…" className="btn ghost" onPress={improve} />
+        </div>
       )}
 
       {phase === "rating" && (
@@ -223,6 +270,7 @@ export function WrittenAnswer({ challenge, levelId, onDone, saveOnExit = false }
                   <ScorePill score={scoreOf(a)} />
                 </div>
                 <p>{a.answer}</p>
+                {a.grade && <Stronger grade={a.grade} />}
               </li>
             ))}
           </ul>

@@ -1,5 +1,5 @@
-import type { FlowStep, Level } from "questlog/authoring";
-import { hl } from "questlog/authoring";
+import type { FlowStep, Level } from "questie/authoring";
+import { hl } from "questie/authoring";
 import { API, HOST, ORIGIN, SID } from "../samples";
 
 // Objectives: read Set-Cookie attributes; tell same-origin from same-site; predict when a preflight happens;

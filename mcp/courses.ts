@@ -10,7 +10,7 @@ export type Visibility = "public" | "private";
 export type Roots = Record<Visibility, string>;
 export interface CourseFile { id: string; file: string; visibility: Visibility }
 
-export const defaultRoots = (): Roots => ({ public: resolve("courses"), private: resolve(process.env.QUESTLOG_COURSES ?? "courses-private") });
+export const defaultRoots = (): Roots => ({ public: resolve("courses"), private: resolve(process.env.QUESTIE_COURSES ?? process.env.QUESTLOG_COURSES ?? "courses-private") });
 
 export function findCourses(roots: Roots): CourseFile[] {
   return (Object.keys(roots) as Visibility[]).flatMap((visibility) =>

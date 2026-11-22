@@ -1,6 +1,7 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { courseDue, dueKeys } from "./srs";
-import { hydrate, initial, multiplier, rankIndex, rankProgress, reducer, type Action, type Progress } from "./store";
+import { LEGACY_KEY } from "./legacy";
+import { hydrate, initial, load, multiplier, OLD_STORAGE_KEY, rankIndex, rankProgress, reducer, STORAGE_KEY, type Action, type Progress } from "./store";
 
 const run = (actions: Action[], s: Progress = initial) => actions.reduce(reducer, s);
 const NOW = Date.UTC(2026, 0, 1);
@@ -119,5 +120,37 @@ describe("settings and hydrate", () => {
     expect(s.best).toEqual({ "c:quiz": 900, "c:match": 20_000 });
     expect(hydrate(JSON.parse(JSON.stringify(s))).best).toEqual(s.best);
     expect(hydrate({ best: { a: 1, b: "2", c: null, d: Infinity } }).best).toEqual({ a: 1 });
+  });
+});
+
+describe("load", () => {
+  const storage = (items: Record<string, string>) => {
+    const m = new Map(Object.entries(items));
+    vi.stubGlobal("localStorage", {
+      getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v),
+      key: (i: number) => [...m.keys()][i] ?? null, get length() { return m.size; },
+    });
+    return m;
+  };
+  afterEach(() => vi.unstubAllGlobals());
+
+  test("old key only: loaded and copied, old key kept", () => {
+    const old = JSON.stringify({ xp: 42 });
+    const m = storage({ [OLD_STORAGE_KEY]: old });
+    expect(load().xp).toBe(42);
+    expect(m.get(STORAGE_KEY)).toBe(old);
+    expect(m.get(OLD_STORAGE_KEY)).toBe(old);
+  });
+  test("both keys: new key wins", () => {
+    const m = storage({ [STORAGE_KEY]: JSON.stringify({ xp: 7 }), [OLD_STORAGE_KEY]: JSON.stringify({ xp: 42 }) });
+    expect(load().xp).toBe(7);
+    expect(JSON.parse(m.get(OLD_STORAGE_KEY)!).xp).toBe(42);
+  });
+  test("legacy key still migrates", () => {
+    const m = storage({ [LEGACY_KEY]: JSON.stringify({ xp: 5, cleared: ["q1"] }) });
+    const p = load();
+    expect(p.xp).toBe(5);
+    expect(p.cleared).toEqual(["entrevista:q1"]);
+    expect(JSON.parse(m.get(STORAGE_KEY)!).xp).toBe(5);
   });
 });

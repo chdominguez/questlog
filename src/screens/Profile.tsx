@@ -1,4 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from "react";
+import { isNative } from "../platform";
 import { ArrowLeft } from "@phosphor-icons/react";
 import type { Profile, Reminder } from "../../shared/api-types";
 import { ApiError, deleteReminder, getMe, getProfile, listReminders, saveProfile, saveReminder } from "../answers/api";
@@ -7,6 +8,9 @@ import { enablePush, pushState, timeZone, type PushState } from "../engine/push"
 import { useProgress } from "../engine/store";
 import { Hud } from "../engine/Hud";
 import { href } from "../ui/route";
+import { ProfileBilling } from "../billing/ProfileBilling";
+import { AdminLink } from "../library/AdminLink";
+import { AccountSection } from "../auth/AccountSection";
 import "../answers/answers.css";
 import "./screens.css";
 import "./profile.css";
@@ -46,6 +50,9 @@ function Reminders({ user }: { user: string }) {
       <h2>Reminders</h2>
       {state === "install" && <p className="wa-notice">Share → Add to Home Screen</p>}
       {state === "denied" && <p className="wa-notice">Notifications are blocked</p>}
+      {state === "denied" && isNative && (
+        <button type="button" className="btn quiet" onClick={() => { void import("../native/index").then((n) => n.openSettings()).catch(() => {}); }}>Open settings</button>
+      )}
       {state === "off" && <button type="button" className="btn" onClick={enable}>Enable notifications</button>}
       {failed && <p className="wa-notice" role="alert">Couldn't save</p>}
       {state === "on" && visibleTo(user).filter((c) => !completed.includes(c.id)).map((c) => (
@@ -63,7 +70,6 @@ function Reminders({ user }: { user: string }) {
 
 export function ProfileScreen() {
   const [email, setEmail] = useState("");
-  const [logout, setLogout] = useState<string>();
   const [form, setForm] = useState<Profile | null>(null);
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -71,9 +77,8 @@ export function ProfileScreen() {
 
   useEffect(() => {
     Promise.all([getMe(), getProfile()]).then(([me, p]) => {
-      setEmail(me.user);
-      setLogout(me.logout);
-      setForm({ ...p, name: p.name || me.name || "" }); // Keycloak name until the user sets their own
+      setEmail(me.email);
+      setForm({ ...p, name: p.name || me.name || "" }); // account name until the user sets their own
     }, () => setError(true));
   }, []);
 
@@ -114,8 +119,10 @@ export function ProfileScreen() {
           <div className="wa-actions"><button type="submit" className="btn" disabled={busy}>Save</button></div>
         </form>
       )}
+      <ProfileBilling />
       {email && <Reminders user={email} />}
-      {logout && <div className="wa-actions"><a className="btn ghost" href={logout}>Sign out</a></div>}
+      <AdminLink />
+      <AccountSection />
     </div>
     </>
   );

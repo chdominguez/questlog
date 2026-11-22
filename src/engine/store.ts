@@ -5,7 +5,9 @@ import { gradeOf, isCard, schedule, type SrsCard } from "./srs";
 import { Rating } from "ts-fsrs";
 import { LEGACY_KEY, migrateKataKeys, migrateLegacy } from "./legacy";
 
-export const STORAGE_KEY = "questlog-v1";
+export const STORAGE_KEY = "questie-v1";
+/** Progress key before the rename; copied to STORAGE_KEY, never deleted, so a rollback loses nothing. */
+export const OLD_STORAGE_KEY = "questlog-v1";
 export const MAX_LIVES = 3;
 
 export const RANKS = [
@@ -150,10 +152,14 @@ export function hydrate(raw: unknown): Progress {
   };
 }
 
-function load(): Progress {
+export function load(): Progress {
   try {
-    const txt = localStorage.getItem(STORAGE_KEY);
-    if (txt) return hydrate(JSON.parse(txt));
+    const txt = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem(OLD_STORAGE_KEY);
+    if (txt) {
+      const p = hydrate(JSON.parse(txt));
+      localStorage.setItem(STORAGE_KEY, txt);
+      return p;
+    }
     const legacy = localStorage.getItem(LEGACY_KEY);
     if (!legacy) return initial;
     migrateKataKeys(localStorage);

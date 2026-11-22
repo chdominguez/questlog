@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 chdominguez and contributors
 /**
  * Course content contract: the single source for types, validation and the JSON Schema given to AI authors.
  * Fields marked (md) are Markdown rendered by <Md> (src/ui/Md.tsx). A course must stay JSON-serializable.
@@ -120,6 +122,8 @@ export const TheoryCardSchema = z.object({
   title: z.string().min(1),
   blocks: z.array(TheoryBlockSchema).min(1),
   tip: md("One-line takeaway Questie, the mascot, says when the card opens").optional(),
+  sources: z.array(z.object({ url: z.url({ protocol: /^https?$/ }), title: z.string().min(1) }).strict())
+    .describe("Citations shown under the card").optional(),
 }).strict();
 
 export const LevelSchema = z.object({
@@ -159,6 +163,7 @@ export function artProblem(svg: string): string | null {
   if (/\s(width|height)=/.test(root)) return "root must not set width/height";
   if (new TextEncoder().encode(svg).length >= 4096) return "must be under 4 KB";
   if (/href|url\(|<image|<script|#[0-9a-f]{3,6}\b/i.test(svg)) return "no hrefs, url(), images, scripts or hex colors; use var(--accent) etc.";
+  if (/[\s/"']on[a-z]+\s*=|<(foreignObject|img|iframe|embed|object|animate|set)\b/i.test(svg)) return "no event handlers, foreignObject, img, embeds or animation";
   return null;
 }
 

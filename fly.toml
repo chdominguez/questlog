@@ -1,0 +1,36 @@
+app = "questie"
+primary_region = "fra"
+
+[build]
+  [build.args]
+    COMMIT = "dev" # fly deploy --build-arg COMMIT=$(git rev-parse HEAD)
+
+[env]
+  DB_PATH = "/data/questlog.db"
+  HOST = "0.0.0.0"
+  PORT = "8787"
+  IP_HEADER = "fly-client-ip"
+  LITESTREAM_PATH = "questie"
+
+# One machine, one volume, one writer: fly scale count 1
+[[mounts]]
+  source = "questie_data"
+  destination = "/data"
+  snapshot_retention = 14
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_stop_machines = "off" # reminders tick in-process and Litestream must keep streaming
+  auto_start_machines = true
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/api/health"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "30s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"

@@ -1,6 +1,11 @@
 import { useSyncExternalStore } from "react";
 
-/** Hash routes: #/ · #/c/:course · #/c/:course/level/:id · #/c/:course/kata/:id · #/c/:course/mock · #/c/:course/arcade · #/c/:course/arcade/:game · #/c/:course/review · #/c/:course/answers · #/c/:course/materials · #/c/:course/notes · #/c/:course/notes/:id · #/profile */
+/**
+ * Hash routes: #/ · #/c/:course · #/c/:course/level/:id · #/c/:course/kata/:id · #/c/:course/mock · #/c/:course/arcade · #/c/:course/arcade/:game
+ * · #/c/:course/review · #/c/:course/answers · #/c/:course/materials · #/c/:course/notes · #/c/:course/notes/:id · #/profile · #/profile/credits
+ * · #/signin?next= · #/signup · #/verify · #/forgot · #/reset?token= · #/welcome · #/plans?canceled=1 · #/billing/done · #/build · #/build/:job
+ * · #/library · #/admin/review. A "?query" inside the hash is not part of the path; hashQuery() reads it.
+ */
 export type Route =
   | { name: "home" }
   | { name: "map"; course: string }
@@ -13,10 +18,31 @@ export type Route =
   | { name: "answers"; course: string }
   | { name: "materials"; course: string }
   | { name: "notes"; course: string; id?: string }
-  | { name: "profile" };
+  | { name: "profile" }
+  | { name: "credits" }
+  | { name: "signin"; next?: string }
+  | { name: "signup"; next?: string }
+  | { name: "verify"; next?: string }
+  | { name: "forgot" }
+  | { name: "reset"; token?: string }
+  | { name: "welcome" }
+  | { name: "plans"; canceled: boolean }
+  | { name: "billingDone" }
+  | { name: "build" }
+  | { name: "job"; id: string }
+  | { name: "library" }
+  | { name: "adminReview" };
+
+/** Routes anyone can open; every other route needs a session. */
+export const PUBLIC_ROUTES = ["signin", "signup", "verify", "forgot", "reset"] as const satisfies Route["name"][];
+
+/** The "?query" part of a hash, e.g. next= on #/signin?next=... */
+export const hashQuery = (hash: string) => { const i = hash.indexOf("?"); return new URLSearchParams(i < 0 ? "" : hash.slice(i + 1)); };
 
 export function parse(hash: string): Route {
-  const [, a, b, c, d] = hash.replace(/^#/, "").split("/").map((x) => (x ? decodeURIComponent(x) : x));
+  const i = hash.indexOf("?");
+  const qs = hashQuery(hash);
+  const [, a, b, c, d] = (i < 0 ? hash : hash.slice(0, i)).replace(/^#/, "").split("/").map((x) => (x ? decodeURIComponent(x) : x));
   if (a === "c" && b) {
     if ((c === "level" || c === "kata") && d) return { name: c, course: b, id: d };
     if (c === "mock" || c === "review" || c === "answers" || c === "materials") return { name: c, course: b };
@@ -24,7 +50,17 @@ export function parse(hash: string): Route {
     if (c === "notes") return d ? { name: "notes", course: b, id: d } : { name: "notes", course: b };
     return { name: "map", course: b };
   }
-  if (a === "profile") return { name: "profile" };
+  if (a === "profile") return b === "credits" ? { name: "credits" } : { name: "profile" };
+  if (a === "signin" || a === "signup" || a === "verify") {
+    const next = qs.get("next");
+    return next?.startsWith("#/") ? { name: a, next } : { name: a }; // in-app hashes only
+  }
+  if (a === "reset") return qs.get("token") ? { name: "reset", token: qs.get("token")! } : { name: "reset" };
+  if (a === "forgot" || a === "welcome" || a === "library") return { name: a };
+  if (a === "plans") return { name: "plans", canceled: qs.get("canceled") === "1" };
+  if (a === "billing" && b === "done") return { name: "billingDone" };
+  if (a === "build") return b ? { name: "job", id: b } : { name: "build" };
+  if (a === "admin" && b === "review") return { name: "adminReview" };
   return { name: "home" };
 }
 
@@ -42,6 +78,19 @@ export const href = {
   answers: (course: string) => `#/c/${e(course)}/answers`,
   materials: (course: string) => `#/c/${e(course)}/materials`,
   profile: () => "#/profile",
+  credits: () => "#/profile/credits",
+  signin: (next?: string) => `#/signin${next ? `?next=${e(next)}` : ""}`,
+  signup: (next?: string) => `#/signup${next ? `?next=${e(next)}` : ""}`,
+  verify: (next?: string) => `#/verify${next ? `?next=${e(next)}` : ""}`,
+  forgot: () => "#/forgot",
+  reset: () => "#/reset",
+  welcome: () => "#/welcome",
+  plans: () => "#/plans",
+  billingDone: () => "#/billing/done",
+  build: () => "#/build",
+  job: (id: string) => `#/build/${e(id)}`,
+  library: () => "#/library",
+  adminReview: () => "#/admin/review",
   notes: (course: string, id?: string) => `#/c/${e(course)}/notes${id ? `/${e(id)}` : ""}`,
 };
 

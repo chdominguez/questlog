@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import type { TheoryBlock, TheoryCard } from "../course/schema";
 import { Md } from "../ui/Md";
 import { Snippet } from "../code/Snippet";
@@ -10,6 +10,10 @@ import { play } from "../audio/sfx";
 import { Drill } from "./Drill";
 import { Practice } from "./Practice";
 import { say } from "../questie/Questie";
+import { courseOf } from "../course/registry";
+import { ReportButton } from "../library/ReportButton";
+import { Sources } from "./Sources";
+import { useTheoryCard } from "../narration/card";
 import "./engine.css";
 
 export function Block({ b }: { b: TheoryBlock }) {
@@ -46,9 +50,9 @@ export const typingTarget = (e: KeyboardEvent) => {
   return !!t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || !!t.closest?.(".monaco-editor"));
 };
 
-/** Card-by-card theory with progress dots; arrows navigate. */
-export function Theory({ cards, onDone }: { cards: TheoryCard[]; onDone: () => void }) {
-  const [i, setI] = useState(0);
+/** Card-by-card theory with progress dots; arrows navigate. `level` (qualified key) enables per-card reports. */
+export function Theory({ cards, onDone, level }: { cards: TheoryCard[]; onDone: () => void; level?: string }) {
+  const [i, setI] = useTheoryCard(level);
   useEffect(() => { scrollTo(0, 0); }, [i]);
   const last = i >= cards.length - 1;
   const goTo = (n: number) => { if (n >= 0 && n < cards.length && n !== i) { play("click"); setI(n); } };
@@ -70,8 +74,12 @@ export function Theory({ cards, onDone }: { cards: TheoryCard[]; onDone: () => v
   return (
     <section className="theory" aria-label="Theory">
       <article key={i} className="card theory-card screen-in">
-        <h2>{card.title}</h2>
+        <div className="card-head">
+          <h2>{card.title}</h2>
+          {level && <ReportButton courseId={courseOf(level)} itemId={`${level}#${i}`} />}
+        </div>
         {card.blocks.map((b, k) => <Block key={k} b={b} />)}
+        <Sources sources={card.sources} />
       </article>
       <div className="theory-nav">
         <button type="button" className="btn ghost" onClick={() => goTo(i - 1)} disabled={i === 0}>Previous</button>

@@ -1,4 +1,4 @@
-import { defineCourse } from "questlog/authoring";
+import { defineCourse } from "questie/authoring";
 import art from "./art";
 import requests from "./levels/01-requests";
 import caching from "./levels/02-caching";

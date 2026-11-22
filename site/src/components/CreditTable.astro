@@ -1,0 +1,28 @@
+---
+// What each AI action costs, and how many of each the plan's monthly credits cover.
+import { costs, plan } from "./price.ts";
+---
+
+<div class="not-content credits">
+  <table>
+    <thead><tr><th scope="col">Action</th><th scope="col">Credits</th><th scope="col">Per month on the plan</th></tr></thead>
+    <tbody>
+      {costs.map((c) => (
+        <tr><td><a href={c.href}>{c.action}</a></td><td class="n">{c.credits}</td><td class="n">{c.perMonth}</td></tr>
+      ))}
+    </tbody>
+  </table>
+  <p>The plan's {plan.credits} credits cover any mix of these. Your first course from a topic is free.</p>
+</div>
+
+<style>
+  .credits { margin-block: 1.5rem; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; background: var(--q-surface); border: 1px solid var(--q-line); border-radius: 8px; overflow: hidden; }
+  th, td { text-align: left; padding: .7rem 1rem; border-bottom: 1px solid var(--q-line); }
+  th { background: var(--q-raise); font-size: .9rem; }
+  tbody tr:last-child td { border-bottom: 0; }
+  .n { font-family: var(--sl-font-mono); text-align: right; white-space: nowrap; }
+  th:not(:first-child) { text-align: right; }
+  a { color: inherit; text-decoration-color: var(--sl-color-accent); text-underline-offset: .2em; }
+  p { color: var(--q-muted); margin: .75rem 0 0; }
+</style>

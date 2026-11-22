@@ -1,0 +1,18 @@
+.lib-dialog { width: min(420px, calc(100vw - 2 * var(--s-4))); color: var(--fg); display: grid; gap: var(--s-4); }
+.lib-dialog:not([open]) { display: none; }
+.lib-dialog::backdrop { background: color-mix(in oklch, var(--bg) 85%, transparent); }
+.lib-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
+.lib-dialog-head h2 { margin: 0; font-size: var(--t-lg); }
+.lib-dialog p { margin: 0; }
+.lib-dialog fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: var(--s-2); }
+.lib-dialog label { display: flex; gap: var(--s-2); align-items: center; }
+.lib-dialog .lib-field, .lib-field { display: grid; gap: var(--s-1); }
+.lib-stack { display: grid; gap: var(--s-3); justify-items: start; }
+.lib-end { justify-content: flex-end; }
+.lib-report { position: relative; display: inline-flex; align-items: center; gap: var(--s-2); }
+.lib-tabs { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+.lib-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-3); }
+.lib-row { display: grid; gap: var(--s-2); }
+.lib-row-head { display: flex; justify-content: space-between; gap: var(--s-3); align-items: baseline; }
+.lib-meta { color: var(--muted); font-size: var(--t-sm); }
+.lib-search { display: grid; gap: var(--s-3); }

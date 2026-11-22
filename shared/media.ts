@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 chdominguez and contributors
 /** Media files a course may reference, shared by the schema, the server and the MCP server. */
 export const MEDIA_TYPES = {
   image: ["png", "jpg", "jpeg", "webp", "gif", "avif"],
@@ -24,7 +26,7 @@ export function mediaRefProblem(ref: string, types: readonly MediaType[] = ["ima
   return allowed.includes(mediaExt(m[1])) ? null : `extension must be one of ${allowed.join(", ")}`;
 }
 
-/** Public URL of a course-relative ref. */
-export const mediaUrl = (course: string, ref: string) => `/media/${course}/${ref.slice("media/".length)}`;
+/** Public URL of a course-relative ref; `base` is the server origin when the app is not served by it (native). */
+export const mediaUrl = (course: string, ref: string, base = "") => `${base}/media/${course}/${ref.slice("media/".length)}`;
 /** Rewrites Markdown image paths `](media/x.png)` to public URLs. */
-export const mdMedia = (course: string, text: string) => text.replace(/\]\(media\/([A-Za-z0-9_][A-Za-z0-9._-]*)\)/g, (_, f) => `](/media/${course}/${f})`);
+export const mdMedia = (course: string, text: string, base = "") => text.replace(/\]\(media\/([A-Za-z0-9_][A-Za-z0-9._-]*)\)/g, (_, f) => `](${base}/media/${course}/${f})`);

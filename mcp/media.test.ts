@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { expect, test } from "vitest";
 import { listMedia, uploadMedia } from "./courses";
 
-const root = () => mkdtempSync(join(tmpdir(), "questlog-mcpmedia-"));
+const root = () => mkdtempSync(join(tmpdir(), "questie-mcpmedia-"));
 
 test("uploads, lists, and refuses overwrite unless asked", () => {
   const r = root();

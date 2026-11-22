@@ -1,0 +1,203 @@
+---
+// Landing sections below the hero.
+import { APP_URL } from "../../../shared/brand.ts";
+import Pricing from "./Pricing.astro";
+import Shot from "./Shot.astro";
+import mascot from "../assets/questie-light.svg";
+import traceLight from "../assets/shots/trace-m-light.webp";
+import traceDark from "../assets/shots/trace-m-dark.webp";
+import kataLight from "../assets/shots/kata-d-light.webp";
+import kataDark from "../assets/shots/kata-d-dark.webp";
+import flowLight from "../assets/shots/flow-d-light.webp";
+import flowDark from "../assets/shots/flow-d-dark.webp";
+
+const DEMO = "/demo/#/c/http-basics";
+const facts = ["11 challenge types", "TypeScript and Python katas", "FSRS review", "Answers graded by Claude", "AGPL, self-hostable"];
+const ways = [
+  { name: "Library", text: "Free courses, reviewed before they go public.", href: "/learn/", link: "Start learning" },
+  { name: "Build with AI", text: "From a topic and level, from your PDFs, notes, a URL or a repo, or from web research with citations. Your first course from a topic is free.", href: "/ai/topic/", link: "Build a course" },
+  { name: "Write your own", text: "An open file format, an MCP server and a Claude Code plugin.", href: "/authoring/", link: "Read the format" },
+];
+---
+
+<div class="not-content landing">
+  <ul class="facts" aria-label="Highlights">
+    {facts.map((f) => <li>{f}</li>)}
+  </ul>
+
+  <section class="reveal">
+    <h2>Practice a chatbot can't give you</h2>
+    <div class="bento">
+      <article class="cell review">
+        <h3>Review that schedules itself</h3>
+        <p>Every challenge becomes an FSRS card. Misses come back right away, hits come back days later.</p>
+      </article>
+      <article class="cell graded">
+        <h3>Explain it, get <mark>graded</mark></h3>
+        <p>Type or dictate an answer. Claude scores it against the key points and shows the ones you missed.</p>
+      </article>
+      <article class="cell">
+        <h3>Code that runs</h3>
+        <p>Katas with visible and hidden tests, in the browser. TypeScript and Python.</p>
+      </article>
+      <article class="cell">
+        <h3>Watch the code run</h3>
+        <p>Step-through traces with live variables. Request flows with the real payload on every hop.</p>
+      </article>
+      <article class="cell validated">
+        <h3>Courses that pass a validator</h3>
+        <p>Every AI-built course passes the same schema and kata checks as hand-written ones before you see it.</p>
+        <pre><code><span class="bad">✗</span> levels[1].challenges[4].answer: answer 4 but only 3 options
+<span class="ok">✓</span> courses/http-basics/course.ts</code></pre>
+      </article>
+      <article class="cell">
+        <h3>Sources on every card</h3>
+        <p>Research courses link each theory card to the pages it came from.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="reveal">
+    <h2>Three ways to get a course</h2>
+    <div class="ways">
+      {ways.map((w) => (
+        <div class="way">
+          <h3>{w.name}</h3>
+          <p>{w.text} <a href={w.href}>{w.link}</a></p>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="reveal see">
+    <h2>See it</h2>
+    <div class="collage">
+      <div class="c-trace"><Shot light={traceLight} dark={traceDark} alt="A trace stepping through isFresh with its variables" caption="Step through real code" tilt={-2} sizes="(min-width: 50rem) 22rem, 90vw" /></div>
+      <div class="c-kata"><Shot light={kataLight} dark={kataDark} alt="A kata with its statement, editor and passing tests" caption="Pass the hidden tests" tilt={1} sizes="(min-width: 50rem) 40rem, 90vw" /></div>
+      <div class="c-flow"><Shot light={flowLight} dark={flowDark} alt="A request flow from page to browser cache to server" caption="Follow every hop" tilt={-1} sizes="(min-width: 50rem) 34rem, 90vw" /></div>
+    </div>
+  </section>
+
+  <section class="reveal free">
+    <div class="sticky">
+      <p class="big">No energy bar. No lives to refill.</p>
+      <p>Games, katas, review, notes and the whole library cost nothing. Credits pay only for AI work.</p>
+    </div>
+    <img src={mascot.src} alt="" width="120" height="134" class="free-mascot" />
+  </section>
+
+  <section class="reveal run">
+    <div>
+      <h2>Yours to run</h2>
+      <dl>
+        <dt>One container</dt><dd>Docker or Fly, SQLite with continuous backups.</dd>
+        <dt>Your key</dt><dd>Bring <code>ANTHROPIC_API_KEY</code> and every AI feature runs unmetered.</dd>
+        <dt>Open licenses</dt><dd>App AGPL-3.0, course format MIT, library courses CC BY 4.0. <a href="/license/">Licenses</a></dd>
+      </dl>
+      <a class="q-link" href="/self-host/docker/">Self-host Questie</a>
+    </div>
+    <pre class="term"><code><span class="dim"># .env</span>
+ANTHROPIC_API_KEY=sk-ant-...
+
+<span class="dim">$</span> docker compose up -d</code></pre>
+  </section>
+
+  <section class="reveal">
+    <h2>Free to practice. Credits for AI.</h2>
+    <Pricing compact />
+    <a class="q-link" href="/pricing/">See pricing</a>
+  </section>
+
+  <section class="reveal cta">
+    <h2>Start with one level</h2>
+    <div class="cta-actions">
+      <a class="q-btn" href={DEMO}>Try a level</a>
+      <a class="q-btn ghost" href={`${APP_URL}/#/signup`}>Start free</a>
+    </div>
+  </section>
+</div>
+
+<style>
+  .landing { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(4rem, 9vw, 6.5rem); padding-bottom: 3rem; }
+  .landing * { min-width: 0; }
+  h2 { font-family: var(--q-display); font-weight: 700; font-size: clamp(2.3rem, 5vw, 3.2rem); line-height: 1.05; margin: 0 0 1.75rem; color: var(--sl-color-white); }
+  h3 { margin: 0; font-size: 1.15rem; color: inherit; }
+  p { margin: 0; }
+  a { color: var(--sl-color-accent); text-underline-offset: .2em; }
+  mark { background: linear-gradient(transparent 12%, var(--q-mark) 12%, var(--q-mark) 88%, transparent 88%); color: inherit; padding: 0 .1em; }
+  code { font-family: var(--sl-font-mono); font-size: .9em; }
+
+  .facts {
+    list-style: none; margin: -1.5rem 0 0; padding: 1rem 0; display: flex; flex-wrap: wrap; gap: .6rem 2rem;
+    border-block: 2px dashed var(--q-line); font-family: var(--sl-font-mono); font-size: .9rem; color: var(--sl-color-gray-2);
+  }
+
+  .bento { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+  .cell { background: var(--q-surface); border: 1px solid var(--q-line); border-radius: 8px; padding: 1.4rem; display: grid; gap: .6rem; align-content: start; }
+  .cell p { color: var(--sl-color-gray-2); line-height: 1.55; }
+  .review { background: var(--q-sticky); color: var(--q-sticky-ink); border-color: transparent; rotate: -1deg; box-shadow: var(--q-shadow); }
+  .review h3, .graded h3 { font-family: var(--q-display); font-size: 2rem; line-height: 1.05; }
+  .review p { color: inherit; }
+  .graded { background: var(--q-raise); }
+  .validated pre { margin: .4rem 0 0; padding: .9rem 1rem; background: var(--q-raise); border-radius: 6px; overflow-x: auto; font-size: .82rem; line-height: 1.6; }
+  .bad { color: #d6336c; }
+  .ok { color: var(--q-ok); }
+  @media (min-width: 50rem) {
+    .bento { grid-template-columns: repeat(6, 1fr); }
+    .review { grid-column: span 2; grid-row: span 2; align-content: center; padding: 2rem; }
+    .graded { grid-column: span 4; }
+    .cell:nth-child(3), .cell:nth-child(4) { grid-column: span 2; }
+    .validated { grid-column: span 4; }
+    .cell:nth-child(6) { grid-column: span 2; }
+  }
+
+  .ways { display: grid; }
+  .way { display: grid; gap: .5rem 2rem; padding-block: 1.25rem; border-top: 2px dashed var(--q-line); }
+  .way:last-child { border-bottom: 2px dashed var(--q-line); }
+  .way h3 { font-family: var(--q-display); font-size: 2rem; line-height: 1.1; }
+  .way p { font-size: 1.1rem; color: var(--sl-color-gray-2); max-width: 52ch; }
+  @media (min-width: 50rem) { .way { grid-template-columns: 14rem 1fr; align-items: baseline; } }
+
+  .collage { display: grid; gap: 2.5rem 2rem; grid-template-columns: 1fr; }
+  @media (min-width: 50rem) {
+    .collage { grid-template-columns: 22rem 1fr; grid-template-areas: "trace kata" "trace flow"; align-items: start; }
+    .c-trace { grid-area: trace; }
+    .c-kata { grid-area: kata; }
+    .c-flow { grid-area: flow; width: 85%; justify-self: end; }
+  }
+  @media (max-width: 49.99rem) { .c-trace { max-width: 22rem; } }
+
+  .free { display: grid; justify-items: center; gap: 1rem; position: relative; }
+  .sticky {
+    background: var(--q-sticky); color: var(--q-sticky-ink); padding: 2.2rem 2rem; max-width: 36rem; rotate: 1.5deg;
+    box-shadow: var(--q-shadow); display: grid; gap: .75rem; text-align: center;
+  }
+  .sticky .big { font-family: var(--q-display); font-weight: 700; font-size: clamp(2.2rem, 5vw, 3rem); line-height: 1.05; }
+  .sticky p:not(.big) { font-size: 1.1rem; }
+  .free-mascot { width: 6.5rem; height: auto; margin-top: -2.5rem; rotate: -6deg; position: relative; }
+
+  .run { display: grid; gap: 2rem; align-items: center; }
+  @media (min-width: 50rem) { .run { grid-template-columns: 1.2fr 1fr; } }
+  dl { margin: 0 0 1.25rem; display: grid; gap: .9rem; }
+  dt { font-weight: 700; }
+  dd { margin: .15rem 0 0; color: var(--sl-color-gray-2); }
+  .term { margin: 0; padding: 1.25rem 1.4rem; background: #1b1e25; color: #e9e7e1; border-radius: 8px; box-shadow: var(--q-shadow); font-size: .9rem; line-height: 1.7; overflow-x: auto; }
+  .term .dim { color: #a4a9b6; }
+
+  .q-link { font-weight: 700; display: inline-block; margin-top: .25rem; }
+  .cta { text-align: center; padding: 3rem 1rem; border: 2px dashed var(--q-line); border-radius: 8px; }
+  .cta h2 { margin-bottom: 1.5rem; }
+  .cta-actions { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; }
+  .q-btn {
+    display: inline-flex; align-items: center; min-height: 48px; padding: .6rem 1.4rem; font-weight: 700; font-size: 1.05rem;
+    background: var(--sl-color-accent); color: var(--q-accent-ink); border: 2px solid var(--sl-color-accent); text-decoration: none;
+  }
+  .q-btn.ghost { background: var(--q-surface); color: var(--sl-color-white); border-color: var(--q-line); }
+
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .reveal { animation: rise linear both; animation-timeline: view(); animation-range: entry 0% entry 35%; }
+      @keyframes rise { from { opacity: 0; transform: translateY(2rem); } }
+    }
+  }
+</style>

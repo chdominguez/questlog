@@ -54,12 +54,18 @@
   .hud-rank-body { min-width: 96px; }
   .hud-sound input[type="range"] { width: 64px; }
 }
+@media (max-width: 520px) {
+  /* Two rows: brand, chip, rank badge, streak, mute; then nav. */
+  .hud-rank-body, .hud-sound input[type="range"] { display: none; }
+  .hud-rank { order: 0; margin-left: 0; }
+}
 
 /* Theory */
 .theory { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); }
 .theory-card { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); min-width: 0; margin-top: var(--s-3); }
 .theory-card::before { content: ""; position: absolute; top: -12px; left: 50%; width: 110px; height: 24px; translate: -50% 0; rotate: -2deg; background: var(--tape); pointer-events: none; }
 .theory-card > .md, .theory-card > p { max-width: 68ch; }
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: var(--s-3); }
 .theory-card h2 { font-size: clamp(var(--t-2xl), 5vw, var(--t-3xl)); }
 .theory-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
 .dots { display: flex; flex-wrap: wrap; justify-content: center; }

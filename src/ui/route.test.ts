@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { href, parse } from "./route";
+import { hashQuery, href, parse } from "./route";
 
 test("parse", () => {
   expect(parse("")).toEqual({ name: "home" });
@@ -21,4 +21,26 @@ test("parse", () => {
 
 test("href round-trips qualified ids", () => {
   expect(parse(href.level("x", "x:01 intro"))).toEqual({ name: "level", course: "x", id: "01 intro" });
+});
+
+test("app routes and hash query", () => {
+  expect(parse("#/profile/credits")).toEqual({ name: "credits" });
+  expect(parse("#/signin")).toEqual({ name: "signin" });
+  expect(parse(href.signin("#/c/x?y=1"))).toEqual({ name: "signin", next: "#/c/x?y=1" });
+  expect(parse(href.signup("#/plans"))).toEqual({ name: "signup", next: "#/plans" });
+  expect(parse(href.verify("#/plans"))).toEqual({ name: "verify", next: "#/plans" });
+  expect(parse("#/signup")).toEqual({ name: "signup" });
+  expect(parse("#/signin?next=%2F%2Fevil.example")).toEqual({ name: "signin" });
+  expect(parse("#/reset?token=abc")).toEqual({ name: "reset", token: "abc" });
+  for (const n of ["signup", "verify", "forgot", "welcome", "library"] as const) expect(parse(href[n]())).toEqual({ name: n });
+  expect(parse("#/plans")).toEqual({ name: "plans", canceled: false });
+  expect(parse("#/plans?canceled=1")).toEqual({ name: "plans", canceled: true });
+  expect(parse(href.billingDone())).toEqual({ name: "billingDone" });
+  expect(parse(href.build())).toEqual({ name: "build" });
+  expect(parse(href.job("j 1"))).toEqual({ name: "job", id: "j 1" });
+  expect(parse(href.adminReview())).toEqual({ name: "adminReview" });
+  expect(parse("#/admin")).toEqual({ name: "home" });
+  expect(parse("#/c/x/notes?q=1")).toEqual({ name: "notes", course: "x" });
+  expect(hashQuery("#/plans?canceled=1&a=b").get("a")).toBe("b");
+  expect(hashQuery("#/plans").toString()).toBe("");
 });

@@ -1,4 +1,4 @@
-// Questlog MCP server over stdio: `npm run mcp`. See mcp/README.md.
+// Questie MCP server over stdio: `npm run mcp`. See mcp/README.md.
 import { readFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { mediaRoot } from "../server/media";
@@ -10,28 +10,31 @@ import { validateCourse } from "../src/course/validate";
 import { defaultRoots, findCourses, listCourses, listMedia, loadCourse, saveCourse, uploadMedia } from "./courses";
 
 const text = (t: string, isError = false) => ({ content: [{ type: "text" as const, text: t }], isError });
-const course = z.record(z.string(), z.unknown()).describe("The whole course object, shaped like the questlog://schema/course resource");
-const guide = resolve(import.meta.dirname, "../plugins/questlog/skills/questlog-course/SKILL.md");
+const course = z.record(z.string(), z.unknown()).describe("The whole course object, shaped like the questie://schema/course resource");
+const guide = resolve(import.meta.dirname, "../plugins/questie/skills/questie-course/SKILL.md");
 
 async function api(path: string) {
-  const base = process.env.QUESTLOG_URL;
-  if (!base) return text("Notes live in the deployed Questlog app. Set QUESTLOG_URL (the app's base URL) and, if a login proxy sits in front, QUESTLOG_HEADERS (JSON of the header it trusts, e.g. {\"x-auth-request-email\":\"me@x.com\"}) in this MCP server's env, then restart it.", true);
+  const base = process.env.QUESTIE_URL ?? process.env.QUESTLOG_URL;
+  if (!base) return text("Notes live in the deployed Questie app. Set QUESTIE_URL (the app's base URL) and QUESTIE_TOKEN (an MCP token from Profile) in this MCP server's env, then restart it.", true);
+  // QUESTLOG_HEADERS is kept one release for login-proxy installs.
   const headers: Record<string, string> = JSON.parse(process.env.QUESTLOG_HEADERS || "{}");
+  const token = process.env.QUESTIE_TOKEN ?? process.env.QUESTLOG_TOKEN;
+  if (token) headers["x-api-key"] = token;
   try {
     // A login proxy answers a missing or bad credential with a redirect to its login page, so don't follow it.
     const res = await fetch(new URL(path, base), { headers, redirect: "manual" });
-    if (!res.ok) return text(`GET ${path} failed with ${res.status}.${res.status < 400 || res.status === 401 || res.status === 403 ? " Check QUESTLOG_HEADERS." : ""}`, true);
+    if (!res.ok) return text(`GET ${path} failed with ${res.status}.${res.status < 400 || res.status === 401 || res.status === 403 ? " Check QUESTIE_TOKEN." : ""}`, true);
     return { ok: true as const, data: await res.json() };
   } catch (e) {
-    return text(`GET ${new URL(path, base)} failed: ${e instanceof Error ? e.message : e}. Check QUESTLOG_URL.`, true);
+    return text(`GET ${new URL(path, base)} failed: ${e instanceof Error ? e.message : e}. Check QUESTIE_URL.`, true);
   }
 }
 
 serveStdio(() => {
-  const server = new McpServer({ name: "questlog", version: "0.1.0" });
+  const server = new McpServer({ name: "questie", version: "0.1.0" });
 
   server.registerTool("course_list", {
-    description: "Lists the Questlog courses on this machine: id, title, lang, level and kata counts, file path, and whether it is public (courses/) or private. Start here to find a course_id.",
+    description: "Lists the Questie courses on this machine: id, title, lang, level and kata counts, file path, and whether it is public (courses/) or private. Start here to find a course_id.",
   }, async () => text(JSON.stringify(await listCourses(defaultRoots()))));
 
   server.registerTool("course_get", {
@@ -59,7 +62,7 @@ serveStdio(() => {
     description: "Validates a course and writes it to <root>/<id>/course.json, where root is courses/ for public or the private courses folder for private. If it is invalid nothing is written and you get the problem list: fix it and call again. It never replaces a TypeScript course (edit that file instead) and replaces an existing course.json only with overwrite: true. Returns the path written.",
     inputSchema: z.object({
       course,
-      visibility: z.enum(["public", "private"]).describe("public: committed with the app in courses/. private: the user's own courses folder ($QUESTLOG_COURSES or courses-private/)"),
+      visibility: z.enum(["public", "private"]).describe("public: committed with the app in courses/. private: the user's own courses folder ($QUESTIE_COURSES or courses-private/)"),
       overwrite: z.boolean().optional().describe("Replace an existing course.json with the same id"),
     }),
   }, ({ course, visibility, overwrite }) => {
@@ -68,7 +71,7 @@ serveStdio(() => {
   });
 
   server.registerTool("media_upload", {
-    description: "Stores an image, GIF, video or audio file for a course and returns the ref (media/<file>) to put in a course's media block src or poster, or in Markdown as ![alt](media/<file>). Allowed: png jpg jpeg webp gif avif mp4 webm mp3 ogg m4a wav. Give exactly one of data (base64) or path (a file on this machine). The file is stored in the media folder the Questlog server serves (MEDIA_DIR, else next to the database).",
+    description: "Stores an image, GIF, video or audio file for a course and returns the ref (media/<file>) to put in a course's media block src or poster, or in Markdown as ![alt](media/<file>). Allowed: png jpg jpeg webp gif avif mp4 webm mp3 ogg m4a wav. Give exactly one of data (base64) or path (a file on this machine). The file is stored in the media folder the Questie server serves (MEDIA_DIR, else next to the database).",
     inputSchema: z.object({
       course_id: z.string().describe("Course id from course_list"),
       filename: z.string().optional().describe("Name to store, e.g. demo.mp4; defaults to the name of path"),
@@ -94,7 +97,7 @@ serveStdio(() => {
   });
 
   server.registerTool("note_search", {
-    description: "Searches the user's notes in the deployed Questlog app. Both filters are optional; with neither it lists every note. Returns id, title, tags, courseId and updatedAt; read one in full with note_get.",
+    description: "Searches the user's notes in the deployed Questie app. Both filters are optional; with neither it lists every note. Returns id, title, tags, courseId and updatedAt; read one in full with note_get.",
     inputSchema: z.object({
       query: z.string().optional().describe("Words to look for in titles and bodies"),
       tag: z.string().optional().describe("Only notes with this exact tag"),
@@ -114,17 +117,17 @@ serveStdio(() => {
     return "ok" in r ? text(JSON.stringify(r.data)) : r;
   });
 
-  server.registerResource("course-schema", "questlog://schema/course", {
+  server.registerResource("course-schema", "questie://schema/course", {
     description: "JSON Schema of a course, the shape course_save accepts. Cross-reference rules (art keys, kata ids, answer indexes) are checked by course_validate, not by the schema.",
     mimeType: "application/schema+json",
   }, (uri) => ({ contents: [{ uri: uri.href, text: JSON.stringify(z.toJSONSchema(CourseSchema, { io: "input" })) }] }));
 
-  server.registerResource("authoring-guide", "questlog://guide/authoring", {
-    description: "How to write a good Questlog course: structure, challenge types, katas and art.",
+  server.registerResource("authoring-guide", "questie://guide/authoring", {
+    description: "How to write a good Questie course: structure, challenge types, katas and art.",
     mimeType: "text/markdown",
   }, (uri) => {
     let t: string;
-    try { t = readFileSync(guide, "utf8"); } catch { t = "The questlog-course authoring guide is not installed (plugins/questlog/skills/questlog-course/SKILL.md). Use questlog://schema/course and course_validate."; }
+    try { t = readFileSync(guide, "utf8"); } catch { t = "The questie-course authoring guide is not installed (plugins/questie/skills/questie-course/SKILL.md). Use questie://schema/course and course_validate."; }
     return { contents: [{ uri: uri.href, text: t }] };
   });
 

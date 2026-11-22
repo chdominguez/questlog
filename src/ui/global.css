@@ -32,6 +32,10 @@
   --bad: #d6336c;
   --gold: #a87100;
   --info: #5f3dc4;
+  /* State as small text: AA on --bg, --surface and --sticky */
+  --ok-ink: #237032;
+  --bad-ink: #b02a5b;
+  --gold-ink: #8a5d00;
   /* Notebook */
   --mark: rgb(132 232 96 / .5);     /* highlighter */
   --rule: rgb(28 111 214 / .11);    /* ruled lines */
@@ -74,6 +78,9 @@
     --bad: #ff8aac;
     --gold: #ffc94a;
     --info: #b9a8ff;
+    --ok-ink: #7fdc8e;
+    --bad-ink: #ff8aac;
+    --gold-ink: #ffc94a;
     --mark: rgb(140 235 100 / .26);
     --rule: rgb(127 181 255 / .07);
     --margin: rgb(255 138 172 / .25);
@@ -102,6 +109,8 @@ code { overflow-wrap: anywhere; font-family: var(--f-mono); font-size: .88em; ba
 h1, h2, h3 { font-family: var(--f-display); font-weight: 700; text-wrap: balance; margin: 0; line-height: 1.1; }
 a { color: var(--accent); }
 .wrap { max-width: 980px; margin: 0 auto; }
+/* Screens without the Hud (sign-in, not found) clear the notch themselves. */
+#root > .wrap:not(:has(.hud)) { padding-top: env(safe-area-inset-top, 0px); }
 /* Red margin line, only where there is room left of the content column. */
 @media (min-width: 1100px) {
   body { background-image: linear-gradient(90deg, transparent calc(50% - 522px), var(--margin) calc(50% - 522px), var(--margin) calc(50% - 520px), transparent calc(50% - 520px)), repeating-linear-gradient(180deg, transparent 0 31px, var(--rule) 31px 32px); }

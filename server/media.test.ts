@@ -2,9 +2,10 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { createMedia } from "./media";
+import { Hono, type Context } from "hono";
+import { createMedia, CSP, cspHeader, WORKER_CSP } from "./media";
 
-const dir = mkdtempSync(join(tmpdir(), "questlog-media-"));
+const dir = mkdtempSync(join(tmpdir(), "questie-media-"));
 mkdirSync(join(dir, "c"));
 writeFileSync(join(dir, "c", "a.mp4"), "0123456789");
 writeFileSync(join(dir, "c", "x.txt"), "no");
@@ -41,4 +42,12 @@ test("404 for missing, disallowed extension and traversal", async () => {
   for (const p of ["/media/c/missing.mp4", "/media/c/x.txt", "/media/nope/a.mp4", "/media/c/..%2F..%2Fsecret.png", "/media/..%2Fc/a.mp4", "/media/c/%2e%2e", "/media/c/.hidden.png"]) {
     expect((await get(p)).status, p).toBe(404);
   }
+});
+
+test("cspHeader: HTML pages get the CSP, the kata worker its own, other responses none", async () => {
+  const js = (c: Context) => c.body("x", 200, { "Content-Type": "text/javascript" });
+  const app = new Hono().use(cspHeader).get("/", (c) => c.html("<p>x</p>")).get("/a.js", js).get("/assets/runner.worker-Ab_1.js", js);
+  expect((await app.request("/")).headers.get("content-security-policy")).toBe(CSP);
+  expect((await app.request("/a.js")).headers.get("content-security-policy")).toBeNull();
+  expect((await app.request("/assets/runner.worker-Ab_1.js")).headers.get("content-security-policy")).toBe(WORKER_CSP);
 });

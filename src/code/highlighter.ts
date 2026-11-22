@@ -3,7 +3,7 @@ import { createJavaScriptRegexEngine } from "shiki/engine/javascript";
 import type { CodeLang } from "../course/schema";
 
 // Token colors are CSS variables (--shiki-* in global.css), so snippets follow the palette and the OS scheme live.
-const theme = createCssVariablesTheme({ name: "questlog", variablePrefix: "--shiki-" });
+const theme = createCssVariablesTheme({ name: "questie", variablePrefix: "--shiki-" });
 
 // Fine-grained bundle: only these grammars get shipped.
 const highlighter = createHighlighterCore({
@@ -29,5 +29,5 @@ const LANG: Record<CodeLang, string> = {
 
 export async function tokenize(src: string, lang: CodeLang): Promise<ThemedToken[][]> {
   const h = await highlighter;
-  return h.codeToTokens(src, { lang: LANG[lang], theme: "questlog" }).tokens;
+  return h.codeToTokens(src, { lang: LANG[lang], theme: "questie" }).tokens;
 }

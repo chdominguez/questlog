@@ -1,0 +1,14 @@
+Questie
+Copyright 2026 chdominguez and contributors
+
+The Questie app is licensed under the GNU Affero General Public License v3.0 only (LICENSE).
+The course format is licensed under the MIT License (LICENSES/MIT.txt):
+  src/course/schema.ts, src/course/authoring.ts, shared/media.ts, scripts/schema-ref.ts,
+  plugins/questie/, site/src/content/docs/authoring/
+Library courses in courses/ are licensed under CC BY 4.0 (LICENSES/CC-BY-4.0.txt).
+REUSE.toml is the file-by-file record.
+
+Bundled fonts: Atkinson Hyperlegible, JetBrains Mono, Caveat, under the SIL Open Font License 1.1.
+
+"Questie" and the Questie mascot are trademarks of chdominguez. Forks may use the code
+under its license but must not use the name or mascot for a hosted service.

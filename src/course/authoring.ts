@@ -1,4 +1,6 @@
-/** Helpers for typed course files: `import { defineCourse, at, hl } from "questlog/authoring"`. */
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 chdominguez and contributors
+/** Helpers for typed course files: `import { defineCourse, at, hl } from "questie/authoring"`. */
 import type { CourseInput } from "./schema";
 export type * from "./schema";
 

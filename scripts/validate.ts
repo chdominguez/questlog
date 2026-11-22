@@ -4,7 +4,7 @@ import { basename, dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { validateCourse } from "../src/course/validate";
 
-const roots = ["courses", process.env.QUESTLOG_COURSES ?? "courses-private"];
+const roots = ["courses", process.env.QUESTIE_COURSES ?? process.env.QUESTLOG_COURSES ?? "courses-private"];
 const files = roots.flatMap((r) => globSync(`${r}/*/course.{ts,json}`)).map((f) => resolve(f));
 const wanted = process.argv.slice(2);
 const pick = wanted.length ? files.filter((f) => wanted.some((w) => basename(dirname(f)) === w || f.startsWith(resolve(w)))) : files;
