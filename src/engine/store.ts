@@ -36,7 +36,9 @@ export interface Progress {
   completed: string[]; // course ids the user marked done: no due reviews
   unlockAll: boolean;
   sound: { muted: boolean; volume: number };
-  best: Record<string, number>; // arcade bests by "<course>:<game>"
+  best: Record<string, number>; // arcade bests by "<course>:<game>", or "<level>:<game>" for a level's own arcade
+  plays: Record<string, number>; // arcade games finished, same keys as best
+  read: string[]; // level ids whose theory was read to the last card
   run: Run | null; // current level attempt, not persisted
   updatedAt: number; // last local change, for sync (newest wins)
 }
@@ -50,13 +52,14 @@ export type Action =
   | { type: "finish" } // run completed with lives left
   | { type: "quit" } // run ended without completion
   | { type: "markReview"; id: string; now: number }
+  | { type: "read"; levelId: string }
   | { type: "unlockAll"; on: boolean }
   | { type: "complete"; course: string; on: boolean }
   | { type: "sound"; muted?: boolean; volume?: number }
   | { type: "best"; key: string; value: number; lower?: boolean }; // lower: a time, smaller is better
 
 export const initial: Progress = {
-  xp: 0, levels: {}, streak: 0, cards: {}, cleared: [], completed: [], unlockAll: false, sound: { muted: false, volume: 0.7 }, best: {}, run: null, updatedAt: 0,
+  xp: 0, levels: {}, streak: 0, cards: {}, cleared: [], completed: [], unlockAll: false, sound: { muted: false, volume: 0.7 }, best: {}, plays: {}, read: [], run: null, updatedAt: 0,
 };
 
 export const multiplier = (streak: number) => (streak >= 5 ? 2 : streak >= 3 ? 1.5 : 1);
@@ -102,6 +105,8 @@ export function reducer(s: Progress, a: Action): Progress {
       return { ...s, run: null };
     case "markReview":
       return { ...s, cards: { ...s.cards, [a.id]: schedule(s.cards[a.id], Rating.Again, a.now) } };
+    case "read":
+      return s.read.includes(a.levelId) ? s : { ...s, read: [...s.read, a.levelId] };
     case "unlockAll":
       return { ...s, unlockAll: a.on };
     case "complete":
@@ -109,7 +114,8 @@ export function reducer(s: Progress, a: Action): Progress {
     case "best": {
       const prev = s.best[a.key];
       const better = prev === undefined || (a.lower ? a.value < prev : a.value > prev);
-      return better ? { ...s, best: { ...s.best, [a.key]: a.value } } : s;
+      const plays = { ...s.plays, [a.key]: (s.plays[a.key] ?? 0) + 1 };
+      return { ...s, plays, best: better ? { ...s.best, [a.key]: a.value } : s.best };
     }
     case "sound":
       return {
@@ -129,8 +135,11 @@ export function hydrate(raw: unknown): Progress {
   const num = (v: unknown, d: number) => (typeof v === "number" && Number.isFinite(v) ? v : d);
   const levels: Record<string, LevelProgress> = {};
   const cards: Record<string, SrsCard> = {};
-  const best: Record<string, number> = {};
-  if (r.best && typeof r.best === "object") for (const [k, v] of Object.entries(r.best)) if (typeof v === "number" && Number.isFinite(v)) best[k] = v;
+  const numbers = (v: unknown) => {
+    const out: Record<string, number> = {};
+    if (v && typeof v === "object") for (const [k, x] of Object.entries(v)) if (typeof x === "number" && Number.isFinite(x)) out[k] = x;
+    return out;
+  };
   if (r.cards && typeof r.cards === "object") for (const [id, c] of Object.entries(r.cards)) if (isCard(c)) cards[id] = c;
   if (r.levels && typeof r.levels === "object") {
     for (const [id, l] of Object.entries(r.levels)) {
@@ -146,7 +155,9 @@ export function hydrate(raw: unknown): Progress {
     completed: strings(r.completed),
     unlockAll: r.unlockAll === true,
     sound: { muted: r.sound?.muted === true, volume: clamp(num(r.sound?.volume, initial.sound.volume), 0, 1) },
-    best,
+    best: numbers(r.best),
+    plays: numbers(r.plays),
+    read: strings(r.read),
     run: null,
     updatedAt: Math.max(0, num(r.updatedAt, 0)),
   };
