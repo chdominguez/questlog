@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { Star } from "@phosphor-icons/react";
 import { getMe } from "../answers/api";
-import { COURSE_ERRORS, visibleTo } from "../course/registry";
+import { COURSE_ERRORS, coursesLoaded, useCourses, visibleTo } from "../course/registry";
+import { useSession } from "../auth/session";
+import { JobCards } from "../builder/JobCards";
+import { loadCourses, useUserCourses } from "../builder/api";
+import { StatusPill } from "../library/StatusPill";
 import { getArt } from "../art";
 import { play } from "../audio/sfx";
 import { Hud } from "../engine/Hud";
@@ -9,17 +13,26 @@ import { useProgress } from "../engine/store";
 import { courseDue } from "../engine/srs";
 import { href } from "../ui/route";
 import "./screens.css";
+import "../builder/builder.css";
 
 export function HomeScreen() {
   const p = useProgress();
   const [user, setUser] = useState(() => { try { return localStorage.getItem("ql.user") ?? ""; } catch { return ""; } }); // sync.ts keeps it current
   useEffect(() => { getMe().then((me) => setUser(me.user), () => {}); }, []);
-  const courses = visibleTo(user);
+  const all = useCourses();
+  const courses = visibleTo(user, all);
+  const { status, metas } = useUserCourses();
+  const mine = new Set(metas.filter((m) => m.mine).map((m) => m.id));
+  const session = useSession();
+  const ai = session.me?.features.ai ?? false;
+  // Signed in after a failed load (e.g. signed out at start): load again.
+  useEffect(() => { if (session.status === "signedIn" && status === "error") void loadCourses(); }, [session.status]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <>
       <Hud />
       <section className="home screen-in">
         <h1 className="sr">Courses</h1>
+        <JobCards />
         <ul className="home-courses">
           {courses.map((c) => {
             const done = c.levels.filter((l) => p.levels[l.id]?.done).length;
@@ -33,7 +46,7 @@ export function HomeScreen() {
                     {art ? <span className="art" dangerouslySetInnerHTML={{ __html: art }} /> : <span className="num">{c.title[0]}</span>}
                   </span>
                   <span className="course-body">
-                    <b>{c.title}</b>
+                    <b>{c.title}</b>{mine.has(c.id) && <> <StatusPill courseId={c.id} /></>}
                     {c.summary && <span className="course-summary">{c.summary}</span>}
                     <span className="course-meta">{done}/{c.levels.length} levels · {stars}<Star weight="fill" aria-hidden /><span className="sr">stars</span>{p.completed.includes(c.id) ? " · Completed" : due > 0 ? ` · ${due} due` : ""}</span>
                     <span className="bar" aria-hidden="true"><span style={{ transform: `scaleX(${c.levels.length ? done / c.levels.length : 0})` }} /></span>
@@ -42,8 +55,18 @@ export function HomeScreen() {
               </li>
             );
           })}
+          {!coursesLoaded() && <li aria-hidden="true"><span className="course-card card course-skeleton" /></li>}
         </ul>
-        {courses.length === 0 && <p className="scr-empty">No courses</p>}
+        {status === "error" && (
+          <p className="wa-notice home-empty" role="alert">Couldn't load courses <button type="button" className="btn ghost" onClick={() => void loadCourses()}>Retry</button></p>
+        )}
+        {courses.length === 0 && coursesLoaded() && (
+          <div className="home-empty">
+            <p className="scr-empty">No courses</p>
+            {ai && <a className="btn" href={href.build()}>Build course</a>}
+            <a className="btn ghost" href={href.library()}>Browse library</a>
+          </div>
+        )}
         {COURSE_ERRORS.map((e) => (
           <details key={e.file} className="course-error card" role="alert">
             <summary>Invalid course: {e.file}</summary>
