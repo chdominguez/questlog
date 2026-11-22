@@ -6,12 +6,15 @@ import { RankBadge } from "./Hud";
 import { token } from "../ui/theme";
 import "./engine.css";
 
+// On the main thread: the page CSP allows no blob: workers, and a blocked worker draws nothing.
+const confettiOnPage = confetti.create(undefined, { resize: true, useWorker: false });
+
 export function burst(big = false) {
   try {
     const COLORS = ["--accent", "--gold", "--ok", "--info", "--fg"].map(token);
-    confetti({ particleCount: big ? 160 : 70, spread: big ? 100 : 70, origin: { y: 0.6 }, colors: COLORS, disableForReducedMotion: true });
-    if (big) setTimeout(() => confetti({ particleCount: 80, angle: 60, spread: 60, origin: { x: 0, y: 0.7 }, colors: COLORS, disableForReducedMotion: true }), 250);
-    if (big) setTimeout(() => confetti({ particleCount: 80, angle: 120, spread: 60, origin: { x: 1, y: 0.7 }, colors: COLORS, disableForReducedMotion: true }), 400);
+    confettiOnPage({ particleCount: big ? 160 : 70, spread: big ? 100 : 70, origin: { y: 0.6 }, colors: COLORS, disableForReducedMotion: true });
+    if (big) setTimeout(() => confettiOnPage({ particleCount: 80, angle: 60, spread: 60, origin: { x: 0, y: 0.7 }, colors: COLORS, disableForReducedMotion: true }), 250);
+    if (big) setTimeout(() => confettiOnPage({ particleCount: 80, angle: 120, spread: 60, origin: { x: 1, y: 0.7 }, colors: COLORS, disableForReducedMotion: true }), 400);
   } catch { /* canvas unavailable */ }
 }
 

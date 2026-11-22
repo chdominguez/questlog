@@ -50,8 +50,11 @@ async function playBasics(courseTitle: string) {
   await expect(page.getByRole("heading", { name: "Level cleared" })).toBeVisible();
 }
 
+const csp: string[] = []; // CSP violations the main page logs
+
 test.beforeAll(async ({ browser }) => {
   page = await browser.newPage();
+  page.on("console", (m) => { if (/Content Security Policy/.test(m.text())) csp.push(m.text()); });
 });
 
 test("sign up, verify email, welcome", async ({ request }) => {
@@ -94,6 +97,7 @@ test("play a level", async () => {
   await page.getByRole("link", { name: "Start" }).click();
   await playBasics("Lists in practice");
   await snap(page, "level-cleared");
+  expect(csp).toEqual([]); // the clear fires confetti
 });
 
 test("subscribe with Stripe test checkout; plan credits granted", async () => {
