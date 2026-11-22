@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 
 /**
- * Hash routes: #/ · #/c/:course · #/c/:course/level/:id · #/c/:course/kata/:id · #/c/:course/mock · #/c/:course/arcade · #/c/:course/arcade/:game
+ * Hash routes: #/ · #/c/:course · #/c/:course/level/:id · #/c/:course/kata/:id · #/c/:course/mock · #/c/:course/arcade · #/c/:course/arcade/:game · #/c/:course/arcade/:game/:level
  * · #/c/:course/review · #/c/:course/answers · #/c/:course/materials · #/c/:course/notes · #/c/:course/notes/:id · #/profile · #/profile/credits
  * · #/signin?next= · #/signup · #/verify · #/forgot · #/reset?token= · #/welcome · #/plans?canceled=1 · #/billing/done · #/build · #/build/:job
  * · #/library · #/admin/review. A "?query" inside the hash is not part of the path; hashQuery() reads it.
@@ -13,7 +13,7 @@ export type Route =
   | { name: "kata"; course: string; id: string }
   | { name: "mock"; course: string }
   | { name: "arcade"; course: string }
-  | { name: "game"; course: string; game: string }
+  | { name: "game"; course: string; game: string; level?: string }
   | { name: "review"; course: string }
   | { name: "answers"; course: string }
   | { name: "materials"; course: string }
@@ -42,11 +42,11 @@ export const hashQuery = (hash: string) => { const i = hash.indexOf("?"); return
 export function parse(hash: string): Route {
   const i = hash.indexOf("?");
   const qs = hashQuery(hash);
-  const [, a, b, c, d] = (i < 0 ? hash : hash.slice(0, i)).replace(/^#/, "").split("/").map((x) => (x ? decodeURIComponent(x) : x));
+  const [, a, b, c, d, f] = (i < 0 ? hash : hash.slice(0, i)).replace(/^#/, "").split("/").map((x) => (x ? decodeURIComponent(x) : x));
   if (a === "c" && b) {
     if ((c === "level" || c === "kata") && d) return { name: c, course: b, id: d };
     if (c === "mock" || c === "review" || c === "answers" || c === "materials") return { name: c, course: b };
-    if (c === "arcade") return d ? { name: "game", course: b, game: d } : { name: "arcade", course: b };
+    if (c === "arcade") return d ? { name: "game", course: b, game: d, ...(f && { level: f }) } : { name: "arcade", course: b };
     if (c === "notes") return d ? { name: "notes", course: b, id: d } : { name: "notes", course: b };
     return { name: "map", course: b };
   }
@@ -73,7 +73,7 @@ export const href = {
   kata: (course: string, id: string) => `#/c/${e(course)}/kata/${e(id.slice(id.indexOf(":") + 1))}`,
   mock: (course: string) => `#/c/${e(course)}/mock`,
   arcade: (course: string) => `#/c/${e(course)}/arcade`,
-  game: (course: string, game: string) => `#/c/${e(course)}/arcade/${e(game)}`,
+  game: (course: string, game: string, level?: string) => `#/c/${e(course)}/arcade/${e(game)}${level ? `/${e(level.slice(level.indexOf(":") + 1))}` : ""}`,
   review: (course: string) => `#/c/${e(course)}/review`,
   answers: (course: string) => `#/c/${e(course)}/answers`,
   materials: (course: string) => `#/c/${e(course)}/materials`,

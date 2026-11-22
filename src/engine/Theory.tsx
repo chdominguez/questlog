@@ -51,10 +51,12 @@ export const typingTarget = (e: KeyboardEvent) => {
 };
 
 /** Card-by-card theory with progress dots; arrows navigate. `level` (qualified key) enables per-card reports. */
-export function Theory({ cards, onDone, level }: { cards: TheoryCard[]; onDone: () => void; level?: string }) {
+/** onEnd: the last card was shown. */
+export function Theory({ cards, onDone, onEnd, level }: { cards: TheoryCard[]; onDone: () => void; onEnd?: () => void; level?: string }) {
   const [i, setI] = useTheoryCard(level);
   useEffect(() => { scrollTo(0, 0); }, [i]);
   const last = i >= cards.length - 1;
+  useEffect(() => { if (last) onEnd?.(); }, [last]);
   const goTo = (n: number) => { if (n >= 0 && n < cards.length && n !== i) { play("click"); setI(n); } };
   const next = () => (last ? onDone() : goTo(i + 1));
 

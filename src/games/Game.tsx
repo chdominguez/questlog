@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import { ArrowLeft, Keyboard, Lightning, ListNumbers, SquaresFour, Trophy } from "@phosphor-icons/react";
-import type { Course } from "../course/registry";
+import { q, type Course } from "../course/registry";
+import type { Level } from "../course/schema";
+import { isUnlocked } from "../engine/levels";
 import { play } from "../audio/sfx";
 import { burst } from "../engine/Celebrate";
 import { Hud } from "../engine/Hud";
@@ -28,28 +30,37 @@ export const GAMES: GameDef[] = [
 
 export const fmt = (g: GameDef, v: number) => (g.lower ? secs(v) : String(v));
 
-export function GameScreen({ course, game }: { course: Course; game: string }) {
+/** Best and plays key: per course, or per level for a level's own arcade. */
+export const gameKey = (owner: string, game: string) => `${owner}:${game}`;
+/** A level's own arcade pool: only its challenges. */
+export const levelPool = (level: Level) => buildPool([level], { levels: {}, unlockAll: true });
+
+/** level: local level id when played from that level's start screen. */
+export function GameScreen({ course, game, level }: { course: Course; game: string; level?: string }) {
   const g = GAMES.find((x) => x.id === game);
+  const at = level ? course.levels.findIndex((l) => l.id === q(course.id, level)) : -1;
+  const lv = at >= 0 && isUnlocked(course.levels, at, getProgress()) ? course.levels[at] : undefined;
   const [round, setRound] = useState(0);
   const [phase, setPhase] = useState<"count" | "play" | "end">("count");
   const [value, setValue] = useState(0);
-  const pool = useMemo(() => buildPool(course.levels, getProgress()), [course, round]);
-  if (!g) return <NotFound />;
+  const pool = useMemo(() => (lv ? levelPool(lv) : buildPool(course.levels, getProgress())), [course, lv, round]);
+  if (!g || (level && !lv)) return <NotFound />;
   const ready = g.size(pool) >= g.min;
+  const exit = lv ? { to: href.level(course.id, lv.id), label: "Back" } : { to: href.arcade(course.id), label: "Arcade" };
 
   return (
     <>
       <Hud />
       <section className="game">
         <div className="game-head">
-          <a className="back" href={href.arcade(course.id)} aria-label="Arcade"><ArrowLeft aria-hidden /></a>
+          <a className="back" href={exit.to} aria-label={exit.label}><ArrowLeft aria-hidden /></a>
           <h1>{g.name}</h1>
         </div>
-        {!ready && <a className="btn" href={href.arcade(course.id)}>Arcade</a>}
+        {!ready && <a className="btn" href={exit.to}>{exit.label}</a>}
         {ready && phase === "count" && <Countdown onDone={() => setPhase("play")} />}
         {ready && phase === "play" && <g.Play key={round} pool={pool} onEnd={(v) => { setValue(v); setPhase("end"); }} />}
         {ready && phase === "end" && (
-          <End key={round} g={g} course={course} value={value} onAgain={() => { setRound(round + 1); setPhase("count"); }} />
+          <End key={round} g={g} owner={lv?.id ?? course.id} exit={exit} value={value} onAgain={() => { setRound(round + 1); setPhase("count"); }} />
         )}
       </section>
     </>
@@ -66,8 +77,8 @@ function Countdown({ onDone }: { onDone: () => void }) {
   return <div key={n} className="game-count" role="timer" aria-live="assertive">{n || "Go"}</div>;
 }
 
-function End({ g, course, value, onAgain }: { g: GameDef; course: Course; value: number; onAgain: () => void }) {
-  const key = `${course.id}:${g.id}`;
+function End({ g, owner, exit, value, onAgain }: { g: GameDef; owner: string; exit: { to: string; label: string }; value: number; onAgain: () => void }) {
+  const key = gameKey(owner, g.id);
   const [prev] = useState(() => getProgress().best[key]);
   const isNew = prev === undefined ? g.lower || value > 0 : g.lower ? value < prev : value > prev;
   const again = useRef<HTMLButtonElement>(null);
@@ -85,7 +96,7 @@ function End({ g, course, value, onAgain }: { g: GameDef; course: Course; value:
         : prev !== undefined && <div className="game-best">Best {fmt(g, prev)}</div>}
       <div className="game-actions">
         <button ref={again} type="button" className="btn" onClick={onAgain}>Play again</button>
-        <a className="btn ghost" href={href.arcade(course.id)}>Arcade</a>
+        <a className="btn ghost" href={exit.to}>{exit.label}</a>
       </div>
     </div>
   );

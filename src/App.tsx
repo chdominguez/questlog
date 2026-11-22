@@ -66,7 +66,7 @@ export function App() {
       {r.name === "kata" && course && <KataScreen course={course} kataId={q(course.id, r.id)} />}
       {r.name === "mock" && course && <MockScreen course={course} />}
       {r.name === "arcade" && course && <ArcadeScreen course={course} />}
-      {r.name === "game" && course && <GameScreen key={r.game} course={course} game={r.game} />}
+      {r.name === "game" && course && <GameScreen key={`${r.game}/${r.level}`} course={course} game={r.game} level={r.level} />}
       {r.name === "review" && course && <ReviewScreen course={course} />}
       {r.name === "answers" && course && <AnswersScreen course={course} />}
       {r.name === "materials" && course && <MaterialsScreen course={course} />}

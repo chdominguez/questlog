@@ -106,3 +106,48 @@ ol.nodes > .node { position: absolute; width: 152px; transform: translateX(-50%)
 .course-body .bar { display: block; margin-top: var(--s-1); }
 .course-body .bar > span { display: block; height: 100%; background: var(--accent); transform-origin: left; }
 .course-error pre { white-space: pre-wrap; font-size: var(--t-sm); }
+
+/* Level start: Questie's nudge + Theory / Challenge / Arcade rows */
+.quest { display: grid; gap: var(--s-5); }
+.quest-tip { display: flex; align-items: flex-end; gap: var(--s-3); }
+.quest-tip .questie { width: 72px; }
+.quest-say {
+  position: relative; flex: 1; min-width: 0; max-width: 440px; margin-bottom: var(--s-4);
+  background: var(--surface); color: var(--fg); border: 2px solid var(--fg); border-radius: 14px; padding: var(--s-3) var(--s-4);
+  box-shadow: 3px 3px 0 color-mix(in oklch, var(--fg) 25%, transparent); font-weight: 700; animation: say-in .35s cubic-bezier(.3, 1.5, .5, 1);
+}
+.quest-say::before { content: ""; position: absolute; left: -9px; bottom: 14px; width: 14px; height: 14px; background: var(--surface); border: 2px solid var(--fg); border-width: 0 0 2px 2px; transform: rotate(45deg); }
+.quest-rows { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-3); }
+.quest-row {
+  display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: var(--s-2) var(--s-4); width: 100%; text-align: left;
+  padding: var(--s-4) var(--s-5); background: var(--surface); color: var(--fg); border: 1.5px solid var(--line); border-radius: var(--r-md);
+  box-shadow: var(--shadow-card); font: inherit; transition: transform .12s, border-color .12s;
+}
+button.quest-row { cursor: pointer; }
+button.quest-row:hover { border-color: var(--accent); transform: translateY(-2px) rotate(-.3deg); }
+button.quest-row:active { transform: translateY(2px); box-shadow: none; }
+.quest-row.next { border: 2.5px solid var(--accent); box-shadow: var(--shadow-press); background: color-mix(in oklch, var(--accent) 9%, var(--surface)); }
+.quest-row b { font: 700 var(--t-xl)/1.1 var(--f-display); }
+.quest-icon { width: 36px; height: 36px; color: var(--accent); }
+.quest-stats { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--s-1) var(--s-3); color: var(--muted); font-size: var(--t-sm); font-variant-numeric: tabular-nums; }
+.quest-ok { display: inline-flex; align-items: center; gap: var(--s-1); color: var(--ok); font-weight: 700; }
+.quest-go { width: 20px; height: 20px; color: var(--muted); }
+.quest-row.next .quest-go { color: var(--accent); }
+li.quest-row { grid-template-columns: auto 1fr auto; }
+.quest-games { grid-column: 1 / -1; list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.quest-game {
+  display: inline-flex; align-items: center; gap: var(--s-2); min-height: 44px; padding: var(--s-2) var(--s-3); border-radius: var(--r-full);
+  background: var(--raise); border: 1.5px solid var(--line); color: var(--fg); text-decoration: none; font-weight: 700; box-shadow: var(--shadow-press);
+  transition: transform .08s, border-color .12s;
+}
+.quest-game svg { width: 22px; height: 22px; color: var(--accent); }
+.quest-game:hover { border-color: var(--accent); }
+.quest-game:active { transform: translateY(3px); box-shadow: none; }
+@media (max-width: 520px) {
+  .quest-row { grid-template-columns: auto 1fr auto; padding: var(--s-3) var(--s-4); }
+  .quest-row .quest-stats { grid-column: 2 / 3; grid-row: 2; justify-content: flex-start; }
+  button.quest-row .quest-go { grid-column: 3; grid-row: 1 / 3; }
+  li.quest-row .quest-stats { grid-column: 3; grid-row: 1; }
+  .quest-tip .questie { width: 60px; }
+}
+@media (prefers-reduced-motion: reduce) { .quest-say { animation: none; } .quest-row, .quest-game { transition: none; } }

@@ -120,6 +120,15 @@ describe("settings and hydrate", () => {
     expect(s.best).toEqual({ "c:quiz": 900, "c:match": 20_000 });
     expect(hydrate(JSON.parse(JSON.stringify(s))).best).toEqual(s.best);
     expect(hydrate({ best: { a: 1, b: "2", c: null, d: Infinity } }).best).toEqual({ a: 1 });
+    expect(s.plays).toEqual({ "c:quiz": 2, "c:match": 2 });
+    expect(hydrate(JSON.parse(JSON.stringify(s))).plays).toEqual(s.plays);
+    expect(hydrate({ plays: { a: 3, b: "x" } }).plays).toEqual({ a: 3 });
+  });
+  test("read marks a level's theory once and survives hydrate", () => {
+    const s = run([{ type: "read", levelId: "c:l1" }, { type: "read", levelId: "c:l1" }]);
+    expect(s.read).toEqual(["c:l1"]);
+    expect(hydrate(JSON.parse(JSON.stringify(s))).read).toEqual(["c:l1"]);
+    expect(hydrate({ read: ["a", 2, null] }).read).toEqual(["a"]);
   });
 });
 

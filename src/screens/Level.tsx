@@ -1,6 +1,9 @@
-import { useEffect, useState } from "react";
-import { ArrowLeft, Star } from "@phosphor-icons/react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, BookOpen, CaretRight, Check, GameController, Star, Sword } from "@phosphor-icons/react";
 import { levelByKey, type Course } from "../course/registry";
+import type { Level } from "../course/schema";
+import { fmt, GAMES, gameKey, levelPool } from "../games/Game";
+import { Md } from "../ui/Md";
 import { play } from "../audio/sfx";
 import { go, href } from "../ui/route";
 import { Hud } from "../engine/Hud";
@@ -9,7 +12,7 @@ import { ChallengeCard } from "../engine/Challenge";
 import { LevelUp, burst } from "../engine/Celebrate";
 import { dispatch, getProgress, MAX_LIVES, rankIndex, useProgress } from "../engine/store";
 import { isUnlocked } from "../engine/levels";
-import { Guide, react } from "../questie/Questie";
+import { Guide, Questie, react, type Mood } from "../questie/Questie";
 import { Narration } from "../narration/Narration";
 import "./screens.css";
 
@@ -39,7 +42,7 @@ function LevelRun({ course, id }: { course: Course; id: string }) {
   const level = levelByKey(id);
   const progress = useProgress();
   const run = progress.run;
-  const [phase, setPhase] = useState<Phase>(level?.theory.length ? "choose" : "play");
+  const [phase, setPhase] = useState<Phase>("choose");
   const [i, setI] = useState(0);
   const [out, setOut] = useState<Outcome | null>(null);
   const [showRank, setShowRank] = useState(false);
@@ -106,22 +109,15 @@ function LevelRun({ course, id }: { course: Course; id: string }) {
           <a className="back" href={href.map(course.id)} aria-label="Map"><ArrowLeft aria-hidden /></a>
           <h1>{level.title}</h1>
           {phase === "play" && <Lives n={lives} />}
-          <Guide />
+          {phase !== "choose" && <Guide />}
         </div>
 
-        {phase === "choose" && (
-          <div className="result screen-in">
-            <div className="row center">
-              <button type="button" className="btn ghost" onClick={() => { play("click"); setPhase("theory"); }}>Theory</button>
-              <button type="button" className="btn" autoFocus onClick={startPlay}>Challenge</button>
-            </div>
-          </div>
-        )}
+        {phase === "choose" && <QuestBoard course={course} level={level} onTheory={() => { play("click"); setPhase("theory"); }} onPlay={startPlay} />}
 
         {phase === "theory" && (
           <>
             <Narration course={course.id} level={id} />
-            <Theory key={`t-${id}`} cards={level.theory} onDone={startPlay} level={id} />
+            <Theory key={`t-${id}`} cards={level.theory} onDone={startPlay} onEnd={() => dispatch({ type: "read", levelId: id })} level={id} />
           </>
         )}
 
@@ -164,5 +160,82 @@ function LevelRun({ course, id }: { course: Course; id: string }) {
       </section>
       {showRank && out?.rankUp != null && <LevelUp rank={out.rankUp} onClose={() => setShowRank(false)} />}
     </>
+  );
+}
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+/** Level start: Questie's nudge, then Theory, Challenge and this level's own Arcade with progress; the suggested next step is highlighted. */
+function QuestBoard({ course, level, onTheory, onPlay }: { course: Course; level: Level; onTheory: () => void; onPlay: () => void }) {
+  const p = useProgress();
+  const games = useMemo(() => { const pool = levelPool(level); return GAMES.filter((g) => g.size(pool) >= g.min); }, [level]);
+  const [takeaway] = useState(() => { const tips = level.theory.flatMap((c) => (c.tip ? [c.tip] : [])); return tips[Math.floor(Math.random() * tips.length)]; });
+  const hasTheory = level.theory.length > 0;
+  const read = p.read.includes(level.id);
+  const { stars = 0, done = false } = p.levels[level.id] ?? {};
+  const cleared = level.challenges.filter((c) => p.cleared.includes(c.id)).length;
+  const plays = games.reduce((n, g) => n + (p.plays[gameKey(level.id, g.id)] ?? 0), 0);
+  const next = hasTheory && !read ? "theory" : !done || !games.length ? "play" : "arcade";
+  const [tip, mood]: [string, Mood] =
+    next === "theory" ? ["Start with the theory.", "think"]
+    : !done ? [hasTheory ? "You read it. Now clear it." : "Three lives. Clear it.", "idle"]
+    : stars < 3 ? [`${plural(stars, "star")}. Go for 3.`, "happy"]
+    : [takeaway ?? "Perfect clear. Beat your arcade best.", "cheer"];
+  const row = (step: string) => `quest-row${next === step ? " next" : ""}`;
+
+  return (
+    <div className="quest screen-in">
+      <div className="quest-tip">
+        <Questie key={mood} mood={mood} />
+        <div className="quest-say" role="status"><Md text={tip} /></div>
+      </div>
+      <ul className="quest-rows">
+        {hasTheory && (
+          <li>
+            <button type="button" className={row("theory")} onClick={onTheory} autoFocus={next === "theory"}>
+              <BookOpen weight="duotone" className="quest-icon" aria-hidden />
+              <b>Theory</b>
+              <span className="quest-stats">
+                <span>{plural(level.theory.length, "card")}</span>
+                {read && <span className="quest-ok"><Check weight="bold" aria-hidden />Read</span>}
+              </span>
+              <CaretRight className="quest-go" aria-hidden />
+            </button>
+          </li>
+        )}
+        <li>
+          <button type="button" className={row("play")} onClick={onPlay} autoFocus={next === "play"}>
+            <Sword weight="duotone" className="quest-icon" aria-hidden />
+            <b>Challenge</b>
+            <span className="quest-stats">
+              <Stars n={stars} />
+              <span>{cleared}/{level.challenges.length} cleared</span>
+            </span>
+            <CaretRight className="quest-go" aria-hidden />
+          </button>
+        </li>
+        {games.length > 0 && (
+          <li className={row("arcade")}>
+            <GameController weight="duotone" className="quest-icon" aria-hidden />
+            <b>Arcade</b>
+            <span className="quest-stats"><span>{plural(plays, "play")}</span></span>
+            <ul className="quest-games">
+              {games.map((g, k) => {
+                const best = p.best[gameKey(level.id, g.id)];
+                return (
+                  <li key={g.id}>
+                    <a className="quest-game" href={href.game(course.id, g.id, level.id)} onClick={() => play("click")} autoFocus={next === "arcade" && k === 0}>
+                      <g.Icon weight="duotone" aria-hidden />
+                      <span>{g.name}</span>
+                      {best !== undefined && <span className="arcade-best">Best {fmt(g, best)}</span>}
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </li>
+        )}
+      </ul>
+    </div>
   );
 }

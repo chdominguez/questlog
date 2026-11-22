@@ -5,7 +5,7 @@ import { play } from "../audio/sfx";
 import { Hud } from "../engine/Hud";
 import { useProgress } from "../engine/store";
 import { href } from "../ui/route";
-import { fmt, GAMES } from "./Game";
+import { fmt, GAMES, gameKey } from "./Game";
 import { buildPool } from "./pool";
 import "./games.css";
 
@@ -19,7 +19,7 @@ export function ArcadeScreen({ course }: { course: Course }) {
         <h1>Arcade</h1>
         <ul className="arcade-cards">
           {GAMES.map((g) => {
-            const best = p.best[`${course.id}:${g.id}`];
+            const best = p.best[gameKey(course.id, g.id)];
             const open = g.size(pool) >= g.min;
             const inner = (
               <>
