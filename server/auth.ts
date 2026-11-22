@@ -115,7 +115,11 @@ export function authRoutes(deps: Deps): Hono<App> {
     magicLink: !!c.env.RESEND_API_KEY,
   } satisfies AuthMethods)).on(["GET", "POST"], "/auth/*", (c) => {
     const auth = instances.get(deps.session);
-    return auth ? auth.handler(c.req.raw) : err(c, 501, "not_configured");
+    if (!auth) return err(c, 501, "not_configured");
+    // The API key is for GET /notes only (sessionFrom); here it would act as a full session.
+    const headers = new Headers(c.req.raw.headers);
+    headers.delete("x-api-key");
+    return auth.handler(new Request(c.req.raw, { headers }));
   });
 }
 

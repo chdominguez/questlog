@@ -190,6 +190,8 @@ test("x-api-key works on GET /notes* only", async () => {
   expect((await req("/notes/missing", { headers: { "x-api-key": key } })).status).toBe(404);
   expect((await req("/me", { headers: { "x-api-key": key } })).status).toBe(401);
   expect((await req("/notes", post({ title: "t", body: "", tags: [] }, { "x-api-key": key }))).status).toBe(401);
+  expect((await req("/auth/list-sessions", { headers: { "x-api-key": key } })).status).toBe(401);
+  expect((await req("/auth/api-key/create", post({ name: "more" }, { "x-api-key": key }))).status).toBe(401);
 });
 
 test("delete-user cancels billing and purges every table", async () => {
