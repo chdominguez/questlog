@@ -28,7 +28,7 @@ export function QueueScreen() {
   const [rejecting, setRejecting] = useState<UserCourseMeta | null>(null);
   // Approvals wait UNDO_MS before the request; leaving the screen sends them at once.
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
-  const [held, setHeld] = useState<UserCourseMeta | null>(null);
+  const [held, setHeld] = useState<UserCourseMeta[]>([]);
 
   const load = useCallback(() => {
     setFailed(false);
@@ -43,17 +43,17 @@ export function QueueScreen() {
   const startApprove = (m: UserCourseMeta) => {
     setError(false);
     drop(m.id);
-    setHeld(m);
+    setHeld((h) => [...h, m]);
     timers.current.set(m.id, setTimeout(() => {
       timers.current.delete(m.id);
-      setHeld((h) => (h?.id === m.id ? null : h));
+      setHeld((h) => h.filter((x) => x.id !== m.id));
       approve(m.id).catch(() => { restore(m); setError(true); });
     }, UNDO_MS));
   };
   const undo = (m: UserCourseMeta) => {
     clearTimeout(timers.current.get(m.id));
     timers.current.delete(m.id);
-    setHeld(null);
+    setHeld((h) => h.filter((x) => x.id !== m.id));
     restore(m);
   };
   const dismiss = (f: Flag) => {
@@ -74,12 +74,12 @@ export function QueueScreen() {
         {failed && <p className="scr-empty" role="alert">Couldn't load queue <button type="button" className="btn ghost" onClick={load}>Retry</button></p>}
         {queue && (
           <>
-            <div className="lib-tabs" role="tablist">
-              <button type="button" role="tab" className="btn ghost" aria-selected={tab === "pending"} onClick={() => setTab("pending")}>Pending · {queue.pending.length}</button>
-              <button type="button" role="tab" className="btn ghost" aria-selected={tab === "reports"} onClick={() => setTab("reports")}>Reports · {queue.flags.length}</button>
+            <div className="lib-tabs">
+              <button type="button" className={tab === "pending" ? "btn" : "btn ghost"} aria-pressed={tab === "pending"} onClick={() => setTab("pending")}>Pending · {queue.pending.length}</button>
+              <button type="button" className={tab === "reports" ? "btn" : "btn ghost"} aria-pressed={tab === "reports"} onClick={() => setTab("reports")}>Reports · {queue.flags.length}</button>
             </div>
             <div role="status">
-              {held && <p className="wa-notice">Approved <button type="button" className="btn quiet" onClick={() => undo(held)}>Undo</button></p>}
+              {held.map((m) => <p key={m.id} className="wa-notice">Approved · {m.title} <button type="button" className="btn quiet" onClick={() => undo(m)}>Undo</button></p>)}
             </div>
             {error && <p className="wa-error" role="alert">Couldn't update</p>}
             {tab === "pending" && (queue.pending.length ? (
