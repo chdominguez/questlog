@@ -5,6 +5,9 @@ import { startSync } from "../engine/sync";
 import { isNative } from "../platform";
 import { setToken } from "./token";
 
+
+/** The Better Auth client, loaded on first use so it stays out of the main bundle. */
+export const getAuthClient = () => import("./client").then((m) => m.authClient);
 export type SessionStatus = "loading" | "signedOut" | "signedIn" | "offline";
 export interface Session { status: SessionStatus; me?: Me }
 
@@ -50,7 +53,7 @@ export function markSignedOut() {
 
 /** Better Auth sign-out, then forget the token and cached account. Local progress stays; the next sign-in's user switch decides. */
 export async function signOut() {
-  await import("./client").then(({ authClient }) => authClient.signOut()).catch(() => {});
+  await getAuthClient().then((c) => c.signOut()).catch(() => {});
   await setToken(null);
   if (isNative) await import("../native/purchases").then((p) => p.logOut()).catch(() => {});
   markSignedOut();

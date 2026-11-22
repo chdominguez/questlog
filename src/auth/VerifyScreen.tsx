@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { href } from "../ui/route";
-import { authClient } from "./client";
 import { AuthFrame, useCooldown } from "./parts";
 import { signupDraft } from "./SignUpScreen";
 import { attempt, authMessage } from "./messages";
+import { getAuthClient } from "./session";
 
 export function VerifyScreen({ next }: { next?: string }) {
   const [{ email }] = useState(signupDraft);
@@ -13,7 +13,7 @@ export function VerifyScreen({ next }: { next?: string }) {
 
   async function resend() {
     setStatus(""); setError("");
-    const r = await attempt(() => authClient.sendVerificationEmail({ email, callbackURL: `/${next ?? href.welcome()}` }));
+    const r = await attempt(async () => (await getAuthClient()).sendVerificationEmail({ email, callbackURL: `/${next ?? href.welcome()}` }));
     if (r.error !== false) return setError(authMessage(r.error, "Couldn't send email"));
     wait.start();
     setStatus("Email sent");

@@ -3,8 +3,7 @@ import { SITE_URL } from "../../shared/brand";
 import { Questie } from "../questie/Questie";
 import { apiUrl, isNative, platform } from "../platform";
 import { go } from "../ui/route";
-import { authClient } from "./client";
-import { loadMe } from "./session";
+import { getAuthClient, loadMe } from "./session";
 import { attempt } from "./messages";
 import "./auth.css";
 
@@ -90,13 +89,13 @@ export function SocialButtons({ next, onError }: { next?: string; onError(msg: s
       if (isNative) {
         const t = await (await import("../native/social")).idToken(provider);
         if (!t) return; // canceled
-        const r = await attempt(() => authClient.signIn.social({ provider, idToken: { token: t.token, nonce: t.nonce } }));
+        const r = await attempt(async () => (await getAuthClient()).signIn.social({ provider, idToken: { token: t.token, nonce: t.nonce } }));
         if (r.error !== false) return failed();
         await loadMe();
         go(next ?? "#/welcome"); // Welcome sends accounts with progress or courses on to Home
       } else {
         try { sessionStorage.setItem(PROVIDER_KEY, provider); } catch { /* storage off */ }
-        const r = await attempt(() => authClient.signIn.social({ provider, callbackURL: `/${next ?? "#/"}`, newUserCallbackURL: "/#/welcome", errorCallbackURL: "/#/signin" }));
+        const r = await attempt(async () => (await getAuthClient()).signIn.social({ provider, callbackURL: `/${next ?? "#/"}`, newUserCallbackURL: "/#/welcome", errorCallbackURL: "/#/signin" }));
         if (r.error !== false) failed();
       }
     } catch { failed(); }

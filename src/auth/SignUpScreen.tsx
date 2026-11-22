@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 import { go, href } from "../ui/route";
-import { authClient } from "./client";
-import { loadMe } from "./session";
+import { getAuthClient, loadMe } from "./session";
 import { AuthFrame, Field, Legal, PasswordField, SocialButtons } from "./parts";
 import { attempt, authMessage, PASSWORD_MIN, validEmail } from "./messages";
 
@@ -34,7 +33,7 @@ export function SignUpScreen({ next }: { next?: string }) {
     if (first) return refs[first].current?.focus();
     setBusy(true);
     try { sessionStorage.setItem(DRAFT, JSON.stringify({ name: name.trim(), email: email.trim() })); } catch { /* storage off */ }
-    const r = await attempt(() => authClient.signUp.email({ name: name.trim(), email: email.trim(), password, callbackURL: `/${next ?? href.welcome()}` }));
+    const r = await attempt(async () => (await getAuthClient()).signUp.email({ name: name.trim(), email: email.trim(), password, callbackURL: `/${next ?? href.welcome()}` }));
     if (r.error !== false) {
       setBusy(false);
       const msg = authMessage(r.error, "Couldn't create account");

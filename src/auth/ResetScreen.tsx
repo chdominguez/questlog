@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { href } from "../ui/route";
-import { authClient } from "./client";
 import { AuthFrame, PasswordField } from "./parts";
 import { attempt, authMessage, flash, PASSWORD_MIN, takeUrlError } from "./messages";
+import { getAuthClient } from "./session";
 
 /** The token comes from location.search (Better Auth appends ?token=), else the hash query. */
 export function ResetScreen({ token: hashToken }: { token?: string }) {
@@ -18,7 +18,7 @@ export function ResetScreen({ token: hashToken }: { token?: string }) {
     setError("");
     if (password.length < PASSWORD_MIN) return setFieldError("Password needs 8+ characters");
     setBusy(true);
-    const r = await attempt(() => authClient.resetPassword({ newPassword: password, token }));
+    const r = await attempt(async () => (await getAuthClient()).resetPassword({ newPassword: password, token }));
     setBusy(false);
     if (r.error !== false) {
       const msg = authMessage(r.error, "Couldn't save password");

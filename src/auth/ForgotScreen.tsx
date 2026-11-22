@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { href } from "../ui/route";
-import { authClient } from "./client";
 import { AuthFrame, Field } from "./parts";
 import { attempt, authMessage, validEmail } from "./messages";
+import { getAuthClient } from "./session";
 
 export function ForgotScreen() {
   const [email, setEmail] = useState("");
@@ -16,7 +16,7 @@ export function ForgotScreen() {
     setError(""); setSent(false);
     if (!validEmail(email)) return setEmailError("Enter a valid email");
     setBusy(true);
-    const r = await attempt(() => authClient.requestPasswordReset({ email: email.trim(), redirectTo: "/#/reset" }));
+    const r = await attempt(async () => (await getAuthClient()).requestPasswordReset({ email: email.trim(), redirectTo: "/#/reset" }));
     setBusy(false);
     // Same answer whether or not the account exists.
     if (r.error === false || (r.error && r.error.status !== 429)) setSent(true);

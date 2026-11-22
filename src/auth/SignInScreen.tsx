@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { go, href } from "../ui/route";
-import { authClient } from "./client";
-import { loadMe } from "./session";
+import { getAuthClient, loadMe } from "./session";
 import { AuthFrame, Field, Legal, PasswordField, SocialButtons, lastProvider, useMethods } from "./parts";
 import { attempt, authMessage, flash, takeUrlError, validEmail } from "./messages";
 
@@ -37,7 +36,7 @@ export function SignInScreen({ next }: { next?: string }) {
     setError(""); setStatus(""); setEmailError("");
     if (!validEmail(email)) { setEmailError("Enter a valid email"); mail.current?.focus(); return; }
     setBusy(true);
-    const r = await attempt(() => authClient.signIn.email({ email: email.trim(), password }));
+    const r = await attempt(async () => (await getAuthClient()).signIn.email({ email: email.trim(), password }));
     if (r.error !== false) {
       setBusy(false);
       setError(authMessage(r.error, "Couldn't sign in"));
@@ -50,7 +49,7 @@ export function SignInScreen({ next }: { next?: string }) {
 
   async function resend() {
     if (!validEmail(email)) return setEmailError("Enter a valid email");
-    const r = await attempt(() => authClient.sendVerificationEmail({ email: email.trim(), callbackURL: "/#/welcome" }));
+    const r = await attempt(async () => (await getAuthClient()).sendVerificationEmail({ email: email.trim(), callbackURL: "/#/welcome" }));
     if (r.error !== false) return setError(authMessage(r.error, "Couldn't send email"));
     setError(""); setStatus("Email sent");
   }
@@ -58,7 +57,7 @@ export function SignInScreen({ next }: { next?: string }) {
   async function magic() {
     setEmailError(""); setError(""); setStatus("");
     if (!validEmail(email)) return setEmailError("Enter a valid email");
-    const r = await attempt(() => authClient.signIn.magicLink({ email: email.trim(), callbackURL: `/${next ?? "#/"}`, newUserCallbackURL: "/#/welcome", errorCallbackURL: "/#/signin" }));
+    const r = await attempt(async () => (await getAuthClient()).signIn.magicLink({ email: email.trim(), callbackURL: `/${next ?? "#/"}`, newUserCallbackURL: "/#/welcome", errorCallbackURL: "/#/signin" }));
     if (r.error !== false) return setError(authMessage(r.error, "Couldn't send link"));
     setStatus("Link sent");
   }

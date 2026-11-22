@@ -3,8 +3,7 @@ import { REPO } from "../../shared/brand";
 import { wipeLocal } from "../engine/sync";
 import { isNative } from "../platform";
 import { go, href } from "../ui/route";
-import { authClient } from "./client";
-import { markSignedOut, signOut, useSession } from "./session";
+import { getAuthClient, markSignedOut, signOut, useSession } from "./session";
 import { setToken } from "./token";
 import { Field } from "./parts";
 import { attempt, authMessage, flash } from "./messages";
@@ -28,7 +27,7 @@ export function AccountSection() {
 
   async function createToken() {
     setError("");
-    const r = await attempt(() => authClient.apiKey.create({ name: "mcp" }));
+    const r = await attempt(async () => (await getAuthClient()).apiKey.create({ name: "mcp" }));
     if (r.error !== false || !r.data) return setError("Couldn't create token");
     setTokenText((r.data as { key: string }).key);
   }
@@ -81,7 +80,7 @@ function DeleteDialog({ onClose }: { onClose(): void }) {
 
   async function remove() {
     setBusy(true); setError("");
-    const r = await attempt(() => authClient.deleteUser({}));
+    const r = await attempt(async () => (await getAuthClient()).deleteUser({}));
     if (r.error !== false) {
       setBusy(false);
       return setError(r.error?.code === "SESSION_EXPIRED" ? authMessage(r.error, "") : "Couldn't delete account");

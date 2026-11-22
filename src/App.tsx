@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useHash, useRoute } from "./ui/route";
 import { unlock } from "./audio/sfx";
 import { courseById, coursesLoaded, useCourses } from "./course/registry";
@@ -19,15 +19,17 @@ import { q } from "./course/registry";
 import { Gate } from "./auth/Gate";
 import { useSession } from "./auth/session";
 import { TopUpSheet } from "./billing/TopUpSheet";
-import { PlansScreen } from "./billing/PlansScreen";
-import { BillingDoneScreen } from "./billing/BillingDoneScreen";
-import { CreditsScreen } from "./billing/CreditsScreen";
-import { BuildScreen } from "./builder/BuildScreen";
-import { JobScreen } from "./builder/JobScreen";
 import { fetchCourse } from "./builder/api";
-import { WelcomeScreen } from "./screens/Welcome";
-import { LibraryScreen } from "./screens/Library";
-import { QueueScreen } from "./library/QueueScreen";
+
+// Screens most sessions never open load on demand, keeping them out of the main chunk.
+const PlansScreen = lazy(() => import("./billing/PlansScreen").then((m) => ({ default: m.PlansScreen })));
+const BillingDoneScreen = lazy(() => import("./billing/BillingDoneScreen").then((m) => ({ default: m.BillingDoneScreen })));
+const CreditsScreen = lazy(() => import("./billing/CreditsScreen").then((m) => ({ default: m.CreditsScreen })));
+const BuildScreen = lazy(() => import("./builder/BuildScreen").then((m) => ({ default: m.BuildScreen })));
+const JobScreen = lazy(() => import("./builder/JobScreen").then((m) => ({ default: m.JobScreen })));
+const WelcomeScreen = lazy(() => import("./screens/Welcome").then((m) => ({ default: m.WelcomeScreen })));
+const LibraryScreen = lazy(() => import("./screens/Library").then((m) => ({ default: m.LibraryScreen })));
+const QueueScreen = lazy(() => import("./library/QueueScreen").then((m) => ({ default: m.QueueScreen })));
 
 export function App() {
   const r = useRoute();
@@ -55,6 +57,7 @@ export function App() {
   return (
     <Gate>
     <main className="wrap">
+      <Suspense fallback={null}>
       {r.name === "home" && <HomeScreen />}
       {r.name === "map" && course && <MapScreen course={course} />}
       {r.name === "level" && course && <LevelScreen course={course} id={q(course.id, r.id)} />}
@@ -75,6 +78,7 @@ export function App() {
       {r.name === "job" && <JobScreen id={r.id} />}
       {r.name === "library" && <LibraryScreen />}
       {r.name === "adminReview" && (admin ? <QueueScreen /> : <NotFound />)}
+      </Suspense>
       <TopUpSheet />
     </main>
     </Gate>
