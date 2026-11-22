@@ -103,6 +103,18 @@ test("plan credits expire lazily once after period end + grace; top-ups never ex
   expect(balance(db, "v")).toMatchObject({ plan: 1000 });
 });
 
+test("plan credits refunded after the plan ended expire at once", () => {
+  const soon = Date.now() + 3_600_000;
+  planGrant("in_1", new Date(soon - 86_400_000).toISOString()); // expires in 1 h (period end + 1 day grace)
+  pack("cs_1", 10);
+  const s = sp("a", "course_files") as { spendId: string };
+  const after = new Date(soon + 60_000);
+  expect(balance(db, "u", after)).toMatchObject({ plan: 0, topup: 10 });
+  expect(refund(db, s.spendId, "build failed", after)).toBe(true);
+  expect(balance(db, "u", new Date(soon + 60 * 86_400_000))).toMatchObject({ plan: 0, topup: 10 });
+  check();
+});
+
 test("free course: once, topic only, restored by refund", () => {
   expect(sp("x", "course_files", true)).toMatchObject({ ok: false, code: "insufficient_credits" });
   const f = sp("a", "course_topic", true) as { spendId: string; free: boolean };

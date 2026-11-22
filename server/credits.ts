@@ -111,16 +111,21 @@ export function spend(db: Db, env: Env, a: { user: string; action: Action; key: 
   });
 }
 
-/** Mirrors a spend once (also undoes a free course). False when there was nothing to refund. */
-export function refund(db: Db, spendId: string, note?: string): boolean {
+/** Mirrors a spend once (also undoes a free course). False when there was nothing to refund. Plan credits refunded after the plan ended expire at once. */
+export function refund(db: Db, spendId: string, note?: string, now = new Date()): boolean {
   return db.tx((q) => {
     const s = q.get<LedgerRowDb>("SELECT * FROM credit_ledger WHERE id = ? AND kind IN ('spend', 'free_course')", spendId);
     if (!s) return false;
     const free = s.kind === "free_course";
-    return !!write(q, s.user_id, {
+    const done = !!write(q, s.user_id, {
       kind: free ? "free_refund" : "refund", plan: -s.plan_delta, topup: -s.topup_delta, free: free ? -1 : 0,
       action: s.action, source: "refund", sourceId: s.id, ref: s.ref, note,
     });
+    const end = row(q, s.user_id).plan_expires_at;
+    if (done && s.plan_delta < 0 && end && end < now.toISOString()) {
+      write(q, s.user_id, { kind: "plan_expire", plan: s.plan_delta, source: "expire", sourceId: `refund:${s.id}` });
+    }
+    return done;
   });
 }
 
