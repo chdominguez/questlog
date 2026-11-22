@@ -1,0 +1,19 @@
+name: DCO
+on: pull_request
+jobs:
+  dco:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - id: f
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            open: [courses/**, src/course/schema.ts, src/course/authoring.ts, shared/media.ts, scripts/schema-ref.ts, plugins/questie/**, site/src/content/docs/authoring/**]
+      - if: steps.f.outputs.open == 'true' && github.event.pull_request.user.login != 'chdominguez'
+        run: |
+          for c in $(git rev-list --no-merges ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}); do
+            who=$(git show -s --format='%an <%ae>' "$c")
+            git show -s --format=%B "$c" | grep -qxF "Signed-off-by: $who" || { echo "::error::$c needs 'Signed-off-by: $who' (git commit -s)"; exit 1; }
+          done
