@@ -1,13 +1,16 @@
+import type { Me } from "../../shared/api-types";
+import { apiFetch } from "../api";
 import { adopt, OLD_STORAGE_KEY, snapshot, STORAGE_KEY, subscribe } from "./store";
 
 const USER_KEY = "ql.user";
 
 /** Records the signed-in user; when it differs from the previous one, wipes their local progress and kata drafts. True if wiped. */
-function switchUser(user: string): boolean {
+function switchUser(me: Pick<Me, "user" | "email" | "aliases">): boolean {
   try {
     const prev = localStorage.getItem(USER_KEY);
-    localStorage.setItem(USER_KEY, user);
-    if (prev === null || prev === user) return false; // first run keeps pre-multi-user local progress
+    localStorage.setItem(USER_KEY, me.user);
+    // first run keeps pre-multi-user local progress; an old key this account claimed (email, "local") is the same user
+    if (prev === null || prev === me.user || prev === me.email.toLowerCase() || me.aliases.includes(prev)) return false;
     for (const k of Object.keys(localStorage)) if (k === STORAGE_KEY || k === OLD_STORAGE_KEY || k.startsWith("ql.kata.")) localStorage.removeItem(k);
     return true;
   } catch { return false; }
@@ -18,13 +21,17 @@ const DEBOUNCE_MS = 2000;
 const push = (keepalive = false) => {
   const value = snapshot();
   if (!value.updatedAt) return; // nothing played yet
-  fetch("/api/progress", {
+  apiFetch("/progress", {
     method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ value, updatedAt: value.updatedAt }), keepalive,
   }).catch(() => {});
 };
 
-/** Mirrors progress to /api/progress (newest wins on both sides). Fails silently: offline or file:// use keeps localStorage only. */
-export function startSync() {
+let started = false;
+
+/** Mirrors progress to /api/progress (newest wins on both sides). Called by the session store once signed in; fails silently offline. */
+export function startSync(me: Pick<Me, "user" | "email" | "aliases">) {
+  if (started) return;
+  started = true;
   let timer: ReturnType<typeof setTimeout> | undefined;
   const flush = (keepalive = false) => {
     if (timer === undefined) return;
@@ -33,10 +40,8 @@ export function startSync() {
     push(keepalive);
   };
   // Local state belongs to whoever last used this browser; another account must not adopt or push it.
-  fetch("/api/me")
-    .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-    .then(({ user }: { user: string }) => { if (switchUser(user)) location.reload(); })
-    .then(() => fetch("/api/progress"))
+  if (switchUser(me)) { location.reload(); return; }
+  apiFetch("/progress")
     .then((r) => (r.status === 404 ? null : r.ok ? r.json() : Promise.reject(r.status)))
     // The server only stores newer copies, so pushing ours when it wasn't adopted is always safe.
     .then((remote) => { if (!(remote && adopt(remote.value))) push(); })

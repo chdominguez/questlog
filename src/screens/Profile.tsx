@@ -7,6 +7,9 @@ import { enablePush, pushState, timeZone, type PushState } from "../engine/push"
 import { useProgress } from "../engine/store";
 import { Hud } from "../engine/Hud";
 import { href } from "../ui/route";
+import { ProfileBilling } from "../billing/ProfileBilling";
+import { AdminLink } from "../library/AdminLink";
+import { AccountSection } from "../auth/AccountSection";
 import "../answers/answers.css";
 import "./screens.css";
 import "./profile.css";
@@ -63,7 +66,6 @@ function Reminders({ user }: { user: string }) {
 
 export function ProfileScreen() {
   const [email, setEmail] = useState("");
-  const [logout, setLogout] = useState<string>();
   const [form, setForm] = useState<Profile | null>(null);
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -71,9 +73,8 @@ export function ProfileScreen() {
 
   useEffect(() => {
     Promise.all([getMe(), getProfile()]).then(([me, p]) => {
-      setEmail(me.user);
-      setLogout(me.logout);
-      setForm({ ...p, name: p.name || me.name || "" }); // Keycloak name until the user sets their own
+      setEmail(me.email);
+      setForm({ ...p, name: p.name || me.name || "" }); // account name until the user sets their own
     }, () => setError(true));
   }, []);
 
@@ -114,8 +115,10 @@ export function ProfileScreen() {
           <div className="wa-actions"><button type="submit" className="btn" disabled={busy}>Save</button></div>
         </form>
       )}
+      <ProfileBilling />
       {email && <Reminders user={email} />}
-      {logout && <div className="wa-actions"><a className="btn ghost" href={logout}>Sign out</a></div>}
+      <AdminLink />
+      <AccountSection />
     </div>
     </>
   );

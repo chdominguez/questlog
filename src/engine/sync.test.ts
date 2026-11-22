@@ -16,7 +16,7 @@ test("adopts a newer remote copy, then debounces PUTs and flushes when hidden", 
   vi.stubGlobal("addEventListener", (_: string, cb: () => void) => { onVisibility = cb; });
   vi.stubGlobal("document", { visibilityState: "visible" });
 
-  startSync();
+  startSync({ user: "u1", email: "u@x.com", aliases: [] });
   await vi.waitFor(() => expect(getProgress().xp).toBe(99));
   vi.advanceTimersByTime(2000); // the adopt itself only re-sends an equal copy
   dispatch({ type: "unlockAll", on: true });

@@ -17,6 +17,7 @@ import { permutation, shuffled } from "./shuffle";
 import { gradeMatch } from "./match";
 import { gradeMulti } from "./grade";
 import { react, say } from "../questie/Questie";
+import { ReportButton } from "../library/ReportButton";
 import "./engine.css";
 
 type Of<T extends Challenge["type"]> = Extract<Challenge, { type: T }>;
@@ -402,6 +403,7 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
     <article className={`qcard${fx ? ` fx-${fx.kind}` : ""}`}>
       {fx && fx.xp > 0 && <span key={fx.n} className="float-xp" aria-hidden="true">+{fx.xp} XP</span>}
       <div className="qtype">{KICKER[c.type]}</div>
+      <ReportButton courseId={courseOf(c.id)} itemId={c.id} />
       {c.type !== "written" && <Md className="qtext" text={c.prompt} />}
       {c.code && c.type !== "bug" && c.type !== "written" && <Snippet lang={c.code.lang} src={c.code.src} />}
       {body}

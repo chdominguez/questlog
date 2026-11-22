@@ -1,17 +1,7 @@
-import type { Grade, GradeRequest, Note, NoteInput, Profile, PushSubscriptionInput, Reminder, SavedAnswer } from "../../shared/api-types";
+import type { Grade, GradeRequest, Me, Note, NoteInput, Profile, PushSubscriptionInput, Reminder, SavedAnswer } from "../../shared/api-types";
+import { ApiError, apiFetch, call } from "../api";
 
-export class ApiError extends Error {
-  constructor(public status: number, message: string) { super(message); }
-}
-
-async function call<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`/api${path}`, init);
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new ApiError(res.status, body.error ?? `HTTP ${res.status}`);
-  }
-  return res.json();
-}
+export { ApiError };
 
 const send = (method: string, body: unknown): RequestInit => ({ method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 const post = (body: unknown) => send("POST", body);
@@ -31,17 +21,17 @@ export const getNote = (id: string) => call<Note>(`/notes/${encodeURIComponent(i
 export const createNote = (n: NoteInput) => call<Note>("/notes", post(n));
 export const updateNote = (id: string, n: NoteInput) => call<Note>(`/notes/${encodeURIComponent(id)}`, send("PUT", n));
 export const deleteNote = async (id: string) => {
-  const res = await fetch(`/api/notes/${encodeURIComponent(id)}`, { method: "DELETE" });
+  const res = await apiFetch(`/notes/${encodeURIComponent(id)}`, { method: "DELETE" });
   if (!res.ok) throw new ApiError(res.status, `HTTP ${res.status}`);
 };
 
-export const getMe = () => call<{ user: string; name?: string; logout?: string }>("/me");
+export const getMe = () => call<Me>("/me");
 export const getProfile = () => call<Profile>("/profile");
 export const saveProfile = (p: Profile) => call<Profile>("/profile", send("PUT", p));
 
 export const getPushKey = () => call<{ key: string }>("/push/key");
-export const savePushSubscription = async (s: PushSubscriptionInput) => { await fetch("/api/push/subscription", send("POST", s)); };
-export const deletePushSubscription = async (endpoint: string) => { await fetch("/api/push/subscription", send("DELETE", { endpoint })); };
+export const savePushSubscription = async (s: PushSubscriptionInput) => { await apiFetch("/push/subscription", send("POST", s)); };
+export const deletePushSubscription = async (endpoint: string) => { await apiFetch("/push/subscription", send("DELETE", { endpoint })); };
 export const listReminders = () => call<Reminder[]>("/reminders");
 export const saveReminder = (r: Reminder) => call<Reminder>("/reminders", send("PUT", r));
-export const deleteReminder = async (course: string) => { await fetch(`/api/reminders/${encodeURIComponent(course)}`, { method: "DELETE" }); };
+export const deleteReminder = async (course: string) => { await apiFetch(`/reminders/${encodeURIComponent(course)}`, { method: "DELETE" }); };

@@ -10,6 +10,7 @@ import { LevelUp, burst } from "../engine/Celebrate";
 import { dispatch, getProgress, MAX_LIVES, rankIndex, useProgress } from "../engine/store";
 import { isUnlocked } from "../engine/levels";
 import { Guide, react } from "../questie/Questie";
+import { Narration } from "../narration/Narration";
 import "./screens.css";
 
 type Phase = "choose" | "theory" | "play" | "result" | "fail";
@@ -117,7 +118,12 @@ function LevelRun({ course, id }: { course: Course; id: string }) {
           </div>
         )}
 
-        {phase === "theory" && <Theory key={`t-${id}`} cards={level.theory} onDone={startPlay} />}
+        {phase === "theory" && (
+          <>
+            <Narration course={course.id} level={id} />
+            <Theory key={`t-${id}`} cards={level.theory} onDone={startPlay} level={id} />
+          </>
+        )}
 
         {phase === "play" && level.challenges[i] && (
           <div className="screen-in" key={`${level.challenges[i].id}`}>

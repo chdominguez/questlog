@@ -5,6 +5,8 @@ import { play } from "../audio/sfx";
 import { href, useRoute } from "../ui/route";
 import { courseDue } from "./srs";
 import { dispatch, multiplier, RANKS, rankIndex, rankProgress, useProgress } from "./store";
+import { useSession } from "../auth/session";
+import { CreditChip } from "../billing/CreditChip";
 import "./engine.css";
 
 export const isMilestone = (streak: number) => streak === 3 || (streak >= 5 && streak % 5 === 0);
@@ -19,6 +21,7 @@ export function RankBadge({ index, className = "" }: { index: number; className?
 export function Hud() {
   const p = useProgress();
   const r = useRoute();
+  const ai = useSession().me?.features.ai ?? false;
   const ri = rankIndex(p.xp);
   const next = RANKS[ri + 1];
   const [pulse, setPulse] = useState(0);
@@ -29,8 +32,10 @@ export function Hud() {
   }, [p.streak]);
 
   const nav = [
-    { href: href.home(), label: "Courses", on: r.name === "home" || "course" in r },
-    { href: href.profile(), label: "Profile", on: r.name === "profile" },
+    { href: href.home(), label: "Courses", on: r.name === "home" || r.name === "welcome" || "course" in r },
+    { href: href.library(), label: "Library", on: r.name === "library" },
+    ...(ai ? [{ href: href.build(), label: "Build", on: r.name === "build" || r.name === "job" }] : []),
+    { href: href.profile(), label: "Profile", on: ["profile", "credits", "plans", "billingDone", "adminReview"].includes(r.name) },
   ];
   const tabs = "course" in r && r.name !== "level" && r.name !== "kata" ? [
     { href: href.map(r.course), label: "Map", on: r.name === "map" || r.name === "mock" },
@@ -53,6 +58,7 @@ export function Hud() {
             </a>
           ))}
         </nav>
+        <CreditChip />
         <div className="hud-rank">
           <RankBadge index={ri} />
           <div className="hud-rank-body">

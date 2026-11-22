@@ -10,6 +10,7 @@ import { deleteReminder } from "../answers/api";
 import { href } from "../ui/route";
 import { Stars } from "./Level";
 import { MapQuestie } from "../questie/Questie";
+import { ShareButton } from "../library/ShareButton";
 import "./screens.css";
 
 const ROW = 184; // px per node row: orb + 3-line title + stars, so rows never overlap
@@ -36,6 +37,7 @@ export function MapScreen({ course }: { course: Course }) {
       <section className="map-screen screen-in">
         <div className="map-head">
           <h1>{course.title}</h1>
+          <ShareButton courseId={course.id} />
           {course.mock && <a className="btn ghost" href={href.mock(course.id)} onClick={() => play("click")}>{course.mock.title}</a>}
           <button type="button" className="btn ghost" aria-pressed={done}
             onClick={() => {
