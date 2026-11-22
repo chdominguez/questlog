@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import type { Job, JobEvent, JobPoll } from "../../shared/api-types";
-import { checkForm, emptyForm, fileProblem, initialView, reduce, steps, toRequest, type JobView } from "./machine";
+import { checkForm, emptyForm, failReason, fileProblem, initialView, reduce, steps, toRequest, type JobView } from "./machine";
 
 const job = (o: Partial<Job> = {}): Job => ({ id: "j", kind: "build", status: "running", title: "Rust", mode: "topic", result: null, error: null, createdAt: "", finishedAt: null, ...o });
 let seq = 0;
@@ -66,4 +66,12 @@ test("file checks", () => {
   expect(fileProblem(f("a.docx"), 0)).toBe("Use PDF, Markdown or text");
   expect(fileProblem(f("a.pdf", 21 * 1024 * 1024), 0)).toBe("Files must be under 20 MB");
   expect(fileProblem(f("a.pdf"), 10)).toBe("Up to 10 files");
+});
+
+test("failure reason: known codes get a line, others none", () => {
+  expect(failReason("source_unreachable")).toBe("Couldn't fetch this URL");
+  expect(failReason("build_rejected")).toBe("Topic not supported");
+  expect(failReason("ai_failed")).toBeNull();
+  expect(failReason("toString")).toBeNull();
+  expect(failReason(undefined)).toBeNull();
 });
