@@ -22,9 +22,28 @@ test("runReminders sends once, and drops subscriptions the push service reports 
     sent.push(payload);
   };
   const now = new Date("2026-11-15T08:01:00Z");
-  await runReminders(db, send, now);
-  await runReminders(db, send, now);
+  await runReminders(db, { web: send }, now);
+  await runReminders(db, { web: send }, now);
   expect(sent).toHaveLength(1);
   expect(JSON.parse(sent[0])).toMatchObject({ title: "Course", url: "/#/c/c" });
   expect((await db.prepare("SELECT endpoint FROM push_subscriptions").all()).results).toEqual([{ endpoint: "live" }]);
+});
+
+test("runReminders sends to web and native devices, and drops tokens FCM reports unregistered", async () => {
+  const db = memoryDb();
+  await db.prepare("INSERT INTO reminders (user_id, course_id, title, time, tz) VALUES ('u', 'c', 'Course', '08:00', 'UTC')").run();
+  await db.prepare("INSERT INTO push_subscriptions VALUES ('web', 'u', 'k', 'a')").run();
+  await db.prepare("INSERT INTO device_tokens VALUES ('live', 'u', 'android', ''), ('dead', 'u', 'ios', ''), ('other', 'v', 'ios', '')").run();
+  const web: string[] = [];
+  const native: [string, object][] = [];
+  await runReminders(db, {
+    web: async (_s, payload) => { web.push(payload); },
+    fcm: async (token, m) => { native.push([token, m]); return token === "dead" ? "gone" : "ok"; },
+  }, new Date("2026-11-15T08:01:00Z"));
+  expect(web).toHaveLength(1);
+  expect(native.sort()).toEqual([
+    ["dead", { title: "Course", body: "Time to study", url: "/#/c/c" }],
+    ["live", { title: "Course", body: "Time to study", url: "/#/c/c" }],
+  ]);
+  expect((await db.prepare("SELECT token FROM device_tokens ORDER BY token").all()).results).toEqual([{ token: "live" }, { token: "other" }]);
 });
