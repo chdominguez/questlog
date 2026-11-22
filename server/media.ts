@@ -2,7 +2,7 @@
 import { createReadStream, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { Readable } from "node:stream";
-import { Hono } from "hono";
+import { Hono, type MiddlewareHandler } from "hono";
 import { MEDIA_MIME, mediaExt, safeMediaName } from "../shared/media";
 
 /** MEDIA_DIR, else `media/` next to the database. Shared with the MCP server so uploads land where this reads. */
@@ -43,3 +43,10 @@ export const createMedia = (root: () => string = mediaRoot) => new Hono().get("/
   if (!COURSE_DIR.test(course) || !safeMediaName(file) || !mime) return c.text("Not found", 404);
   return serveFile(c.req.raw, join(root(), course, file), mime, "public, max-age=3600, must-revalidate");
 });
+
+/** App pages run only scripts from this origin (and Pyodide's CDN): an injected inline script or event handler never runs. */
+export const CSP = "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'";
+export const cspHeader: MiddlewareHandler = async (c, next) => {
+  await next();
+  if (c.res.headers.get("content-type")?.startsWith("text/html")) c.res.headers.set("Content-Security-Policy", CSP);
+};

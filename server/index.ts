@@ -7,7 +7,7 @@ import { createAuth, sessionFrom } from "./auth";
 import { openDb } from "./db";
 import { readEnv, type Env } from "./env";
 import { startJobs } from "./jobs";
-import { createMedia } from "./media";
+import { createMedia, cspHeader } from "./media";
 import { startReminders } from "./reminders";
 
 const config = readEnv();
@@ -36,6 +36,7 @@ const app = new Hono<{ Bindings: Env }>()
     if (p.startsWith("/assets/")) c.res.headers.set("Cache-Control", "public, max-age=31536000, immutable");
     else if (NO_CACHE.includes(p) || p === "/") c.res.headers.set("Cache-Control", "no-cache");
   })
+  .use(cspHeader)
   .use(serveStatic({ root: "dist" }))
   .get("*", (c) => /\.\w+$/.test(c.req.path) ? c.text("Not found", 404) : c.html(index()));
 

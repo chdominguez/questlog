@@ -2,7 +2,8 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { createMedia } from "./media";
+import { Hono } from "hono";
+import { createMedia, CSP, cspHeader } from "./media";
 
 const dir = mkdtempSync(join(tmpdir(), "questie-media-"));
 mkdirSync(join(dir, "c"));
@@ -41,4 +42,10 @@ test("404 for missing, disallowed extension and traversal", async () => {
   for (const p of ["/media/c/missing.mp4", "/media/c/x.txt", "/media/nope/a.mp4", "/media/c/..%2F..%2Fsecret.png", "/media/..%2Fc/a.mp4", "/media/c/%2e%2e", "/media/c/.hidden.png"]) {
     expect((await get(p)).status, p).toBe(404);
   }
+});
+
+test("cspHeader: HTML pages get the CSP, other responses do not", async () => {
+  const app = new Hono().use(cspHeader).get("/", (c) => c.html("<p>x</p>")).get("/a.js", (c) => c.body("x", 200, { "Content-Type": "text/javascript" }));
+  expect((await app.request("/")).headers.get("content-security-policy")).toBe(CSP);
+  expect((await app.request("/a.js")).headers.get("content-security-policy")).toBeNull();
 });

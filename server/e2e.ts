@@ -13,6 +13,7 @@ import { createAuth, sessionFrom } from "./auth";
 import { openDb } from "./db";
 import { readEnv, type Env } from "./env";
 import { startJobs } from "./jobs";
+import { cspHeader } from "./media";
 
 const PORT = Number(process.env.E2E_PORT ?? 8799);
 const APP_URL = `http://127.0.0.1:${PORT}`;
@@ -160,6 +161,7 @@ const app = new Hono<{ Bindings: Env }>()
     return c.html(`<!doctype html><title>Test checkout</title><h1>Test checkout</h1><p>${s.mode}</p><form method="post"><button>Pay</button></form>`);
   })
   .post("/__e2e/checkout/:id", async (c) => (sessions.has(c.req.param("id")) ? c.redirect(await pay(c.req.param("id")), 303) : c.text("Not found", 404)))
+  .use(cspHeader)
   .use(serveStatic({ root: "dist" }))
   .get("*", (c) => (/\.\w+$/.test(c.req.path) ? c.text("Not found", 404) : c.html(index())));
 
