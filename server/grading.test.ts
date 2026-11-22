@@ -169,9 +169,18 @@ test("mock: a failed first grade refunds the exam and closes it; later failures 
   expect(bank.balance).toBe(80);
 });
 
-test("mock needs a course with a mock exam and a grader", async () => {
+test("mock needs a course with written challenges and a grader; 30 minutes without a mock block", async () => {
   const req = api();
-  expect((await req("/mock", post({ courseId: "p" }))).status).toBe(400);
+  expect((await req("/mock", post({ courseId: "z" }))).status).toBe(400);
+  expect((await api({ grader: () => null })("/mock", post({ courseId: "p" }))).status).toBe(503);
+  expect(bank.spent).toEqual([]);
+  const res = await req("/mock", post({ courseId: "p" }));
+  expect(res.status).toBe(200);
+  expect(Date.parse((await res.json()).expiresAt) - now.getTime()).toBe(40 * 60_000); // 30 min + grace
+});
+
+test("mock: unknown course and no grader", async () => {
+  const req = api();
   expect((await req("/mock", post({ courseId: "nope" }))).status).toBe(404);
   expect((await api({ grader: () => null })("/mock", post({ courseId: "t" }))).status).toBe(503);
   expect(bank.spent).toEqual([]);

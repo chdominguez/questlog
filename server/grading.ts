@@ -9,6 +9,7 @@ import { err } from "./errors";
 import { parseGrade, parseImprovement, type GradeInput } from "./grader";
 
 const MOCK_GRACE_MS = 10 * 60_000;
+const MOCK_SECONDS = 30 * 60; // courses without a mock block (src/screens/Mock.tsx uses the same)
 
 /** Deps courses (static, or test fixtures) first, then user courses under the access rule. */
 export const courseFor = async ({ courses }: Deps, db: Db, user: string, id: string): Promise<Course | null> =>
@@ -110,8 +111,8 @@ export function gradingRoutes(deps: Deps): Hono<App> {
       const course = await courseFor(deps, c.env.DB, c.get("user"), b.courseId);
       if (!course) return err(c, 404, "not_found", {}, "Unknown course");
       const n = mockQuestions(course);
-      if (!course.mock || !n) return err(c, 400, "invalid_request", {}, "Course has no mock exam");
-      const { seconds } = course.mock;
+      if (!n) return err(c, 400, "invalid_request", {}, "Course has no written challenges");
+      const seconds = course.mock?.seconds ?? MOCK_SECONDS;
       return charge(c, "mock", course.id, async (spendId) => {
         const now = deps.now();
         const start: MockStart = { mockId: crypto.randomUUID(), expiresAt: new Date(now.getTime() + seconds * 1000 + MOCK_GRACE_MS).toISOString() };
