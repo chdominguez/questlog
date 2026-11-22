@@ -150,6 +150,7 @@ const JSON_WRITE = new Set(["POST", "PUT", "PATCH"]);
  * Only this app's own pages and the native apps may call the API. Cross-site or foreign-origin requests pass only from an
  * APP_ORIGINS origin, which then authenticates by bearer only (appOrigin). Writes must be JSON, except multipart uploads.
  */
+const SCRIPT_DESTS = new Set(["script", "json", "style", "worker", "sharedworker", "serviceworker"]);
 const guard: MiddlewareHandler<App> = async (c, next) => {
   const origin = c.req.header("origin");
   const appOrigin = !!origin && c.env.APP_ORIGINS.includes(origin);
@@ -159,6 +160,8 @@ const guard: MiddlewareHandler<App> = async (c, next) => {
     try { if (new URL(origin).host !== new URL(c.req.url).host) foreign = true; } catch { foreign = true; }
   }
   if (foreign && !appOrigin) return err(c, 403, "origin_not_allowed");
+  // Kata code from courses runs in a worker without fetch; a module or JSON import is the read it has left.
+  if (SCRIPT_DESTS.has(c.req.header("sec-fetch-dest") ?? "")) return err(c, 403, "origin_not_allowed");
   if (appOrigin) c.set("appOrigin", true);
   const upload = c.req.method === "POST" && c.req.path.endsWith("/builder/uploads");
   if (JSON_WRITE.has(c.req.method) && !upload && !/^application\/json\b/i.test(c.req.header("content-type") ?? "")) {

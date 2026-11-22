@@ -222,6 +222,9 @@ test("guard: rejects cross-site and non-JSON writes, allows app origins", async 
   expect((await app.req("/grade", h({ Origin: "http://evil.test" }))).status).toBe(403);
   expect((await app.req("http://localhost/grade", h({ Origin: "http://localhost", "Sec-Fetch-Site": "same-origin" }))).status).toBe(200);
   expect((await app.req("/export", { headers: { "Sec-Fetch-Site": "none" } })).status).toBe(200);
+  for (const dest of ["script", "json"]) {
+    expect((await app.req("/export", { headers: { "Sec-Fetch-Site": "same-origin", "Sec-Fetch-Dest": dest } })).status).toBe(403);
+  }
   for (const origin of ["capacitor://localhost", "https://localhost"]) {
     expect((await app.req("http://app.test/grade", h({ Origin: origin, "Sec-Fetch-Site": "cross-site" }))).status).toBe(200);
   }

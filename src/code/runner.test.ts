@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { deepEqual, runKata } from "./runner";
+import { deepEqual, lockdown, runKata } from "./runner";
 
 test("deepEqual", () => {
   expect(deepEqual([[1, 2]], [[1, 2]])).toBe(true);
@@ -47,4 +47,14 @@ test("runKata isolates state between tests", () => {
   const src = "let n = 0; function inc() { return ++n; }";
   const r = runKata(src, [{ name: "a", code: "return eq(inc(), 1)" }, { name: "b", code: "return eq(inc(), 1)" }]);
   expect(r.every((x) => x.pass)).toBe(true);
+});
+
+test("lockdown removes network APIs from the scope and its prototypes for good", () => {
+  const proto = { fetch: () => 1, get caches() { return {}; } };
+  const scope = Object.assign(Object.create(proto), { XMLHttpRequest: class {}, importScripts: () => {}, keep: 1 });
+  lockdown(scope);
+  for (const o of [scope, proto]) for (const n of ["fetch", "caches", "XMLHttpRequest", "importScripts"]) expect(o[n]).toBeUndefined();
+  expect(scope.keep).toBe(1);
+  expect(() => { "use strict"; scope.fetch = () => 2; }).toThrow();
+  expect(Object.getPrototypeOf(scope).fetch).toBeUndefined();
 });
