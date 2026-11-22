@@ -66,10 +66,10 @@ describe("switchUser", () => {
     expect(switchUser({ user: "id1", email: "a@x.com", aliases: [] })).toBe(false);
     expect(s["ql.user"]).toBe("id1");
   });
-  test("id A -> id B wipes progress and kata drafts only", () => {
-    const s = storage({ ...local, "ql.user": "idA" });
+  test("id A -> id B wipes the previous account's local data", () => {
+    const s = storage({ ...local, "ql.user": "idA", "ql.courses": "[]", "ql.seenJobs": "[]", "entrevista-quest-v2": "{}", "eq2.kata.solved.k": "1", "ql.provider": "google" });
     expect(switchUser({ user: "idB", email: "b@x.com", aliases: ["local"] })).toBe(true);
-    expect(s).toEqual({ "ql.me": "{}", "ql.user": "idB" });
+    expect(s).toEqual({ "ql.user": "idB", "ql.provider": "google" });
   });
   test("another account signing in on the same page wipes and reloads", async () => {
     vi.resetModules();

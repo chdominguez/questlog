@@ -1,12 +1,16 @@
 import type { Me } from "../../shared/api-types";
 import { apiFetch } from "../api";
+import { LEGACY_KEY } from "./legacy";
 import { adopt, OLD_STORAGE_KEY, snapshot, STORAGE_KEY, subscribe } from "./store";
 
 const USER_KEY = "ql.user";
 
-/** Removes local progress and kata drafts (another account, or this one deleted). */
+/** Per-account keys: progress (current, old and legacy), cached courses and /me, seen jobs, the low-balance notice. */
+const ACCOUNT_KEYS = new Set([STORAGE_KEY, OLD_STORAGE_KEY, LEGACY_KEY, "ql.courses", "ql.me", "ql.seenJobs", "ql.lowWarned"]);
+
+/** Removes the previous account's local data and kata drafts (another account, or this one deleted). */
 export function wipeLocal() {
-  try { for (const k of Object.keys(localStorage)) if (k === STORAGE_KEY || k === OLD_STORAGE_KEY || k.startsWith("ql.kata.")) localStorage.removeItem(k); }
+  try { for (const k of Object.keys(localStorage)) if (ACCOUNT_KEYS.has(k) || k.startsWith("ql.kata.") || k.startsWith("eq2.kata.")) localStorage.removeItem(k); }
   catch { /* storage off */ }
 }
 
