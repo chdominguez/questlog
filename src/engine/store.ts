@@ -47,7 +47,7 @@ export interface Progress {
 export type Result = "ok" | "partial" | "miss" | "wrong";
 
 export type Action =
-  | { type: "start"; levelId: string }
+  | { type: "start"; levelId: string; lives?: number } // lives: resuming a saved attempt
   | { type: "answer"; id: string; ctype: ChallengeType; result: Result; easy?: boolean; now: number }
   | { type: "finish" } // run completed with lives left
   | { type: "quit" } // run ended without completion
@@ -83,7 +83,7 @@ const withId = (list: string[], id: string) => (list.includes(id) ? list : [...l
 export function reducer(s: Progress, a: Action): Progress {
   switch (a.type) {
     case "start":
-      return { ...s, run: { levelId: a.levelId, lives: MAX_LIVES, startXp: s.xp } };
+      return { ...s, run: { levelId: a.levelId, lives: clamp(a.lives ?? MAX_LIVES, 1, MAX_LIVES), startXp: s.xp } };
     case "answer": {
       const base = s.cleared.includes(a.id) ? REPLAY_XP : BASE_XP[a.ctype];
       const cards = { ...s.cards, [a.id]: schedule(s.cards[a.id], gradeOf(a.result, a.easy), a.now) };

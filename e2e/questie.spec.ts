@@ -41,9 +41,13 @@ async function playBasics(courseTitle: string) {
   await page.getByRole("link", { name: /Basics/ }).click();
   await page.getByRole("button", { name: "Theory" }).click();
   await page.getByRole("button", { name: "Next" }).click();
+  await page.reload(); // resumes on the second card
   await page.getByRole("button", { name: "Start challenges" }).click();
   await page.getByRole("button", { name: "0", exact: true }).click();
   await page.getByRole("button", { name: "Next" }).click();
+  await page.reload(); // resumes on challenge 2 with challenge 1 answered
+  await expect(page.getByRole("button", { name: "Challenge 1" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Challenge 2" })).toHaveAttribute("aria-current", "step");
   await page.getByRole("button", { name: "Reveal" }).click();
   await page.getByRole("button", { name: "Good" }).click();
   await page.getByRole("button", { name: "See result" }).click();

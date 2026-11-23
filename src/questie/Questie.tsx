@@ -137,3 +137,22 @@ export function MapQuestie({ course, pts, at, row }: { course: string; pts: { x:
 
   return <div ref={el} className="map-questie"><Questie key={mood} mood={mood} /></div>;
 }
+
+/** Small Questie standing on stop `at` of `n` evenly spaced stops; walks over when `at` changes and shows the shared mood. */
+export function TrackQuestie({ at, n }: { at: number; n: number }) {
+  const q = useQuestie();
+  const el = useRef<HTMLDivElement>(null);
+  const prev = useRef(at);
+  useEffect(() => {
+    const node = el.current;
+    if (!node || prev.current === at || reduced()) { prev.current = at; return; }
+    node.classList.add("walking");
+    node.classList.toggle("left", at < prev.current);
+    prev.current = at;
+    const stop = () => node.classList.remove("walking", "left");
+    const end = (e: TransitionEvent) => { if (e.target === node) stop(); }; // limbs' transitions bubble up too
+    node.addEventListener("transitionend", end);
+    return () => { node.removeEventListener("transitionend", end); stop(); };
+  }, [at]);
+  return <div ref={el} className="track-questie" style={{ left: `${((at + 0.5) / n) * 100}%` }}><Questie key={q.n} mood={q.mood} /></div>;
+}

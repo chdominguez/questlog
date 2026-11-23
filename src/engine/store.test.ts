@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { courseDue, dueKeys } from "./srs";
 import { LEGACY_KEY } from "./legacy";
-import { hydrate, initial, load, multiplier, OLD_STORAGE_KEY, rankIndex, rankProgress, reducer, STORAGE_KEY, type Action, type Progress } from "./store";
+import { hydrate, initial, load, MAX_LIVES, multiplier, OLD_STORAGE_KEY, rankIndex, rankProgress, reducer, STORAGE_KEY, type Action, type Progress } from "./store";
 
 const run = (actions: Action[], s: Progress = initial) => actions.reduce(reducer, s);
 const NOW = Date.UTC(2026, 0, 1);
@@ -58,6 +58,11 @@ describe("runs", () => {
     expect(run([wrong()]).run).toBeNull();
     const s = run([{ type: "start", levelId: "l" }, wrong(), wrong(), wrong(), wrong()]);
     expect(s.run?.lives).toBe(0);
+  });
+  test("start resumes saved lives, clamped to 1..MAX", () => {
+    expect(run([{ type: "start", levelId: "l", lives: 2 }]).run?.lives).toBe(2);
+    expect(run([{ type: "start", levelId: "l", lives: 9 }]).run?.lives).toBe(MAX_LIVES);
+    expect(run([{ type: "start", levelId: "l", lives: 0 }]).run?.lives).toBe(1);
   });
   test("finish stores best stars = lives left", () => {
     const first = run([{ type: "start", levelId: "l" }, wrong(), { type: "finish" }]);

@@ -367,8 +367,8 @@ export function Feedback({ c, result, xp = 0 }: { c: Challenge; result: Result; 
 interface Fx { kind: "ok" | "bad"; xp: number; n: number }
 
 /** One challenge: renders the right input, records the result, shows feedback and "next". */
-export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
-  c: Challenge; levelId: string; onNext: () => void; nextLabel?: string;
+export function ChallengeCard({ c, levelId, onNext, onResult, nextLabel = "Next" }: {
+  c: Challenge; levelId: string; onNext: () => void; onResult?: (r: Result) => void; nextLabel?: string;
 }) {
   const card = useProgress().cards[c.id];
   const queued = !!card && card.due <= Date.now();
@@ -384,6 +384,7 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
     const gained = report(c, r, easy);
     say(c.tip); // close the hint bubble; Questie's face takes over
     setResult(r);
+    onResult?.(r);
     setXp(gained);
     setFx({ kind: r === "ok" || r === "partial" ? "ok" : "bad", xp: gained, n: ++fxN.current });
   };
@@ -415,7 +416,7 @@ export function ChallengeCard({ c, levelId, onNext, nextLabel = "Next" }: {
       {showFeedback && result && <Feedback c={c} result={result} xp={xp} />}
       <div className="row end">
         {c.type === "kata" && !done && (
-          <button type="button" className="btn ghost" onClick={() => { report(c, "miss"); onNext(); }}>Skip</button>
+          <button type="button" className="btn ghost" onClick={() => { report(c, "miss"); onResult?.("miss"); onNext(); }}>Skip</button>
         )}
         {done && !queued && (
           <button type="button" className="btn ghost" onClick={() => { dispatch({ type: "markReview", id: c.id, now: Date.now() }); play("click"); }}>Review later</button>
