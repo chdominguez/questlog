@@ -13,6 +13,8 @@ import { say } from "../questie/Questie";
 import { courseOf } from "../course/registry";
 import { ReportButton } from "../library/ReportButton";
 import { Sources } from "./Sources";
+import { Jump } from "./Jump";
+import { useProgress } from "./store";
 import { useTheoryCard } from "../narration/card";
 import "./engine.css";
 
@@ -70,6 +72,7 @@ export function Theory({ cards, onDone, onEnd, level }: { cards: TheoryCard[]; o
     return () => removeEventListener("keydown", on);
   });
 
+  const read = useProgress().read.includes(level ?? "");
   const card = cards[i];
   useEffect(() => { say(card?.tip, true); }, [card]);
   if (!card) return null;
@@ -91,7 +94,9 @@ export function Theory({ cards, onDone, onEnd, level }: { cards: TheoryCard[]; o
               className={k === i ? "on" : k < i ? "seen" : ""} onClick={() => goTo(k)} />
           ))}
         </div>
-        <span className="count-label theory-count">{i + 1}/{cards.length}</span>
+        <Jump label="Cards" className="count-label" up items={cards.map((c) => ({ label: c.title, mark: read ? "ok" : null }))} current={i} onPick={goTo}>
+          {i + 1}/{cards.length}
+        </Jump>
         <button type="button" className="btn" onClick={next} autoFocus>{last ? "Start challenges" : "Next"}</button>
       </div>
     </section>
