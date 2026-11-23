@@ -14,7 +14,7 @@ import { courseOf } from "../course/registry";
 import { ReportButton } from "../library/ReportButton";
 import { Sources } from "./Sources";
 import { Jump } from "./Jump";
-import { useProgress } from "./store";
+import { dispatch, getProgress, useProgress } from "./store";
 import { useTheoryCard } from "../narration/card";
 import "./engine.css";
 
@@ -72,9 +72,12 @@ export function Theory({ cards, onDone, onEnd, level }: { cards: TheoryCard[]; o
     return () => removeEventListener("keydown", on);
   });
 
-  const read = useProgress().read.includes(level ?? "");
+  const p = useProgress();
+  const done = (k: number) => p.read.includes(level ?? "") || p.seen.includes(`${level}#${k}`);
   const card = cards[i];
   useEffect(() => { say(card?.tip, true); }, [card]);
+  // dispatch only when new: every dispatch stamps updatedAt and schedules a sync
+  useEffect(() => { if (level && !getProgress().seen.includes(`${level}#${i}`)) dispatch({ type: "seen", card: `${level}#${i}` }); }, [level, i]);
   if (!card) return null;
   return (
     <section className="theory" aria-label="Theory">
@@ -91,10 +94,10 @@ export function Theory({ cards, onDone, onEnd, level }: { cards: TheoryCard[]; o
         <div className="dots" role="tablist" aria-label="Cards">
           {cards.map((c, k) => (
             <button key={k} type="button" role="tab" aria-selected={k === i} aria-label={c.title}
-              className={k === i ? "on" : k < i ? "seen" : ""} onClick={() => goTo(k)} />
+              className={k === i ? "on" : k < i || done(k) ? "seen" : ""} onClick={() => goTo(k)} />
           ))}
         </div>
-        <Jump label="Cards" className="count-label" up items={cards.map((c) => ({ label: c.title, mark: read ? "ok" : null }))} current={i} onPick={goTo}>
+        <Jump label="Cards" className="count-label" up items={cards.map((c, k) => ({ label: c.title, mark: done(k) ? "ok" : null }))} current={i} onPick={goTo}>
           {i + 1}/{cards.length}
         </Jump>
         <button type="button" className="btn" onClick={next} autoFocus>{last ? "Start challenges" : "Next"}</button>

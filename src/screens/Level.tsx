@@ -222,6 +222,7 @@ function QuestBoard({ course, level, res, onTheory, onPlay }: { course: Course; 
   const [takeaway] = useState(() => { const tips = level.theory.flatMap((c) => (c.tip ? [c.tip] : [])); return tips[Math.floor(Math.random() * tips.length)]; });
   const hasTheory = level.theory.length > 0;
   const read = p.read.includes(level.id);
+  const seen = level.theory.filter((_, k) => p.seen.includes(`${level.id}#${k}`)).length;
   const { stars = 0, done = false } = p.levels[level.id] ?? {};
   const cleared = level.challenges.filter((c) => p.cleared.includes(c.id)).length;
   const plays = games.reduce((n, g) => n + (p.plays[gameKey(level.id, g.id)] ?? 0), 0);
@@ -246,12 +247,12 @@ function QuestBoard({ course, level, res, onTheory, onPlay }: { course: Course; 
               <BookOpen weight="duotone" className="quest-icon" aria-hidden />
               <b>Theory</b>
               <span className="quest-stats">
-                <span>{plural(level.theory.length, "card")}</span>
+                <span>{!read && seen > 0 ? `${seen}/${level.theory.length} cards` : plural(level.theory.length, "card")}</span>
                 {read && <span className="quest-ok"><Check weight="bold" aria-hidden />Read</span>}
               </span>
               <CaretRight className="quest-go" aria-hidden />
             </button>
-            <Jump label="Cards" className="quest-more" items={level.theory.map((c) => ({ label: c.title, mark: read ? "ok" : null }))} onPick={onTheory} />
+            <Jump label="Cards" className="quest-more" items={level.theory.map((c, k) => ({ label: c.title, mark: read || p.seen.includes(`${level.id}#${k}`) ? "ok" : null }))} onPick={onTheory} />
           </li>
         )}
         <li className="quest-split">

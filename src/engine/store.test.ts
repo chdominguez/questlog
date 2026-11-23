@@ -129,6 +129,12 @@ describe("settings and hydrate", () => {
     expect(hydrate(JSON.parse(JSON.stringify(s))).plays).toEqual(s.plays);
     expect(hydrate({ plays: { a: 3, b: "x" } }).plays).toEqual({ a: 3 });
   });
+  test("seen marks each theory card once and survives hydrate", () => {
+    const s = run([{ type: "seen", card: "c:l1#0" }, { type: "seen", card: "c:l1#2" }, { type: "seen", card: "c:l1#0" }]);
+    expect(s.seen).toEqual(["c:l1#0", "c:l1#2"]);
+    expect(hydrate(JSON.parse(JSON.stringify(s))).seen).toEqual(["c:l1#0", "c:l1#2"]);
+    expect(hydrate({ seen: ["a", 1] }).seen).toEqual(["a"]);
+  });
   test("read marks a level's theory once and survives hydrate", () => {
     const s = run([{ type: "read", levelId: "c:l1" }, { type: "read", levelId: "c:l1" }]);
     expect(s.read).toEqual(["c:l1"]);
