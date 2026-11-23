@@ -39,6 +39,7 @@ export interface Progress {
   best: Record<string, number>; // arcade bests by "<course>:<game>", or "<level>:<game>" for a level's own arcade
   plays: Record<string, number>; // arcade games finished, same keys as best
   read: string[]; // level ids whose theory was read to the last card
+  seen: string[]; // theory cards opened, "<level>#<card index>"
   run: Run | null; // current level attempt, not persisted
   updatedAt: number; // last local change, for sync (newest wins)
 }
@@ -53,13 +54,14 @@ export type Action =
   | { type: "quit" } // run ended without completion
   | { type: "markReview"; id: string; now: number }
   | { type: "read"; levelId: string }
+  | { type: "seen"; card: string }
   | { type: "unlockAll"; on: boolean }
   | { type: "complete"; course: string; on: boolean }
   | { type: "sound"; muted?: boolean; volume?: number }
   | { type: "best"; key: string; value: number; lower?: boolean }; // lower: a time, smaller is better
 
 export const initial: Progress = {
-  xp: 0, levels: {}, streak: 0, cards: {}, cleared: [], completed: [], unlockAll: false, sound: { muted: false, volume: 0.7 }, best: {}, plays: {}, read: [], run: null, updatedAt: 0,
+  xp: 0, levels: {}, streak: 0, cards: {}, cleared: [], completed: [], unlockAll: false, sound: { muted: false, volume: 0.7 }, best: {}, plays: {}, read: [], seen: [], run: null, updatedAt: 0,
 };
 
 export const multiplier = (streak: number) => (streak >= 5 ? 2 : streak >= 3 ? 1.5 : 1);
@@ -105,6 +107,8 @@ export function reducer(s: Progress, a: Action): Progress {
       return { ...s, run: null };
     case "markReview":
       return { ...s, cards: { ...s.cards, [a.id]: schedule(s.cards[a.id], Rating.Again, a.now) } };
+    case "seen":
+      return s.seen.includes(a.card) ? s : { ...s, seen: [...s.seen, a.card] };
     case "read":
       return s.read.includes(a.levelId) ? s : { ...s, read: [...s.read, a.levelId] };
     case "unlockAll":
@@ -158,6 +162,7 @@ export function hydrate(raw: unknown): Progress {
     best: numbers(r.best),
     plays: numbers(r.plays),
     read: strings(r.read),
+    seen: strings(r.seen),
     run: null,
     updatedAt: Math.max(0, num(r.updatedAt, 0)),
   };

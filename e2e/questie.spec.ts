@@ -48,6 +48,9 @@ async function playBasics(courseTitle: string) {
   await page.reload(); // resumes on challenge 2 with challenge 1 answered
   await expect(page.getByRole("button", { name: "Challenge 1" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Challenge 2" })).toHaveAttribute("aria-current", "step");
+  await page.getByRole("button", { name: "Back" }).click(); // out to the level start, then back in where we were
+  await page.getByRole("button", { name: /^Challenge\b/ }).click();
+  await expect(page.getByRole("button", { name: "Challenge 2" })).toHaveAttribute("aria-current", "step");
   await page.getByRole("button", { name: "Reveal" }).click();
   await page.getByRole("button", { name: "Good" }).click();
   await page.getByRole("button", { name: "See result" }).click();
@@ -135,7 +138,7 @@ test("grade a written answer (2), then a stronger answer (3)", async () => {
   await page.getByRole("link", { name: "Start" }).click();
   await playBasics("Lists from your notes");
   await page.getByRole("button", { name: "Next level" }).click();
-  await page.getByRole("button", { name: "Challenge" }).click();
+  await page.getByRole("button", { name: /^Challenge\b/ }).click();
   await page.getByRole("textbox").fill("It keeps order.");
   await page.getByRole("button", { name: /Grade 2/ }).click();
   await expect(page.getByRole("button", { name: /Stronger answer 3/ })).toBeVisible();
@@ -148,6 +151,7 @@ test("grade a written answer (2), then a stronger answer (3)", async () => {
 });
 
 test("unlock narration (10)", async () => {
+  await page.getByRole("button", { name: "Back" }).click(); // theory or challenge -> level start
   await page.getByRole("link", { name: "Map" }).first().click();
   await page.getByRole("link", { name: /Basics/ }).click();
   await page.getByRole("button", { name: "Theory" }).click();
@@ -158,6 +162,7 @@ test("unlock narration (10)", async () => {
 });
 
 test("publish to the review queue; admin approves; course in Library", async ({ browser, request }) => {
+  await page.getByRole("button", { name: "Back" }).click(); // theory or challenge -> level start
   await page.getByRole("link", { name: "Map" }).first().click();
   await page.getByRole("button", { name: "Share" }).click();
   await page.getByRole("button", { name: "Submit to library" }).click();

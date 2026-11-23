@@ -2,7 +2,7 @@ import type { Result } from "./store";
 import { MAX_LIVES } from "./store";
 
 /** Where a level attempt stands, so a reload resumes it. Per device; not synced. */
-export interface Pos { phase: "theory" | "play"; card: number; i: number; lives: number; res: (Result | null)[] }
+export interface Pos { phase: "choose" | "theory" | "play"; card: number; i: number; lives: number; res: (Result | null)[] }
 
 export const POS_PREFIX = "ql.pos.";
 const RESULTS: (Result | null)[] = ["ok", "partial", "miss", "wrong", null];
@@ -12,7 +12,7 @@ const int = (v: unknown, lo: number, hi: number) => typeof v === "number" && Num
 export function loadPos(level: string, total: number, cards: number): Pos | null {
   try {
     const p = JSON.parse(localStorage.getItem(POS_PREFIX + level) ?? "null") as Partial<Pos> | null;
-    if (!p || (p.phase !== "theory" && p.phase !== "play")) return null;
+    if (!p || (p.phase !== "choose" && p.phase !== "theory" && p.phase !== "play")) return null;
     if (!Array.isArray(p.res) || p.res.length !== total || !p.res.every((r) => RESULTS.includes(r))) return null;
     if (!int(p.i, 0, Math.max(0, total - 1)) || !int(p.card, 0, Math.max(0, cards - 1)) || !int(p.lives, 1, MAX_LIVES)) return null;
     return p as Pos;

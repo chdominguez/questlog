@@ -13,6 +13,8 @@ const pos: Pos = { phase: "play", card: 1, i: 2, lives: 2, res: ["ok", "wrong", 
 test("round-trips and clears", () => {
   savePos("c:l", pos);
   expect(loadPos("c:l", 3, 2)).toEqual(pos);
+  savePos("c:l", { ...pos, phase: "choose" });
+  expect(loadPos("c:l", 3, 2)?.phase).toBe("choose");
   clearPos("c:l");
   expect(loadPos("c:l", 3, 2)).toBeNull();
 });
