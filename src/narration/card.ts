@@ -4,7 +4,8 @@ import { useCallback, useEffect, useId, useSyncExternalStore } from "react";
 const cards = new Map<string, number>();
 const listeners = new Set<() => void>();
 const subscribe = (f: () => void) => { listeners.add(f); return () => { listeners.delete(f); }; };
-const set = (k: string, n: number) => { if (cards.get(k) !== n) { cards.set(k, n); listeners.forEach((f) => f()); } };
+/** Sets a level's card before Theory mounts, to resume a saved position. */
+export const seedTheoryCard = (k: string, n: number) => { if (cards.get(k) !== n) { cards.set(k, n); listeners.forEach((f) => f()); } };
 
 /** `useState(0)` for the card index, shared by every caller with the same `level`. */
 export function useTheoryCard(level?: string): [number, (n: number) => void] {
@@ -12,5 +13,5 @@ export function useTheoryCard(level?: string): [number, (n: number) => void] {
   const k = level ?? id;
   const i = useSyncExternalStore(subscribe, () => cards.get(k) ?? 0);
   useEffect(() => () => { cards.delete(k); }, [k]);
-  return [i, useCallback((n: number) => set(k, n), [k])];
+  return [i, useCallback((n: number) => seedTheoryCard(k, n), [k])];
 }

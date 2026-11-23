@@ -82,3 +82,8 @@
 /* Map walker */
 .map-questie { position: absolute; left: 0; top: 0; width: 52px; z-index: 2; pointer-events: none; will-change: transform; }
 .map-questie .questie { width: 52px; }
+
+/* Challenge-line walker: stands on the current stop and walks between stops */
+.track-questie { position: absolute; bottom: 30px; width: 30px; translate: -50% 0; pointer-events: none; transition: left .55s var(--ease); }
+.track-questie .questie { width: 30px; }
+@media (prefers-reduced-motion: reduce) { .track-questie { transition: none; } }

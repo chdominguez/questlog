@@ -73,6 +73,47 @@ ol.nodes > .node { position: absolute; width: 152px; transform: translateX(-50%)
 .progress { flex: 1; height: 8px; background: var(--raise); border: 1px solid var(--line); border-radius: var(--r-full); overflow: hidden; }
 .progress > div { height: 100%; background: var(--ok); transform-origin: left; transition: transform .4s var(--ease); }
 .count-label { font-size: var(--t-sm); color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* Challenge line: stops with Questie on the current one (Questie's own CSS places the walker) */
+.runbar:has(.track) { align-items: flex-end; }
+.track { position: relative; flex: 1; min-width: 0; padding-top: 32px; }
+.stops { position: relative; display: flex; list-style: none; margin: 0; padding: 0; }
+.stops::before { content: ""; position: absolute; left: 12px; right: 12px; top: 50%; height: 2px; translate: 0 -50%; background: var(--line); }
+.stops li { flex: 1; min-width: 0; height: 44px; display: grid; place-items: center; }
+.stops button {
+  position: relative; width: min(22px, 100%); aspect-ratio: 1; padding: 0; border-radius: 50%; display: grid; place-items: center;
+  background: var(--surface); border: 2px solid var(--muted); color: var(--surface); font-size: 11px; transition: border-color .2s, box-shadow .2s;
+}
+.stops button::after { content: ""; position: absolute; inset: -11px; } /* 44px hit area */
+.stops button:not(:disabled):hover { border-color: var(--fg); }
+.stops button.on { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 30%, transparent); }
+.stops button.ok { background: var(--ok); border-color: var(--ok); }
+.stops button.bad { background: var(--bad); border-color: var(--bad); }
+.stops button:disabled { cursor: default; }
+
+.jump { position: relative; flex: none; }
+.jump summary { list-style: none; display: inline-flex; align-items: center; gap: var(--s-1); min-height: 44px; padding: 0 var(--s-2); border-radius: var(--r-md); cursor: pointer; }
+.jump summary::-webkit-details-marker { display: none; }
+.jump summary:hover { background: var(--raise); color: var(--fg); }
+.jump[open] summary svg { rotate: 180deg; }
+.jump .clist {
+  position: absolute; right: 0; top: calc(100% + var(--s-1)); z-index: 30; width: min(380px, calc(100vw - 32px)); max-height: 60vh; overflow: auto;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--s-2); box-shadow: var(--shadow-pop);
+}
+
+.clist { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-1); width: min(100%, 520px); text-align: left; }
+.clist button {
+  display: grid; grid-template-columns: 2ch auto minmax(0, 1fr) auto; gap: var(--s-3); align-items: center; width: 100%; min-height: 44px;
+  padding: var(--s-2) var(--s-3); border: 1px solid transparent; border-radius: var(--r-md); background: none; color: var(--fg); font: inherit; text-align: left;
+}
+.clist button:not(:disabled):hover { background: var(--raise); }
+.clist button[aria-current] { border-color: var(--accent); }
+.clist button:disabled { color: var(--muted); cursor: default; }
+.clist-n { font-size: var(--t-sm); color: var(--muted); font-variant-numeric: tabular-nums; }
+.clist-kind { font: var(--t-xs) var(--f-mono); color: var(--muted); }
+.clist-q { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clist .ok svg { color: var(--ok); }
+.clist .bad svg { color: var(--bad); }
 .result { text-align: center; display: grid; gap: var(--s-4); justify-items: center; padding-top: var(--s-5); }
 .result h2 { font-size: var(--t-3xl); }
 .result .gain { font: 700 var(--t-3xl) var(--f-display); color: var(--gold); font-variant-numeric: tabular-nums; }
@@ -151,3 +192,4 @@ li.quest-row { grid-template-columns: auto 1fr auto; }
   .quest-tip .questie { width: 60px; }
 }
 @media (prefers-reduced-motion: reduce) { .quest-say { animation: none; } .quest-row, .quest-game { transition: none; } }
+.quest-rows .clist { width: 100%; margin-top: var(--s-2); }
