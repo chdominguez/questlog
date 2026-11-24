@@ -9,6 +9,7 @@ import { typingTarget } from "../engine/Theory";
 import { mmss } from "../answers/text";
 import { isDemo, isNative } from "../platform";
 import { audioSrc, getNarration, jobStatus, unlockNarration } from "./api";
+import { backgroundAudio } from "./background";
 import { useTheoryCard } from "./card";
 import "./narration.css";
 
@@ -45,6 +46,9 @@ function Player({ course, level }: { course: string; level: string }) {
   const seekTo = useRef<number | null>(null); // position in the next card's segment after a scrub across cards
   const jobId = useRef<string | undefined>(undefined);
   const blobs = useRef(new Map<string, Promise<string>>()); // native: one download per segment for the lesson's lifetime
+
+  const bg = (on: boolean) => backgroundAudio(on ? lvl?.title ?? "Questie" : null);
+  useEffect(() => () => backgroundAudio(null), [course, level]);
 
   const settle = (s: NarrationState) => { setSt(s); setPhase(s.unlocked ? "ready" : "locked"); };
   const src = (hash: string) => {
@@ -120,8 +124,8 @@ function Player({ course, level }: { course: string; level: string }) {
       a.defaultPlaybackRate = a.playbackRate = rate;
       setPos(0);
       if (seekTo.current !== null) { a.currentTime = seekTo.current; seekTo.current = null; }
-      if (keepPlaying.current) a.play().catch(() => live && setPhase("playError"));
-    }, () => live && setPhase("playError"));
+      if (keepPlaying.current) { bg(true); a.play().catch(() => { bg(false); if (live) setPhase("playError"); }); }
+    }, () => { bg(false); if (live) setPhase("playError"); });
     return () => {
       live = false;
       a.pause();
@@ -131,7 +135,11 @@ function Player({ course, level }: { course: string; level: string }) {
   const toggle = () => {
     const a = audio.current;
     if (!a || !playable) return;
-    if (a.paused) { keepPlaying.current = true; a.play().catch(() => setPhase("playError")); } else { keepPlaying.current = false; a.pause(); }
+    if (a.paused) {
+      keepPlaying.current = true;
+      bg(true);
+      a.play().catch(() => { bg(false); setPhase("playError"); });
+    } else { keepPlaying.current = false; bg(false); a.pause(); }
   };
   const go = (n: number) => { if (n >= 0 && n < cards) setCard(n); };
 
@@ -231,7 +239,7 @@ function Player({ course, level }: { course: string; level: string }) {
         onPause={() => setPlaying(false)}
         onTimeUpdate={(e) => setPos(e.currentTarget.currentTime)}
         onDurationChange={(e) => { const d = e.currentTarget.duration; setDur(d); if (playable && track) setDurs((x) => ({ ...x, [track.card]: d })); }}
-        onEnded={() => { if (card + 1 < cards) go(card + 1); else keepPlaying.current = false; }}
+        onEnded={() => { if (card + 1 < cards) go(card + 1); else { keepPlaying.current = false; bg(false); } }}
       />
     </div>
   );
