@@ -15,7 +15,8 @@
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
-/* Design tokens: a school notebook. Components use these vars only. Light by default, dark (graphite paper) follows the OS. */
+/* Design tokens: a school notebook. Components use these vars only. Light by default, dark (graphite paper) when theme.ts
+   sets data-theme="dark" (OS scheme or the HUD toggle). */
 :root {
   /* Paper and ink */
   --bg: #fdfcf6;
@@ -64,35 +65,39 @@
   --f-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
   color-scheme: light dark;
 }
+/* Before theme.ts runs only the page background shows: keep it dark on dark systems. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1b1e25;
-    --surface: #22262f;
-    --raise: #2a2f3b;
-    --line: #3d4452;
-    --fg: #e9e7e1;
-    --muted: #a4a9b6;
-    --accent: #7fb5ff;
-    --accent-ink: #0d1a2e;
-    --ok: #7fdc8e;
-    --bad: #ff8aac;
-    --gold: #ffc94a;
-    --info: #b9a8ff;
-    --ok-ink: #7fdc8e;
-    --bad-ink: #ff8aac;
-    --gold-ink: #ffc94a;
-    --mark: rgb(140 235 100 / .26);
-    --rule: rgb(127 181 255 / .07);
-    --margin: rgb(255 138 172 / .25);
-    --sticky: #3b3522;
-    --tape: rgb(233 231 225 / .13);
-    --pair-l: 74%;
-    --shiki-token-keyword: #ff8aac; --shiki-token-string: #7fdc8e; --shiki-token-string-expression: #7fdc8e;
-    --shiki-token-function: #7fb5ff; --shiki-token-constant: #ffc94a;
-    --shadow-card: 0 10px 24px -12px rgb(0 0 0 / .7);
-    --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / .8);
-    --shadow-press: 0 3px 0 rgb(0 0 0 / .5);
-  }
+  :root:not([data-theme]) { --bg: #1b1e25; --rule: rgb(127 181 255 / .07); }
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1b1e25;
+  --surface: #22262f;
+  --raise: #2a2f3b;
+  --line: #3d4452;
+  --fg: #e9e7e1;
+  --muted: #a4a9b6;
+  --accent: #7fb5ff;
+  --accent-ink: #0d1a2e;
+  --ok: #7fdc8e;
+  --bad: #ff8aac;
+  --gold: #ffc94a;
+  --info: #b9a8ff;
+  --ok-ink: #7fdc8e;
+  --bad-ink: #ff8aac;
+  --gold-ink: #ffc94a;
+  --mark: rgb(140 235 100 / .26);
+  --rule: rgb(127 181 255 / .07);
+  --margin: rgb(255 138 172 / .25);
+  --sticky: #3b3522;
+  --tape: rgb(233 231 225 / .13);
+  --pair-l: 74%;
+  --shiki-token-keyword: #ff8aac; --shiki-token-string: #7fdc8e; --shiki-token-string-expression: #7fdc8e;
+  --shiki-token-function: #7fb5ff; --shiki-token-constant: #ffc94a;
+  --shadow-card: 0 10px 24px -12px rgb(0 0 0 / .7);
+  --shadow-pop: 0 16px 40px -12px rgb(0 0 0 / .8);
+  --shadow-press: 0 3px 0 rgb(0 0 0 / .5);
 }
 * { box-sizing: border-box; }
 html, body { min-height: 100%; margin: 0; }

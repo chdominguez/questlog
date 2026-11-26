@@ -31,6 +31,7 @@
 @keyframes pulse { 40% { transform: scale(1.3); } }
 .hud-sound { display: flex; align-items: center; gap: var(--s-1); }
 .hud-sound input[type="range"] { width: 72px; height: 32px; accent-color: var(--accent); }
+.hud-tools { display: flex; gap: var(--s-1); }
 .iconbtn { background: none; border: 1px solid transparent; border-radius: var(--r-md); width: 44px; height: 44px; display: grid; place-items: center; padding: 0; color: var(--muted); }
 .iconbtn:hover { background: var(--raise); color: var(--fg); }
 .iconbtn svg { width: 20px; height: 20px; }
@@ -55,9 +56,12 @@
   .hud-sound input[type="range"] { width: 64px; }
 }
 @media (max-width: 520px) {
-  /* Two rows: brand, chip, rank badge, streak, mute; then nav. */
+  /* Two rows: brand, chip, rank badge, streak, mute; then nav, restore audio, theme. */
   .hud-rank-body, .hud-sound input[type="range"] { display: none; }
   .hud-rank { order: 0; margin-left: 0; }
+  /* Restore and theme end the nav row: the basis leaves them room, so they never wrap; the nav scrolls instead. */
+  .hud-row > .hud-nav { flex: 1 1 calc(100% - 2 * 44px - var(--s-1) - var(--s-4)); min-width: 0; }
+  .hud-tools { order: 4; }
 }
 
 /* Theory */

@@ -1,7 +1,7 @@
-import { useEffect, useId, useState, type CSSProperties } from "react";
+import { useEffect, useId, useState, useSyncExternalStore, type CSSProperties } from "react";
 import "./mermaid.css";
 import { minWidth, svgWidth } from "./svg";
-import { isDark, token } from "../ui/theme";
+import { isDark, onTheme, token } from "../ui/theme";
 
 type MermaidApi = typeof import("mermaid").default;
 
@@ -71,6 +71,7 @@ let seq = 0;
 export function Mermaid({ src, caption }: { src: string; caption?: string }) {
   const reactId = useId();
   const [state, setState] = useState<{ svg?: string; error?: string }>({});
+  const dark = useSyncExternalStore(onTheme, isDark); // re-render the SVG in the new colors
 
   useEffect(() => {
     let live = true;
@@ -86,7 +87,7 @@ export function Mermaid({ src, caption }: { src: string; caption?: string }) {
         if (live) setState({ error: e instanceof Error ? e.message : String(e) });
       });
     return () => { live = false; };
-  }, [src, reactId]);
+  }, [src, reactId, dark]);
 
   return (
     <figure className="mmd">
