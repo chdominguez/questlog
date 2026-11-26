@@ -3,6 +3,7 @@ import { SecureStorage } from "@aparajita/capacitor-secure-storage";
 import { FirebaseMessaging } from "@capacitor-firebase/messaging";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { registerTokenStore } from "../auth/token";
+import { isDark, onTheme } from "../ui/theme";
 import { linkTarget, pushHash } from "./links";
 import { registerDevice } from "./push";
 
@@ -28,10 +29,9 @@ function back() {
 
 /** Dark text on paper, light text on graphite. */
 function statusBar() {
-  const dark = matchMedia("(prefers-color-scheme: dark)");
-  const apply = () => { StatusBar.setStyle({ style: dark.matches ? Style.Dark : Style.Light }).catch(() => {}); };
+  const apply = () => { StatusBar.setStyle({ style: isDark() ? Style.Dark : Style.Light }).catch(() => {}); };
   apply();
-  dark.addEventListener("change", apply);
+  onTheme(apply);
 }
 
 /** Opens this app's page in the OS settings (notifications blocked). */

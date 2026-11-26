@@ -39,15 +39,28 @@ function ensure(): Promise<Zzfx | null> {
   loading ??= import("zzfx")
     .then((m) => {
       zz = m.ZZFX;
-      master = zz.audioContext.createGain();
-      master.gain.value = volume;
-      master.connect(zz.audioContext.destination);
+      wire(zz.audioContext);
       return zz;
     })
     .catch(() => null);
   return loading;
 }
 if (typeof window !== "undefined") void ensure();
+
+function wire(ctx: AudioContext) {
+  master = ctx.createGain();
+  master.gain.value = volume;
+  master.connect(ctx.destination);
+}
+
+// resume() plus a silent buffer: iOS Safari needs a sound started inside the gesture to really unlock output.
+function wake(ctx: AudioContext, rate: number) {
+  ctx.resume().catch(() => {});
+  const src = ctx.createBufferSource();
+  src.buffer = ctx.createBuffer(1, 1, rate);
+  src.connect(ctx.destination);
+  src.start();
+}
 
 function buffers(z: Zzfx, name: SfxName): AudioBuffer[] {
   let b = cache.get(name);
@@ -111,11 +124,19 @@ export function unlock(): void {
     if (!zz) { void ensure(); return; }
     const ctx = zz.audioContext;
     if (ctx.state === "running") return;
-    ctx.resume().catch(() => {});
-    const src = ctx.createBufferSource(); // silent buffer: needed by iOS Safari to really unlock output
-    src.buffer = ctx.createBuffer(1, 1, zz.sampleRate);
-    src.connect(ctx.destination);
-    src.start();
+    wake(ctx, zz.sampleRate);
+  } catch { /* never throw */ }
+}
+
+/** Swaps in a new AudioContext. Safari can keep one silent after a call, Siri or another app's audio, even
+ * when it reports "running"; resume() doesn't bring it back. Call inside a user gesture. */
+export function restore(): void {
+  try {
+    if (!zz) { void ensure(); return; }
+    void zz.audioContext.close().catch(() => {}); // Safari caps open contexts
+    zz.audioContext = new AudioContext();
+    wire(zz.audioContext); // cached AudioBuffers aren't tied to a context: they play in the new one
+    wake(zz.audioContext, zz.sampleRate);
   } catch { /* never throw */ }
 }
 

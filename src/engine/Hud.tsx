@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import { Flame, SpeakerHigh, SpeakerSlash } from "@phosphor-icons/react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { ArrowClockwise, Flame, Moon, SpeakerHigh, SpeakerSlash, Sun } from "@phosphor-icons/react";
 import { getArt } from "../art";
-import { play } from "../audio/sfx";
+import { play, restore } from "../audio/sfx";
+import { isDark, onTheme, toggleTheme } from "../ui/theme";
 import { href, useRoute } from "../ui/route";
 import { courseDue } from "./srs";
 import { dispatch, multiplier, RANKS, rankIndex, rankProgress, useProgress } from "./store";
@@ -23,6 +24,7 @@ export function Hud() {
   const p = useProgress();
   const r = useRoute();
   const ai = useSession().me?.features.ai ?? false;
+  const dark = useSyncExternalStore(onTheme, isDark);
   const ri = rankIndex(p.xp);
   const next = RANKS[ri + 1];
   const [pulse, setPulse] = useState(0);
@@ -82,6 +84,15 @@ export function Hud() {
           <input type="range" min={0} max={1} step={0.05} value={p.sound.volume} aria-label="Volume" disabled={p.sound.muted}
             onChange={(e) => dispatch({ type: "sound", volume: Number(e.target.value) })}
             onPointerUp={() => play("click")} onKeyUp={() => play("click")} />
+        </div>
+        <div className="hud-tools">
+          <button type="button" className="iconbtn" aria-label="Restore audio" title="Restore audio"
+            onClick={() => { if (p.sound.muted) dispatch({ type: "sound", muted: false }); restore(); play("unlock"); }}>
+            <ArrowClockwise aria-hidden />
+          </button>
+          <button type="button" className="iconbtn" aria-label="Dark theme" aria-pressed={dark} onClick={() => { toggleTheme(); play("click"); }}>
+            {dark ? <Sun aria-hidden /> : <Moon aria-hidden />}
+          </button>
         </div>
       </div>
       {tabs.length > 0 && (

@@ -3,7 +3,7 @@ import * as monaco from "monaco-editor";
 import { Editor as MonacoEditor, loader } from "@monaco-editor/react";
 import EditorWorker from "monaco-editor/editor/editor.worker?worker";
 import TsWorker from "monaco-editor/language/typescript/ts.worker?worker";
-import { token } from "../ui/theme";
+import { isDark, onTheme, token } from "../ui/theme";
 
 self.MonacoEnvironment = {
   getWorker: (_id, label) => (label === "typescript" || label === "javascript" ? new TsWorker() : new EditorWorker()),
@@ -23,13 +23,12 @@ ts.typescriptDefaults.addExtraLib(
 );
 
 const css = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-const scheme = matchMedia("(prefers-color-scheme: dark)");
-// Re-read the tokens when the OS scheme flips; setTheme repaints open editors.
-scheme.addEventListener("change", () => { defineTheme(); monaco.editor.setTheme("quest"); });
+// Re-read the tokens when the theme flips; setTheme repaints open editors.
+onTheme(() => { defineTheme(); monaco.editor.setTheme("quest"); });
 function defineTheme() {
   const hex = (v: string) => v.replace("#", "");
   monaco.editor.defineTheme("quest", {
-    base: scheme.matches ? "vs-dark" : "vs",
+    base: isDark() ? "vs-dark" : "vs",
     inherit: true,
     rules: [
       { token: "comment", foreground: hex(token("--muted")), fontStyle: "italic" },

@@ -107,6 +107,22 @@ test("play a level", async () => {
   expect(csp).toEqual([]); // the clear fires confetti
 });
 
+test("theme toggle sticks across reloads; audio restore leaves sound running", async () => {
+  await page.goto("/#/");
+  const html = page.locator("html");
+  const os = (await html.getAttribute("data-theme"))!;
+  const other = os === "dark" ? "light" : "dark";
+  await page.getByRole("button", { name: "Dark theme" }).click();
+  await expect(html).toHaveAttribute("data-theme", other);
+  await page.reload();
+  await expect(html).toHaveAttribute("data-theme", other);
+  await page.getByRole("button", { name: "Dark theme" }).click(); // back on the OS scheme: follows it again
+  await expect(html).toHaveAttribute("data-theme", os);
+  expect(await page.evaluate(() => localStorage.getItem("questie.theme"))).toBeNull();
+  await page.getByRole("button", { name: "Restore audio" }).click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __eqAudio: { state(): string } }).__eqAudio.state())).toBe("running");
+});
+
 test("subscribe with Stripe test checkout; plan credits granted", async () => {
   await page.goto("/#/plans");
   await snap(page, "plans");

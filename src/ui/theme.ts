@@ -13,4 +13,34 @@ export function token(name: string): string {
   return `#${[r, g, b].map((n) => n.toString(16).padStart(2, "0")).join("")}`;
 }
 
-export const isDark = () => matchMedia("(prefers-color-scheme: dark)").matches;
+// Light or dark per device: a saved choice, else the OS scheme. global.css keys the dark tokens on data-theme.
+type Theme = "light" | "dark";
+const KEY = "questie.theme";
+const os = typeof window === "undefined" ? null : matchMedia("(prefers-color-scheme: dark)");
+const osTheme = (): Theme => (os?.matches ? "dark" : "light");
+let choice: Theme | null = null;
+try { const t = localStorage.getItem(KEY); if (t === "light" || t === "dark") choice = t; } catch { /* no storage: follow the OS */ }
+
+export const isDark = () => document.documentElement.dataset.theme === "dark";
+
+function apply() {
+  document.documentElement.dataset.theme = choice ?? osTheme();
+  for (const m of document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')) m.content = token("--bg");
+  dispatchEvent(new Event("themechange"));
+}
+
+/** Flips light/dark. Landing on the OS scheme goes back to following it. */
+export function toggleTheme(): void {
+  const next: Theme = isDark() ? "light" : "dark";
+  choice = next === osTheme() ? null : next;
+  try { if (choice) localStorage.setItem(KEY, choice); else localStorage.removeItem(KEY); } catch { /* kept for this session */ }
+  apply();
+}
+
+/** Calls f after every theme change; returns the unsubscribe. */
+export function onTheme(f: () => void): () => void {
+  addEventListener("themechange", f);
+  return () => removeEventListener("themechange", f);
+}
+
+if (os) { apply(); os.addEventListener("change", apply); }
